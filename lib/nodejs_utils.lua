@@ -1,4 +1,4 @@
-NODEJS_UTILS={}
+local NODEJS_UTILS={}
 
 NODEJS_UTILS.NodeBaseUrl = "https://nodejs.org/dist/v%s/"
 NODEJS_UTILS.FileName = "node-v%s-%s-%s%s"
@@ -86,3 +86,5 @@ function NODEJS_UTILS.calculate_shorthand(list)
 
     return versions_shorthand
 end
+
+return NODEJS_UTILS

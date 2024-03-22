@@ -19,6 +19,3 @@ PLUGIN.description = "Node.js"
 -- minimum compatible vfox version
 PLUGIN.minRuntimeVersion = "0.2.2"
 
-PLUGIN.notes ={
-    "这是一个nodejs测试",
-}
