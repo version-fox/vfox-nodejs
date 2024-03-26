@@ -1,4 +1,5 @@
 local json = require("json")
+local http = require("http")
 local nodejsUtils = require("nodejs_utils")
 
 --- Return all available versions provided by this plugin
