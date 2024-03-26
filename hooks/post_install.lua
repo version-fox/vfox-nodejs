@@ -5,7 +5,7 @@ function PLUGIN:PostInstall(ctx)
     --- ctx.rootPath SDK installation directory
     local rootPath = ctx.rootPath
     local runtimeVersion = ctx.runtimeVersion
-    local sdkInfo = ctx.sdkInfo['sdk-name']
+    local sdkInfo = ctx.sdkInfo['nodejs']
     local path = sdkInfo.path
     local version = sdkInfo.version
     local name = sdkInfo.name
