@@ -7,6 +7,6 @@ Node.js plugin for [vfox](https://vfox.lhan.me/).
 After installing [vfox](https://github.com/version-fox/vfox), install the plugin by running:
 
 ```bash
-vfox install nodejs
+vfox add nodejs
 ```
 
