@@ -10,3 +10,7 @@ After installing [vfox](https://github.com/version-fox/vfox), install the plugin
 vfox add nodejs
 ```
 
+## Mirror
+
+You can configure the mirror by `VFOX_NODEJS_MIRROR` environment variable. The default value
+is `https://nodejs.org/dist/`.
