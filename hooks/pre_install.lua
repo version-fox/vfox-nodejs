@@ -1,5 +1,5 @@
 local http = require("http")
-local nodejsUtils = require("nodejs_utils")
+local util = require("util")
 --- Returns some pre-installed information, such as version number, download address, local files, etc.
 --- If checksum is provided, vfox will automatically check it for you.
 --- @param ctx table
@@ -13,9 +13,9 @@ function PLUGIN:PreInstall(ctx)
         version = lists[1].version
     end
 
-    if not nodejsUtils.is_semver_simple(version) then
+    if not util.is_semver_simple(version) then
         local lists = self:Available({})
-        local shorthands = nodejsUtils.calculate_shorthand(lists)
+        local shorthands = util.calculate_shorthand(lists)
         version = shorthands[version]
     end
 
@@ -33,8 +33,16 @@ function PLUGIN:PreInstall(ctx)
         ext = ".zip"
         osType = "win"
     end
-    local filename = nodejsUtils.FileName:format(version, osType, arch_type, ext)
-    local baseUrl = nodejsUtils.NodeBaseUrl:format(version)
+    -- add logic for macOS M1~
+    if RUNTIME.osType == "darwin" then
+        local major, _ = util.extract_semver(version)
+        if major and tonumber(major) <= 16 then
+            arch_type = "x64"
+        end
+    end
+
+    local filename = util.FileName:format(version, osType, arch_type, ext)
+    local baseUrl = util.getBaseUrl() .. util.NodeBaseUrl:format(version)
 
     local resp, err = http.get({
         url = baseUrl .. "SHASUMS256.txt"
@@ -42,7 +50,7 @@ function PLUGIN:PreInstall(ctx)
     if err ~= nil or resp.status_code ~= 200 then
         error("get checksum failed")
     end
-    local checksum = nodejsUtils.get_checksum(resp.body, filename)
+    local checksum = util.get_checksum(resp.body, filename)
     return {
         version = version,
         url = baseUrl .. filename,

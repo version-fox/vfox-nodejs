@@ -1,11 +1,20 @@
-local NODEJS_UTILS={}
+local UTIL ={}
 
-NODEJS_UTILS.NodeBaseUrl = "https://nodejs.org/dist/v%s/"
-NODEJS_UTILS.FileName = "node-v%s-%s-%s%s"
-NODEJS_UTILS.npmDownloadUrl = "https://github.com/npm/cli/archive/v%s.%s"
-NODEJS_UTILS.VersionSourceUrl = "https://nodejs.org/dist/index.json"
+UTIL.NodeBaseUrl = "/v%s/"
+UTIL.FileName = "node-v%s-%s-%s%s"
+UTIL.VersionSourceUrl = "/index.json"
 
-function NODEJS_UTILS.compare_versions(v1o, v2o)
+function UTIL.getBaseUrl()
+    local mirror = os.getenv("VFOX_NODEJS_MIRROR")
+    if mirror == "" or mirror == nil then
+        return "https://nodejs.org/dist"
+    end
+    return mirror
+end
+
+
+
+function UTIL.compare_versions(v1o, v2o)
     local v1 = v1o.version
     local v2 = v2o.version
     local v1_parts = {}
@@ -32,7 +41,7 @@ function NODEJS_UTILS.compare_versions(v1o, v2o)
 end
 
 
-function NODEJS_UTILS.get_checksum(file_content, file_name)
+function UTIL.get_checksum(file_content, file_name)
     for line in string.gmatch(file_content, '([^\n]*)\n?') do
         local checksum, name = string.match(line, '(%w+)%s+(%S+)')
         if name == file_name then
@@ -42,21 +51,21 @@ function NODEJS_UTILS.get_checksum(file_content, file_name)
     return nil
 end
 
-function NODEJS_UTILS.is_semver_simple(str)
+function UTIL.is_semver_simple(str)
     -- match pattern: three digits, separated by dot
     local pattern = "^%d+%.%d+%.%d+$"
     return str:match(pattern) ~= nil
 end
 
 
-function NODEJS_UTILS.extract_semver(semver)
+function UTIL.extract_semver(semver)
     local pattern = "^(%d+)%.(%d+)%.[%d.]+$"
     local major, minor = semver:match(pattern)
     return major, minor
 end
 
 
-function NODEJS_UTILS.calculate_shorthand(list)
+function UTIL.calculate_shorthand(list)
     local versions_shorthand = {}
     for _, v in ipairs(list) do
         local version = v.version
@@ -87,4 +96,4 @@ function NODEJS_UTILS.calculate_shorthand(list)
     return versions_shorthand
 end
 
-return NODEJS_UTILS
+return UTIL

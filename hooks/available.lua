@@ -1,6 +1,6 @@
 local json = require("json")
 local http = require("http")
-local nodejsUtils = require("nodejs_utils")
+local util = require("util")
 
 --- Return all available versions provided by this plugin
 --- @param ctx table Empty table used as context, for future extension
@@ -11,7 +11,7 @@ function PLUGIN:Available(ctx)
         return available_result
     end
     local resp, err = http.get({
-        url = nodejsUtils.VersionSourceUrl
+        url = util.getBaseUrl() .. util.VersionSourceUrl
     })
     if err ~= nil or resp.status_code ~= 200 then
         return {}
@@ -31,7 +31,7 @@ function PLUGIN:Available(ctx)
             }
         })
     end
-    table.sort(result, nodejsUtils.compare_versions)
+    table.sort(result, util.compare_versions)
     available_result = result
     return result
 end
