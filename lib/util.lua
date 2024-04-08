@@ -1,4 +1,4 @@
-local UTIL ={}
+local UTIL = {}
 
 UTIL.NodeBaseUrl = "/v%s/"
 UTIL.FileName = "node-v%s-%s-%s%s"
@@ -11,8 +11,6 @@ function UTIL.getBaseUrl()
     end
     return mirror
 end
-
-
 
 function UTIL.compare_versions(v1o, v2o)
     local v1 = v1o.version
@@ -40,7 +38,6 @@ function UTIL.compare_versions(v1o, v2o)
     return false
 end
 
-
 function UTIL.get_checksum(file_content, file_name)
     for line in string.gmatch(file_content, '([^\n]*)\n?') do
         local checksum, name = string.match(line, '(%w+)%s+(%S+)')
@@ -57,25 +54,23 @@ function UTIL.is_semver_simple(str)
     return str:match(pattern) ~= nil
 end
 
-
 function UTIL.extract_semver(semver)
     local pattern = "^(%d+)%.(%d+)%.[%d.]+$"
     local major, minor = semver:match(pattern)
     return major, minor
 end
 
-
 function UTIL.calculate_shorthand(list)
     local versions_shorthand = {}
     for _, v in ipairs(list) do
         local version = v.version
-        local major, minor = extract_semver(version)
+        local major, minor = UTIL.extract_semver(version)
 
         if major then
             if not versions_shorthand[major] then
                 versions_shorthand[major] = version
             else
-                if compare_versions({version = version}, {version = versions_shorthand[major]}) then
+                if UTIL.compare_versions({ version = version }, { version = versions_shorthand[major] }) then
                     versions_shorthand[major] = version
                 end
             end
@@ -85,7 +80,7 @@ function UTIL.calculate_shorthand(list)
                 if not versions_shorthand[major_minor] then
                     versions_shorthand[major_minor] = version
                 else
-                    if compare_versions({version = version}, {version = versions_shorthand[major_minor]}) then
+                    if UTIL.compare_versions({ version = version }, { version = versions_shorthand[major_minor] }) then
                         versions_shorthand[major_minor] = version
                     end
                 end
