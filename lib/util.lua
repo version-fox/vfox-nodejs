@@ -62,7 +62,7 @@ end
 
 function UTIL.calculate_shorthand(list)
     local versions_shorthand = {}
-    for _, v in ipairs(list) do
+    for _, v in pairs(list) do
         local version = v.version
         local major, minor = UTIL.extract_semver(version)
 
