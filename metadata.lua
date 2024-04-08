@@ -5,7 +5,7 @@ PLUGIN = {}
 --- Plugin name
 PLUGIN.name = "nodejs"
 --- Plugin version
-PLUGIN.version = "0.2.0"
+PLUGIN.version = "0.2.1"
 --- Plugin repository
 PLUGIN.homepage = "https://github.com/version-fox/vfox-nodejs"
 --- Plugin license
@@ -18,4 +18,3 @@ PLUGIN.description = "Node.js runtime environment."
 PLUGIN.minRuntimeVersion = "0.3.0"
 -- Some things that need user to be attention!
 PLUGIN.notes = {}
-
