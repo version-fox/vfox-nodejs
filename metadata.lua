@@ -14,7 +14,14 @@ PLUGIN.license = "Apache 2.0"
 PLUGIN.description = "Node.js runtime environment."
 
 --- !!! OPTIONAL !!!
--- minimum compatible vfox version
+--- minimum compatible vfox version
 PLUGIN.minRuntimeVersion = "0.3.0"
--- Some things that need user to be attention!
+--- Some things that need user to be attention!
 PLUGIN.notes = {}
+
+--- List legacy configuration filenames for determining the specified version of the tool.
+--- such as ".node-version", ".nvmrc", etc.
+PLUGIN.legacyFilenames = {
+    ".node-version",
+    ".nvmrc"
+}
