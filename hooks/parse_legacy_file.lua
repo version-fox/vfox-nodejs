@@ -43,7 +43,7 @@ function PLUGIN:ParseLegacyFile(ctx)
     end
     local query = resolve_version(content)
 
-    query = resolve_legacy_version("latest_installed", query)
+    query = resolve_legacy_version(ctx.strategy, query)
 
     return {
         version = query
@@ -57,6 +57,7 @@ function resolve_version(query)
         query = query:gsub("-", "/")
     end
 
+    -- https://node.org.cn/en/about/previous-releases
     local nodejs_codenames = {
         argon = 4,
         boron = 6,
@@ -66,7 +67,8 @@ function resolve_version(query)
         fermium = 14,
         gallium = 16,
         hydrogen = 18,
-        iron = 20
+        iron = 20,
+        jod = 22
     }
 
     for codename, version_number in pairs(nodejs_codenames) do
