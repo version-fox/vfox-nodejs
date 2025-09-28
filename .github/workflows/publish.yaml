@@ -25,7 +25,7 @@ jobs:
           else
             echo "VERSION=$(echo ${{ github.ref }} | cut -d'/' -f3 | cut -c2-)" >> $GITHUB_ENV
           fi
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
 
       - name: Set up Lua
         uses: leafo/gh-actions-lua@v12
@@ -64,7 +64,7 @@ jobs:
             echo "VERSION=$(echo ${{ github.ref }} | cut -d'/' -f3 | cut -c2-)" >> $GITHUB_ENV
           fi
       - name: Checkout code
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
       - name: Download JSON file
         uses: actions/download-artifact@v4
         with:
