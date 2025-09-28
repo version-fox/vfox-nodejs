@@ -66,7 +66,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v5
       - name: Download JSON file
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v5
         with:
           name: manifest
       - name: Compress build files
