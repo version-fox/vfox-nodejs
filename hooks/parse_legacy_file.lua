@@ -57,7 +57,7 @@ function resolve_version(query)
         query = query:gsub("-", "/")
     end
 
-    -- https://node.org.cn/en/about/previous-releases
+    -- https://nodejs.org/zh-cn/about/previous-releases
     local nodejs_codenames = {
         argon = 4,
         boron = 6,
