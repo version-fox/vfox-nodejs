@@ -43,7 +43,7 @@ function PLUGIN:ParseLegacyFile(ctx)
     end
     local query = resolve_version(content)
 
-    query = resolve_legacy_version("latest_installed", query)
+    query = resolve_legacy_version(ctx.strategy, query)
 
     return {
         version = query
@@ -57,6 +57,7 @@ function resolve_version(query)
         query = query:gsub("-", "/")
     end
 
+    -- https://nodejs.org/zh-cn/about/previous-releases
     local nodejs_codenames = {
         argon = 4,
         boron = 6,
@@ -66,7 +67,8 @@ function resolve_version(query)
         fermium = 14,
         gallium = 16,
         hydrogen = 18,
-        iron = 20
+        iron = 20,
+        jod = 22
     }
 
     for codename, version_number in pairs(nodejs_codenames) do
@@ -77,7 +79,14 @@ function resolve_version(query)
     end
 
     if query == "lts" or query == "lts/*" then
-        query = tostring(nodejs_codenames[#nodejs_codenames])
+        -- Find the latest LTS version (highest version number)
+        local latest_version = 0
+        for codename, version_number in pairs(nodejs_codenames) do
+            if version_number > latest_version then
+                latest_version = version_number
+            end
+        end
+        query = tostring(latest_version)
     end
 
     return query
