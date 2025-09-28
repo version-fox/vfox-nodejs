@@ -79,7 +79,14 @@ function resolve_version(query)
     end
 
     if query == "lts" or query == "lts/*" then
-        query = tostring(nodejs_codenames[#nodejs_codenames])
+        -- Find the latest LTS version (highest version number)
+        local latest_version = 0
+        for codename, version_number in pairs(nodejs_codenames) do
+            if version_number > latest_version then
+                latest_version = version_number
+            end
+        end
+        query = tostring(latest_version)
     end
 
     return query
