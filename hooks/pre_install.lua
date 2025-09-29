@@ -33,11 +33,12 @@ function PLUGIN:PreInstall(ctx)
         ext = ".zip"
         osType = "win"
     end
-    -- add logic for macOS M1~
+    -- add logic for Apple Silicon
     if RUNTIME.osType == "darwin" then
         local major, _ = util.extract_semver(version)
-        if major and tonumber(major) <= 16 then
+        if major and tonumber(major) < 16 then
             arch_type = "x64"
+            print("Note: Node.js versions below 16 do not support Apple Silicon (arm64), using x64 architecture with Rosetta 2")
         end
     end
 
