@@ -9,7 +9,8 @@ function UTIL.getBaseUrl()
     if mirror == "" or mirror == nil then
         return "https://nodejs.org/dist"
     end
-    return mirror
+    -- Strip trailing slash to avoid double slashes in URL paths
+    return mirror:gsub("/$", "")
 end
 
 function UTIL.compare_versions(v1o, v2o)

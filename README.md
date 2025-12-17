@@ -13,4 +13,5 @@ vfox add nodejs
 ## Mirror
 
 You can configure the mirror by `VFOX_NODEJS_MIRROR` environment variable. The default value
-is `https://nodejs.org/dist/`.
+is `https://nodejs.org/dist`. Trailing slashes are automatically handled, so both
+`https://nodejs.org/dist` and `https://nodejs.org/dist/` will work correctly.
