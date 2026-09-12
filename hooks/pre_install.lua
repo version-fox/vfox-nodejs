@@ -24,10 +24,15 @@ function PLUGIN:PreInstall(ctx)
     end
 
     local arch_type = RUNTIME.archType
+    if arch_type == nil or arch_type == "" then
+        error("Cannot determine Node.js package architecture from RUNTIME.archType")
+    end
     local ext = ".tar.gz"
     local osType = RUNTIME.osType
     if RUNTIME.archType == "amd64" then
         arch_type = "x64"
+    elseif RUNTIME.archType == "386" then
+        arch_type = "x86"
     end
     if RUNTIME.osType == "windows" then
         ext = ".zip"
@@ -52,6 +57,9 @@ function PLUGIN:PreInstall(ctx)
         error("get checksum failed")
     end
     local checksum = util.get_checksum(resp.body, filename)
+    if checksum == nil then
+        error("Node.js package " .. filename .. " is not listed in " .. baseUrl .. "SHASUMS256.txt")
+    end
     return {
         version = version,
         url = baseUrl .. filename,

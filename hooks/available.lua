@@ -13,8 +13,11 @@ function PLUGIN:Available(ctx)
     local resp, err = http.get({
         url = util.getBaseUrl() .. util.VersionSourceUrl
     })
-    if err ~= nil or resp.status_code ~= 200 then
-        return {}
+    if err ~= nil then
+        error("Failed to fetch Node.js versions: " .. tostring(err))
+    end
+    if resp.status_code ~= 200 then
+        error("Failed to fetch Node.js versions: HTTP " .. tostring(resp.status_code))
     end
     local body = json.decode(resp.body)
     local result = {}
