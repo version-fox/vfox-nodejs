@@ -10,11 +10,28 @@ After installing [vfox](https://github.com/version-fox/vfox), install the plugin
 vfox add nodejs
 ```
 
+### Example: Ubuntu 26.04
+
+```bash
+vfox add nodejs
+vfox install nodejs@26.10.0
+sudo apt install --assume-yes libatomic1
+vfox use --global nodejs@26.10.0
+```
+
+You can verify this using the following command:
+
+```bash
+node -v
+```
+
 ## Mirror
 
-You can configure the mirror by `VFOX_NODEJS_MIRROR` environment variable. The default value
-is `https://nodejs.org/dist`. Trailing slashes are automatically handled, so both
-`https://nodejs.org/dist` and `https://nodejs.org/dist/` will work correctly.
+See [docs/mirror.md](docs/mirror.md) for details.
+
+## Testing
+
+See [docs/e2e.md](docs/e2e.md) for details.
 
 ## Releasing this plugin
 
