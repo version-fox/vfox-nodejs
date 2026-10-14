@@ -65,8 +65,33 @@ function PLUGIN:PreInstall(ctx)
         end
     end
 
-    local filename = util.FileName:format(version, osType, arch_type, ext)
+    local filename = nil
     local baseUrl = util.getBaseUrl() .. util.NodeBaseUrl:format(version)
+    local is_musl = false
+    local musl_note = nil
+    if RUNTIME.osType == "linux" then
+        is_musl = util.is_musl()
+        if is_musl then
+            if arch_type == "x64" then
+                arch_type = "x64-musl"
+            elseif arch_type == "arm64" then
+                arch_type = "arm64-musl"
+            else
+                error(
+                    "Node.js musl builds are only available for x64 and arm64, got "
+                        .. tostring(arch_type)
+                        .. ". See "
+                        .. util.ReadmeUrl
+                )
+            end
+            filename = util.FileName:format(version, osType, arch_type, ext)
+            musl_note = "musl libc detected, installed " .. filename .. ". See " .. util.ReadmeUrl
+            print("Note: " .. musl_note)
+        end
+    end
+    if filename == nil then
+        filename = util.FileName:format(version, osType, arch_type, ext)
+    end
 
     local resp, err = http.get({
         url = baseUrl .. "SHASUMS256.txt",
@@ -75,12 +100,41 @@ function PLUGIN:PreInstall(ctx)
         error("get checksum failed")
     end
     local checksum = util.get_checksum(resp.body, filename)
-    if checksum == nil then
-        error("Node.js package " .. filename .. " is not listed in " .. baseUrl .. "SHASUMS256.txt")
+    if checksum ~= nil then
+        local result = {
+            version = version,
+            url = baseUrl .. filename,
+            sha256 = checksum,
+        }
+        if musl_note ~= nil then
+            result.note = musl_note
+        end
+        return result
     end
-    return {
-        version = version,
-        url = baseUrl .. filename,
-        sha256 = checksum,
-    }
+
+    -- musl fallback to unofficial builds: official nodejs.org/dist only ships
+    -- linux-x64-musl for recent releases and never ships linux-arm64-musl,
+    -- while unofficial-builds covers both (including older releases).
+    -- A SHASUMS fetch failure still errors (bogus mirrors must stay rejected);
+    -- only a missing filename falls through here.
+    -- See https://github.com/version-fox/vfox-nodejs/issues/29
+    if is_musl then
+        local unofficialBase = util.UnofficialBaseUrl .. util.NodeBaseUrl:format(version)
+        local uresp, uerr = http.get({
+            url = unofficialBase .. "SHASUMS256.txt",
+        })
+        if uerr == nil and uresp.status_code == 200 then
+            local uchecksum = util.get_checksum(uresp.body, filename)
+            if uchecksum ~= nil then
+                print("Note: " .. filename .. " is not listed in " .. baseUrl .. ", using unofficial musl build")
+                return {
+                    version = version,
+                    url = unofficialBase .. filename,
+                    sha256 = uchecksum,
+                    note = musl_note,
+                }
+            end
+        end
+    end
+    error("Node.js package " .. filename .. " is not listed in " .. baseUrl .. "SHASUMS256.txt")
 end

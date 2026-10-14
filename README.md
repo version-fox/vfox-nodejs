@@ -14,9 +14,23 @@ vfox add nodejs
 
 ```bash
 vfox add nodejs
-vfox install nodejs@26.10.0
+vfox install nodejs@26.11.1
 sudo apt install --assume-yes libatomic1
-vfox use --global nodejs@26.10.0
+vfox use --global nodejs@26.11.1
+```
+
+Note: the `libatomic1` step works around an upstream Node.js packaging bug
+([nodejs/node#60790](https://github.com/nodejs/node/issues/60790), still
+open): Node 25+ links `libatomic.so.1`, which stock Debian/Ubuntu images do
+not ship. System libraries are the user's responsibility; the plugin does
+not install them.
+
+### Example: Alpine / musl
+
+```bash
+vfox add nodejs
+vfox install nodejs@26.11.1
+vfox use --global nodejs@26.11.1
 ```
 
 You can verify this using the following command:
@@ -25,11 +39,23 @@ You can verify this using the following command:
 node -v
 ```
 
+musl details (OpenWrt, tarball matrix, mirror fallback): see [docs/musl.md](docs/musl.md).
+
 ## Mirror
 
 See [docs/mirror.md](docs/mirror.md) for details.
 
-## Testing
+## FAQ
+
+### Install from source
+
+See [docs/source-build.md](docs/source-build.md) for details.
+
+### LTS
+
+See [docs/lts.md](docs/lts.md) for details.
+
+### Testing
 
 See [docs/e2e.md](docs/e2e.md) for details.
 

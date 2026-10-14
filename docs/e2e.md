@@ -20,14 +20,16 @@ driven from Go through `docker exec`-style calls):
 3. A pinned Node.js release installs with checksum verification and runs
    (`node --version`, `npm --version`, `process.platform`, `process.arch`),
    so the `linux-x64` / `linux-arm64` / `win-x64` / `win-arm64` package
-   selection is checked for real.
+   selection is checked for real. The LTS release (`LTS_NODE_VERSION`)
+   installs as well, backing the codename probe below.
 4. `nodejs@latest` resolves through the plugin's `Available` list (the
    first, newest entry) and installs.
 5. The major and major.minor shorthands resolve through `PreUse` against the
    installed versions.
 6. `.nvmrc` and `.node-version` drive `vfox env` selection: the exact
-   version under the default `specified` strategy, and an LTS codename
-   (`lts/<codename>`) under `latest_installed`. Each legacy probe activates
+   pinned version under the default `specified` strategy, and an LTS
+   codename (`lts/<codename>`, see [lts](lts.md)) resolving to the LTS
+   release under `latest_installed`. Each legacy probe activates
    inside its own shell so the selection is recomputed rather than answered
    from the `vfox env` state cache of an earlier probe.
 7. `vfox search nodejs` lists the installed release with the same npm
@@ -49,9 +51,11 @@ pin `VFOX_VERSION` and `MIRROR` explicitly to widen or narrow the matrix.
 | ------------------- | ------------------ | ----------------------------------------------------------------------- |
 | `VFOX_VERSION`      | `latest main`      | Space-separated vfox channels (`latest`, `main`)                        |
 | `MIRROR`            | see matrix above   | Space-separated mirrors; `default` means `nodejs.org`                   |
-| `NODE_VERSION`      | `22.23.3`          | Pinned Node.js release installed by the suite                           |
+| `NODE_VERSION`      | `26.11.1`          | Pinned Node.js release installed by the suite                           |
+| `LTS_NODE_VERSION`  | `24.21.0`          | LTS release backing the `lts/<codename>` probe (see docs/lts.md)        |
 | `E2E_MAX_JOBS`      | `3` (Linux), `2` (Windows) | Parallel containers per host                                     |
 | `E2E_RETRY_ATTEMPTS`| `3`                | Attempts per network-touching exec (linear 10s backoff)                 |
+| `E2E_LINUX_BASE`    | `ubuntu`           | Linux userland: `ubuntu` (glibc) or `alpine` (musl, see docs/musl.md)   |
 
 ## Ubuntu
 
@@ -81,6 +85,22 @@ cd ./vfox-nodejs/
 DOCKER_SOCK="$XDG_RUNTIME_DIR/docker.sock" docker compose -f tests/e2e/linux/compose.yaml run --rm e2e
 ```
 
+## Alpine (musl)
+
+Same host requirement. The Alpine suite builds
+`tests/e2e/linux/Dockerfile-alpine` (musl userland with `libstdc++`) and
+asserts the musl userland before running the standard flow, proving the
+plugin selects the `*-musl` tarballs
+([issue #29](https://github.com/version-fox/vfox-nodejs/issues/29)).
+See [docs/musl.md](musl.md) for the tarball matrix.
+
+```bash
+docker compose -f tests/e2e/linux/compose.alpine.yaml run --rm e2e
+```
+
+Scope it down locally the same way, e.g.
+`VFOX_VERSION=latest MIRROR=default E2E_MAX_JOBS=1` in front of the command.
+
 ## Windows 11 Pro
 
 Windows containers cannot be emulated across architectures, so the ARM64
@@ -99,13 +119,15 @@ combinations still run with an unspaced home.
 
 ### x64
 
-1. Execute in Windows PowerShell 5.1,
+All commands below run in PowerShell 7. If it is not installed yet, install
+it first (this single bootstrap command may run in the built-in Windows
+PowerShell):
 
 ```powershell
 winget install --id Microsoft.PowerShell --source winget --exact
 ```
 
-2. Execute in PowerShell 7,
+1. Execute in PowerShell 7,
 
 ```powershell
 winget install --id Git.Git --source winget --exact
@@ -116,13 +138,13 @@ curl.exe -fsSL `
     -o ./install-docker-ce.ps1
 ```
 
-3. Execute in PowerShell 7 with administrator privileges,
+2. Execute in PowerShell 7 with administrator privileges,
 
 ```powershell
 ./install-docker-ce.ps1
 ```
 
-4. Execute in PowerShell 7,
+3. Execute in PowerShell 7,
 
 ```powershell
 New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.docker\cli-plugins" | Out-Null
@@ -138,13 +160,15 @@ docker compose -f tests/e2e/windows/compose.amd64.yaml run --rm --build e2e
 
 ### arm64
 
-1. Execute in Windows PowerShell 5.1,
+All commands below run in PowerShell 7. If it is not installed yet, install
+it first (this single bootstrap command may run in the built-in Windows
+PowerShell):
 
 ```powershell
 winget install --id Microsoft.PowerShell --source winget --exact
 ```
 
-2. Execute in PowerShell 7,
+1. Execute in PowerShell 7,
 
 ```powershell
 winget install --id Git.Git --source winget --exact

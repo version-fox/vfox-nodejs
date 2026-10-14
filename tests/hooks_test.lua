@@ -18,6 +18,9 @@ package.preload.http = function()
     return {
         get = function(args)
             state.requests = state.requests + 1
+            if state.responder ~= nil then
+                return state.responder(args)
+            end
             return state.response, state.request_error
         end,
     }
@@ -33,7 +36,7 @@ PLUGIN = {}
 dofile("hooks/available.lua")
 dofile("hooks/pre_install.lua")
 local function test(name, fn)
-    state.response, state.request_error, state.decoded, state.requests = nil, nil, nil, 0
+    state.response, state.request_error, state.decoded, state.requests, state.responder = nil, nil, nil, 0, nil
     available_result = nil
     local ok, err = pcall(fn)
     if ok then
@@ -90,6 +93,75 @@ test("missing architecture", function()
     end, "architecture")
     assert(state.requests == 0)
 end)
+-- musl libc (Alpine, OpenWrt/ImmortalWrt): the plugin must select the
+-- *-musl tarball instead of the glibc one.
+-- See https://github.com/version-fox/vfox-nodejs/issues/29
+local util = require("util")
+test("is_musl honors RUNTIME.envType", function()
+    RUNTIME = { osType = "linux", archType = "amd64", envType = "musl" }
+    assert(util.is_musl() == true)
+    RUNTIME = { osType = "linux", archType = "amd64", envType = "gnu" }
+    assert(util.is_musl() == false)
+    RUNTIME = { osType = "windows", archType = "amd64" }
+    assert(util.is_musl() == false)
+end)
+test("package linux/amd64 musl (official)", function()
+    RUNTIME = { osType = "linux", archType = "amd64", envType = "musl" }
+    local filename = "node-v22.23.3-linux-x64-musl.tar.gz"
+    local hash = string.rep("b", 64)
+    state.response = { status_code = 200, body = hash .. "  " .. filename .. "\n" }
+    local result = PLUGIN:PreInstall({ version = "22.23.3" })
+    assert(result.url:sub(-#filename) == filename, result.url)
+    assert(result.sha256 == hash, "checksum missing")
+    assert(result.note ~= nil and result.note:find("README.md", 1, true), tostring(result.note))
+end)
+test("package linux/arm64 musl falls back to unofficial", function()
+    RUNTIME = { osType = "linux", archType = "arm64", envType = "musl" }
+    local filename = "node-v22.22.0-linux-arm64-musl.tar.gz"
+    local official_hash = string.rep("c", 64)
+    local unofficial_hash = string.rep("d", 64)
+    state.responder = function(args)
+        if args.url:find("unofficial-builds.nodejs.org", 1, true) then
+            return { status_code = 200, body = unofficial_hash .. "  " .. filename .. "\n" }
+        end
+        return { status_code = 200, body = official_hash .. "  node-v22.22.0-linux-x64.tar.gz\n" }
+    end
+    local result = PLUGIN:PreInstall({ version = "22.22.0" })
+    assert(result.url:sub(-#filename) == filename, result.url)
+    assert(result.url:find("unofficial-builds.nodejs.org", 1, true), result.url)
+    assert(result.sha256 == unofficial_hash, "unofficial checksum missing")
+end)
+test("musl unsupported architecture", function()
+    RUNTIME = { osType = "linux", archType = "386", envType = "musl" }
+    expect_error(function()
+        PLUGIN:PreInstall({ version = "22.23.3" })
+    end, "musl")
+    assert(state.requests == 0)
+end)
+-- PostInstall guards the musl libstdc++ runtime Dependency.
+dofile("hooks/post_install.lua")
+test("post_install skips non-musl systems", function()
+    RUNTIME = { osType = "windows", archType = "amd64" }
+    PLUGIN:PostInstall({})
+    RUNTIME = { osType = "linux", archType = "amd64", envType = "gnu" }
+    PLUGIN:PostInstall({})
+end)
+test("post_install passes when libstdc++ is present", function()
+    RUNTIME = { osType = "linux", archType = "amd64", envType = "musl" }
+    assert(util.has_libstdcxx() == true, "test host must provide libstdc++")
+    PLUGIN:PostInstall({})
+end)
+test("post_install fails without libstdc++", function()
+    RUNTIME = { osType = "linux", archType = "amd64", envType = "musl" }
+    local saved = util.file_exists
+    util.file_exists = function()
+        return false
+    end
+    expect_error(function()
+        PLUGIN:PostInstall({})
+    end, "libstdc++")
+    util.file_exists = saved
+end)
 test("missing package", function()
     RUNTIME = { osType = "windows", archType = "arm64" }
     state.response = { status_code = 200, body = string.rep("a", 64) .. "  node-v20.16.0-win-x64.zip\n" }
@@ -135,6 +207,61 @@ test("legacy lts codename maps to its major", function()
     })
     os.remove(path)
     assert(result.version == "22", tostring(result.version))
+end)
+test("legacy lts krypton maps to its major", function()
+    local path = write_legacy("lts/krypton")
+    local result = PLUGIN:ParseLegacyFile({
+        filepath = path,
+        filename = ".node-version",
+        strategy = "specified",
+    })
+    os.remove(path)
+    assert(result.version == "24", tostring(result.version))
+end)
+test("legacy lts unknown codename resolves dynamically under latest_available", function()
+    state.response = { status_code = 200, body = "index" }
+    state.decoded = {
+        { version = "v30.0.0", npm = "11.0.0", lts = "Future" },
+        { version = "v24.21.0", npm = "11.19.0", lts = "Krypton" },
+    }
+    local path = write_legacy("lts/future")
+    local result = PLUGIN:ParseLegacyFile({
+        filepath = path,
+        filename = ".nvmrc",
+        strategy = "latest_available",
+        getInstalledVersions = installed_versions,
+    })
+    os.remove(path)
+    assert(result.version == "30.0.0", tostring(result.version))
+end)
+test("legacy bare lts resolves to newest LTS dynamically under latest_available", function()
+    state.response = { status_code = 200, body = "index" }
+    state.decoded = {
+        { version = "v22.23.3", npm = "10.9.9", lts = "Jod" },
+        { version = "v24.21.0", npm = "11.19.0", lts = "Krypton" },
+    }
+    local path = write_legacy("lts")
+    local result = PLUGIN:ParseLegacyFile({
+        filepath = path,
+        filename = ".nvmrc",
+        strategy = "latest_available",
+        getInstalledVersions = installed_versions,
+    })
+    os.remove(path)
+    assert(result.version == "24.21.0", tostring(result.version))
+end)
+test("legacy lts without match falls back to the query itself", function()
+    state.response = { status_code = 200, body = "index" }
+    state.decoded = { { version = "v26.11.1", npm = "11.20.0", lts = false } }
+    local path = write_legacy("lts/unknown")
+    local result = PLUGIN:ParseLegacyFile({
+        filepath = path,
+        filename = ".nvmrc",
+        strategy = "latest_available",
+        getInstalledVersions = installed_versions,
+    })
+    os.remove(path)
+    assert(result.version == "lts/unknown", tostring(result.version))
 end)
 test("legacy latest_installed resolves against installed versions", function()
     local path = write_legacy("22\n")

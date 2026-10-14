@@ -105,15 +105,16 @@ func verifySearch(ctx context.Context, t *testing.T, ctr tc.Container, box slotB
 // verifyLegacyFiles proves ParseLegacyFile drives selection from the legacy
 // config files vfox searches for, in this order:
 //
-//  1. .nvmrc and .node-version holding the exact version (the default
+//  1. .nvmrc and .node-version holding the exact pinned version (the default
 //     `specified` strategy), with the global set to a different release;
 //  2. .nvmrc holding an LTS codename under the `latest_installed` strategy,
-//     which resolves through the plugin's codename table.
+//     which resolves through the plugin's codename table to the LTS release
+//     (see docs/lts.md).
 //
 // Every probe runs in its own freshly activated shell session; node may only
 // come from the env the legacy file selects, so a fallback to the global
 // (latest) release fails the assertion.
-func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox, pinned string) {
+func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox, pinned, lts string) {
 	t.Helper()
 	// Each probe captures its own `vfox activate` rather than reusing the
 	// combo's shared activation: activation pins __VFOX_PID, which scopes the
@@ -141,21 +142,21 @@ func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, box 
 				"Set-Content -NoNewline -Path %s -Value %s",
 			pwshQuote(dir), pwshQuote(dir+`\`+name), pwshQuote(content)), box.vars...)
 	}
-	assertProbe := func(got, what string) {
+	assertProbe := func(got, want, what string) {
 		t.Helper()
-		require.Truef(t, strings.HasSuffix(got, "v"+pinned),
-			"%s must resolve to %s over the global latest\n--- node path and version ---\n%s", what, pinned, got)
+		require.Truef(t, strings.HasSuffix(got, "v"+want),
+			"%s must resolve to %s over the global latest\n--- node path and version ---\n%s", what, want, got)
 	}
 
 	write(`C:\e2e-legacy-nvmrc`, ".nvmrc", pinned)
-	assertProbe(run(`C:\e2e-legacy-nvmrc`), ".nvmrc "+pinned)
+	assertProbe(run(`C:\e2e-legacy-nvmrc`), pinned, ".nvmrc "+pinned)
 
 	write(`C:\e2e-legacy-node-version`, ".node-version", pinned)
-	assertProbe(run(`C:\e2e-legacy-node-version`), ".node-version "+pinned)
+	assertProbe(run(`C:\e2e-legacy-node-version`), pinned, ".node-version "+pinned)
 
-	codename, known := common.LTSCodename(pinned)
+	codename, known := common.LTSCodename(lts)
 	if !known {
-		t.Logf("SKIP LTS codename probe: %s is not in the plugin's codename table", pinned)
+		t.Logf("SKIP LTS codename probe: %s is not in the plugin's codename table", lts)
 		return
 	}
 	execOK(ctx, t, ctr, "vfox config legacyVersionFile.strategy latest_installed", box.vars...)
@@ -163,6 +164,6 @@ func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, box 
 		_, _ = execRun(ctx, t, ctr, "vfox config legacyVersionFile.strategy specified", box.vars...)
 	}()
 	write(`C:\e2e-legacy-lts`, ".nvmrc", "lts/"+codename)
-	assertProbe(run(`C:\e2e-legacy-lts`), "lts/"+codename+" under latest_installed")
-	t.Logf("PASS legacy files select %s (.nvmrc, .node-version, lts/%s)", pinned, codename)
+	assertProbe(run(`C:\e2e-legacy-lts`), lts, "lts/"+codename+" under latest_installed")
+	t.Logf("PASS legacy files select %s (.nvmrc, .node-version) and %s (lts/%s)", pinned, lts, codename)
 }

@@ -17,6 +17,8 @@ local UTIL = {}
 UTIL.NodeBaseUrl = "/v%s/"
 UTIL.FileName = "node-v%s-%s-%s%s"
 UTIL.VersionSourceUrl = "/index.json"
+UTIL.UnofficialBaseUrl = "https://unofficial-builds.nodejs.org/download/release"
+UTIL.ReadmeUrl = "https://github.com/version-fox/vfox-nodejs/blob/main/README.md"
 
 function UTIL.getBaseUrl()
     local mirror = os.getenv("VFOX_NODEJS_MIRROR")
@@ -25,6 +27,97 @@ function UTIL.getBaseUrl()
     end
     -- Strip trailing slash to avoid double slashes in URL paths
     return mirror:gsub("/$", "")
+end
+
+function UTIL.file_exists(path)
+    local f = io.open(path, "rb")
+    if f then
+        f:close()
+        return true
+    end
+    return false
+end
+
+--- Detect musl libc on Linux (Alpine, OpenWrt/ImmortalWrt, ...).
+--- Order: explicit $VFOX_NODEJS_LIBC override, future RUNTIME.envType,
+--- then well-known linker/marker files. musl wins when both linkers exist
+--- (e.g. gcompat shims on Alpine). Non-Linux is never musl.
+--- See https://github.com/version-fox/vfox-nodejs/issues/29
+function UTIL.is_musl()
+    local override = os.getenv("VFOX_NODEJS_LIBC")
+    if override == "musl" then
+        return true
+    end
+    if override == "gnu" or override == "glibc" then
+        return false
+    end
+    if RUNTIME ~= nil and RUNTIME.envType ~= nil then
+        return RUNTIME.envType == "musl"
+    end
+    if RUNTIME ~= nil and RUNTIME.osType ~= nil and RUNTIME.osType ~= "linux" then
+        return false
+    end
+    if UTIL.file_exists("/etc/alpine-release") then
+        return true
+    end
+    local musl_paths = {
+        "/lib/ld-musl-x86_64.so.1",
+        "/usr/lib/ld-musl-x86_64.so.1",
+        "/lib64/ld-musl-x86_64.so.1",
+        "/lib/ld-musl-aarch64.so.1",
+        "/usr/lib/ld-musl-aarch64.so.1",
+        "/lib64/ld-musl-aarch64.so.1",
+        "/lib/ld-musl-armhf.so.1",
+        "/usr/lib/ld-musl-armhf.so.1",
+        "/lib/ld-musl-x86.so.1",
+        "/usr/lib/ld-musl-x86.so.1",
+    }
+    for _, p in ipairs(musl_paths) do
+        if UTIL.file_exists(p) then
+            return true
+        end
+    end
+    return false
+end
+
+--- Whether libstdc++.so.6 is visible at a well-known location.
+--- Node.js musl tarballs fail with `Error relocating ... symbol not found`
+--- when it is missing.
+function UTIL.has_libstdcxx()
+    local lib_paths = {
+        "/usr/lib/libstdc++.so.6",
+        "/lib/libstdc++.so.6",
+        "/usr/lib64/libstdc++.so.6",
+        "/lib64/libstdc++.so.6",
+        "/usr/lib/x86_64-linux-gnu/libstdc++.so.6",
+        "/lib/x86_64-linux-gnu/libstdc++.so.6",
+        "/usr/lib/aarch64-linux-gnu/libstdc++.so.6",
+        "/lib/aarch64-linux-gnu/libstdc++.so.6",
+        "/usr/lib/arm-linux-gnueabihf/libstdc++.so.6",
+        "/lib/arm-linux-gnueabihf/libstdc++.so.6",
+    }
+    for _, p in ipairs(lib_paths) do
+        if UTIL.file_exists(p) then
+            return true
+        end
+    end
+    return false
+end
+
+--- Name of the system package providing libstdc++.so.6, picked by probing
+--- the distribution (Alpine, OpenWrt).
+function UTIL.libstdcxx_hint()
+    if UTIL.file_exists("/etc/alpine-release") or UTIL.file_exists("/sbin/apk") or UTIL.file_exists("/usr/bin/apk") then
+        return "the libstdc++ system package"
+    end
+    if
+        UTIL.file_exists("/etc/openwrt_release")
+        or UTIL.file_exists("/bin/opkg")
+        or UTIL.file_exists("/usr/bin/opkg")
+    then
+        return "the libstdcpp system package"
+    end
+    return "the libstdc++ system package (libstdcpp on OpenWrt)"
 end
 
 function UTIL.compare_versions(v1o, v2o)

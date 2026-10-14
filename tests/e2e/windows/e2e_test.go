@@ -195,8 +195,13 @@ func runOne(t *testing.T, ctx context.Context, image, platform string, c common.
 	verifyShorthand(ctx, t, ctr, box, activation, version)
 	verifySearch(ctx, t, ctr, box, version, npm)
 
+	// The LTS release backs the `lts/<codename>` legacy-file probe, which
+	// needs its major inside the plugin's codename table (see docs/lts.md).
+	lts := common.ResolveLTSVersion(t)
+	installNodeVersion(ctx, t, ctr, box, activation, lts)
+
 	latest := installLatestNode(ctx, t, ctr, box)
 	execOK(ctx, t, ctr, activated(activation, "vfox use --global "+pwshQuote("nodejs@"+latest)), box.vars...)
 	verifyToolchain(ctx, t, ctr, box, activation, latest)
-	verifyLegacyFiles(ctx, t, ctr, box, version)
+	verifyLegacyFiles(ctx, t, ctr, box, version, lts)
 }
