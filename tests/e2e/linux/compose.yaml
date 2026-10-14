@@ -51,6 +51,7 @@ services:
       VFOX_VERSION: ${VFOX_VERSION:-}
       MIRROR: ${MIRROR:-}
       NODE_VERSION: ${NODE_VERSION:-}
+      LTS_NODE_VERSION: ${LTS_NODE_VERSION:-}
       E2E_RETRY_ATTEMPTS: ${E2E_RETRY_ATTEMPTS:-}
     command: ["go", "test", "-v", "-timeout", "55m", "-run", "TestE2E", "./linux"]
 

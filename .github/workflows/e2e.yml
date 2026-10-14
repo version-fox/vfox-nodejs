@@ -42,6 +42,21 @@ jobs:
           persist-credentials: false
       - run: docker compose -f tests/e2e/linux/compose.yaml run --rm e2e
 
+  e2e-linux-musl:
+    if: github.repository == 'version-fox/vfox-nodejs'
+    name: Linux musl container (${{ matrix.runs-on }})
+    strategy:
+      fail-fast: false
+      matrix:
+        runs-on: [ubuntu-latest, ubuntu-26.04-arm]
+    runs-on: ${{ matrix.runs-on }}
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - run: docker compose -f tests/e2e/linux/compose.alpine.yaml run --rm e2e
+
   e2e-windows:
     if: github.repository == 'version-fox/vfox-nodejs'
     name: Windows container (${{ matrix.runs-on }})

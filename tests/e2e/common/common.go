@@ -38,7 +38,12 @@ import (
 // Node.js defaults, maintained in one place for both packages.
 const (
 	// DefaultNodeVersion is the pinned Node.js release both suites install.
-	DefaultNodeVersion = "22.23.3"
+	DefaultNodeVersion = "26.11.1"
+	// DefaultLTSVersion is the LTS release backing the `lts/<codename>`
+	// legacy-file probe. Its major must stay inside the plugin's codename
+	// table (hooks/parse_legacy_file.lua, currently up to krypton/24); see
+	// docs/lts.md.
+	DefaultLTSVersion = "24.21.0"
 	// BogusMirror is the unreachable mirror domain used by the negative probes.
 	BogusMirror = "https://invalid.example.invalid"
 	// DefaultMirrorCN is the default mainland-China Node.js mirror.
@@ -49,6 +54,7 @@ const (
 // Forwarded only when set, so unset stays default.
 var PassThroughEnvs = []string{
 	"NODE_VERSION",
+	"LTS_NODE_VERSION",
 	"E2E_RETRY_ATTEMPTS",
 }
 
@@ -190,11 +196,21 @@ func ResolveNodeVersion(t *testing.T) string {
 	return DefaultNodeVersion
 }
 
+// ResolveLTSVersion honours $LTS_NODE_VERSION, else the default above.
+func ResolveLTSVersion(t *testing.T) string {
+	t.Helper()
+	if v := os.Getenv("LTS_NODE_VERSION"); v != "" {
+		return v
+	}
+	return DefaultLTSVersion
+}
+
 // LTSCodenames maps the Node.js LTS codenames the plugin resolves
 // (hooks/parse_legacy_file.lua) to their major versions.
 var LTSCodenames = map[string]int{
 	"argon": 4, "boron": 6, "carbon": 8, "dubnium": 10, "erbium": 12,
 	"fermium": 14, "gallium": 16, "hydrogen": 18, "iron": 20, "jod": 22,
+	"krypton": 24,
 }
 
 // LTSCodename returns the codename for a version's major, if the plugin's

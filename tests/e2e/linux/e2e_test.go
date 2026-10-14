@@ -55,7 +55,13 @@ func TestE2E(t *testing.T) {
 		t.Fatal(err)
 	}
 	platform := "linux/" + arch
+	base := linuxBase()
 	image := "vfox-nodejs-e2e:linux-" + arch
+	dockerfile := "tests/e2e/linux/Dockerfile"
+	if base == "alpine" {
+		image += "-alpine"
+		dockerfile = "tests/e2e/linux/Dockerfile-alpine"
+	}
 
 	here, err := filepath.Abs(".")
 	if err != nil {
@@ -64,7 +70,7 @@ func TestE2E(t *testing.T) {
 	repoRoot := filepath.Join(here, "..", "..", "..")
 
 	ctx := context.Background()
-	buildImage(t, ctx, repoRoot, image, platform)
+	buildImage(t, ctx, repoRoot, image, platform, dockerfile)
 
 	combos, err := common.Matrix()
 	if err != nil {
@@ -86,9 +92,19 @@ func TestE2E(t *testing.T) {
 	}
 }
 
+// linuxBase selects the target userland for the Linux suite: "ubuntu"
+// (default) or "alpine" (musl, see docs/musl.md). Set via $E2E_LINUX_BASE,
+// wired by tests/e2e/linux/compose.alpine.yaml.
+func linuxBase() string {
+	if v := os.Getenv("E2E_LINUX_BASE"); v != "" {
+		return v
+	}
+	return "ubuntu"
+}
+
 // buildImage replicates `docker build --pull --platform $platform
-// --file tests/e2e/linux/Dockerfile --tag $image $repoRoot`.
-func buildImage(t *testing.T, ctx context.Context, repoRoot, image, platform string) {
+// --file $dockerfile --tag $image $repoRoot`.
+func buildImage(t *testing.T, ctx context.Context, repoRoot, image, platform, dockerfile string) {
 	t.Helper()
 
 	provider, err := tc.NewDockerProvider()
@@ -105,7 +121,7 @@ func buildImage(t *testing.T, ctx context.Context, repoRoot, image, platform str
 	tag, err := provider.BuildImage(ctx, &tc.ContainerRequest{
 		FromDockerfile: tc.FromDockerfile{
 			Context:        repoRoot,
-			Dockerfile:     "tests/e2e/linux/Dockerfile",
+			Dockerfile:     dockerfile,
 			Repo:           "vfox-nodejs-e2e",
 			Tag:            image[strings.LastIndex(image, ":")+1:],
 			KeepImage:      true,
@@ -168,6 +184,9 @@ func runOne(t *testing.T, ctx context.Context, image, platform, arch string, c c
 	machine := strings.TrimSpace(execOK(ctx, t, ctr, "uname --machine"))
 	t.Logf("=== vfox %s, node %s, mirror %s, %s (%s) ===", c.Vfox, version, c.Mirror, platform, machine)
 
+	if linuxBase() == "alpine" {
+		checkMuslUserland(ctx, t, ctr)
+	}
 	checkMirrorReachable(ctx, t, ctr, c.Mirror)
 	setupVfox(ctx, t, ctr, c.Vfox)
 	checkBogusMirrorRejected(ctx, t, ctr)
@@ -178,8 +197,14 @@ func runOne(t *testing.T, ctx context.Context, image, platform, arch string, c c
 	verifyShorthand(ctx, t, ctr, version)
 	verifySearch(ctx, t, ctr, version, npm)
 
+	// The LTS release backs the `lts/<codename>` legacy-file probe, which
+	// needs its major inside the plugin's codename table (see docs/lts.md).
+	// The probe itself runs the binary, so no separate toolchain check here.
+	lts := common.ResolveLTSVersion(t)
+	installNodeVersion(ctx, t, ctr, lts)
+
 	latest := installLatestNode(ctx, t, ctr)
 	execOK(ctx, t, ctr, activated(fmt.Sprintf("vfox use --global nodejs@%s", latest)))
 	verifyToolchain(ctx, t, ctr, latest, arch)
-	verifyLegacyFiles(ctx, t, ctr, version)
+	verifyLegacyFiles(ctx, t, ctr, version, lts)
 }
