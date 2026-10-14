@@ -37,3 +37,17 @@ func TestReleasesIndex(t *testing.T) {
 		t.Errorf("releasesIndex = %q, want %q", got, want)
 	}
 }
+
+func TestMissingLatestArm64MuslBuild(t *testing.T) {
+	output := "Using latest version: \x1b[92m26.12.0\x1b[0m\n" +
+		"Node.js package node-v26.12.0-linux-arm64-musl.tar.gz is not listed in " +
+		"https://nodejs.org/dist/v26.12.0/SHASUMS256.txt"
+	version, filename, missing := missingLatestArm64MuslBuild(output)
+	if version != "26.12.0" || filename != "node-v26.12.0-linux-arm64-musl.tar.gz" || !missing {
+		t.Fatalf("missingLatestArm64MuslBuild = (%q, %q, %v), want (26.12.0, node-v26.12.0-linux-arm64-musl.tar.gz, true)", version, filename, missing)
+	}
+
+	if _, _, missing := missingLatestArm64MuslBuild("Node.js package node-v26.12.0-linux-x64-musl.tar.gz is not listed"); missing {
+		t.Fatal("missingLatestArm64MuslBuild recognized an unrelated architecture")
+	}
+}

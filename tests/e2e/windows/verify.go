@@ -74,6 +74,31 @@ func verifyToolchain(ctx context.Context, t *testing.T, ctr tc.Container, box sl
 	return npm
 }
 
+// verifyGitBashNpm checks the Windows Node.js package from Git Bash. npm.cmd
+// is a control for the known-working Windows shim; the extensionless npm
+// command is the regression target from vfox#293.
+func verifyGitBashNpm(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox, version string) {
+	t.Helper()
+	script := `set -e
+eval "$(vfox activate bash)"
+eval "$(vfox env -s bash)"
+node --version
+npm.cmd --version
+npm --version`
+	code, out := execGitBashRun(ctx, t, ctr, script, box.vars...)
+	require.Equalf(t, 0, code,
+		"Git Bash must run node, npm.cmd, and npm after vfox activation\n--- output ---\n%s", out)
+
+	versions := strings.Fields(out)
+	require.Lenf(t, versions, 3,
+		"Git Bash should print node, npm.cmd, and npm versions\n--- output ---\n%s", out)
+	require.Equalf(t, "v"+version, versions[0], "Git Bash node --version\n--- output ---\n%s", out)
+	require.Regexp(t, `^\d+\.\d+\.\d+$`, versions[1], "Git Bash npm.cmd --version")
+	require.Regexp(t, `^\d+\.\d+\.\d+$`, versions[2], "Git Bash npm --version")
+	require.Equal(t, versions[1], versions[2], "npm and npm.cmd should report the same bundled version")
+	t.Logf("PASS Git Bash node v%s, npm.cmd and npm %s (issue #293)", version, versions[2])
+}
+
 // verifyShorthand proves PreUse resolves the major and major.minor shorthands
 // against the installed versions, without another download.
 func verifyShorthand(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox, activation, version string) {

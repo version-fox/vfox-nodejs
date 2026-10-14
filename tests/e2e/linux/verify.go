@@ -107,7 +107,7 @@ func verifySearch(ctx context.Context, t *testing.T, ctr tc.Container, version, 
 //
 // Every probe runs in its own freshly activated shell session; node may only
 // come from the env the legacy file selects, so a fallback to the global
-// (latest) release fails the assertion.
+// release fails the assertion.
 func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, pinned, lts string) {
 	t.Helper()
 	// Each probe activates inside its own exec rather than relying on the
@@ -129,7 +129,7 @@ func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, pinn
 	assertProbe := func(got, want, what string) {
 		t.Helper()
 		require.Truef(t, strings.HasSuffix(got, "v"+want),
-			"%s must resolve to %s over the global latest\n--- node path and version ---\n%s", what, want, got)
+			"%s must resolve to %s over the global release\n--- node path and version ---\n%s", what, want, got)
 	}
 
 	write("/tmp/e2e-legacy-nvmrc", ".nvmrc", pinned)

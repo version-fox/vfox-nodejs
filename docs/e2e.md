@@ -20,10 +20,15 @@ driven from Go through `docker exec`-style calls):
 3. A pinned Node.js release installs with checksum verification and runs
    (`node --version`, `npm --version`, `process.platform`, `process.arch`),
    so the `linux-x64` / `linux-arm64` / `win-x64` / `win-arm64` package
-   selection is checked for real. The LTS release (`LTS_NODE_VERSION`)
-   installs as well, backing the codename probe below.
+   selection is checked for real. On Windows, Git Bash also runs `node`,
+   `npm.cmd`, and extensionless `npm` after activation to cover
+   [issue #293](https://github.com/version-fox/vfox/issues/293). The LTS
+   release (`LTS_NODE_VERSION`) installs as well, backing the codename probe
+   below.
 4. `nodejs@latest` resolves through the plugin's `Available` list (the
-   first, newest entry) and installs.
+   first, newest entry) and installs when that platform's binary is published.
+   Alpine ARM64 skips this probe only while the matching upstream unofficial
+   musl build is absent; it still verifies the pinned and LTS releases.
 5. The major and major.minor shorthands resolve through `PreUse` against the
    installed versions.
 6. `.nvmrc` and `.node-version` drive `vfox env` selection: the exact
