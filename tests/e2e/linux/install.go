@@ -17,6 +17,7 @@ package linux
 import (
 	"context"
 	"fmt"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
@@ -38,14 +39,68 @@ func installNodeVersion(ctx context.Context, t *testing.T, ctr tc.Container, ver
 	execOK(ctx, t, ctr, activated(fmt.Sprintf("vfox use --global nodejs@%s", version)))
 }
 
-// installLatestNode installs the newest published Node.js version. `vfox
-// install nodejs@latest` resolves @latest through the plugin's Available
-// (the first, newest entry) and prints the pick; the version is returned so
-// the caller can drive `vfox use` against it.
-func installLatestNode(ctx context.Context, t *testing.T, ctr tc.Container) string {
+// installLatestNode installs the newest published Node.js version. If the
+// latest official release has no unofficial ARM64 musl build yet, that one
+// platform-specific probe is skipped; the other latest probes still cover
+// @latest resolution and installation.
+func installLatestNode(ctx context.Context, t *testing.T, ctr tc.Container) (string, bool) {
 	t.Helper()
-	out := execRetry(ctx, t, ctr, "vfox install nodejs@latest", "vfox install nodejs@latest")
+	const label = "vfox install nodejs@latest"
+	code, out := execRun(ctx, t, ctr, label)
+	if code != 0 {
+		version, filename, missing := missingLatestArm64MuslBuild(out)
+		if missing {
+			available, known := unofficialArm64MuslBuildAvailable(ctx, t, ctr, version, filename)
+			if known && !available {
+				t.Logf("SKIP @latest install: unofficial musl ARM64 build %s is not published yet", filename)
+				return "", false
+			}
+		}
+		out = common.Retry(ctx, t, label, func() (int, string) {
+			return execRun(ctx, t, ctr, label)
+		})
+	}
 	latest := common.LatestUsed(out)
 	require.NotEmptyf(t, latest, "@latest install did not report the picked version\n--- output ---\n%s", out)
-	return latest
+	return latest, true
+}
+
+// missingLatestArm64MuslBuild recognizes only the specific error emitted
+// after the unofficial-builds checksum list also lacks the requested asset.
+func missingLatestArm64MuslBuild(output string) (version, filename string, missing bool) {
+	output = common.StripANSI(output)
+	version = common.LatestUsed(output)
+	if version == "" {
+		return "", "", false
+	}
+	filename = fmt.Sprintf("node-v%s-linux-arm64-musl.tar.gz", version)
+	message := fmt.Sprintf("Node.js package %s is not listed in ", filename)
+	missing = strings.Contains(output, message) && strings.Contains(output, "SHASUMS256.txt")
+	return version, filename, missing
+}
+
+// unofficialArm64MuslBuildAvailable checks the exact upstream checksum list
+// before treating a missing artifact as an expected release-publication lag.
+// The second return value is false when the HTTP result is inconclusive, so
+// network errors still fail through the normal retry path instead of skipping.
+func unofficialArm64MuslBuildAvailable(ctx context.Context, t *testing.T, ctr tc.Container, version, filename string) (available, known bool) {
+	t.Helper()
+	url := fmt.Sprintf("https://unofficial-builds.nodejs.org/download/release/v%s/SHASUMS256.txt", version)
+	script := fmt.Sprintf("curl -fsSL --max-time 20 -w '\\n%%{http_code}' %q 2>/dev/null", url)
+	code, out := execRun(ctx, t, ctr, script)
+	trimmed := strings.TrimSpace(out)
+	status := trimmed[strings.LastIndex(trimmed, "\n")+1:]
+	switch status {
+	case "404":
+		return false, code == 22
+	case "200":
+		if code != 0 {
+			return false, false
+		}
+		return strings.Contains(trimmed, filename), true
+	default:
+		// curl exits non-zero for HTTP errors and reports 000 for transport
+		// failures. Do not skip a CI failure unless absence is confirmed.
+		return false, false
+	}
 }

@@ -16,6 +16,7 @@ package windows
 
 import (
 	"context"
+	"fmt"
 	"io"
 	"testing"
 
@@ -49,6 +50,15 @@ func execRun(ctx context.Context, t *testing.T, ctr tc.Container, script string,
 		t.Fatalf("exec read output: %v\n--- script ---\n%s", err, script)
 	}
 	return code, string(out)
+}
+
+// execGitBashRun runs script through the Git for Windows login shell inside
+// the container, while using execRun to apply the isolated slot environment.
+func execGitBashRun(ctx context.Context, t *testing.T, ctr tc.Container, script string, extraEnv ...string) (int, string) {
+	t.Helper()
+	command := fmt.Sprintf("& %s --login -c %s",
+		pwshQuote(`C:\Program Files\Git\bin\bash.exe`), pwshQuote(script))
+	return execRun(ctx, t, ctr, command, extraEnv...)
 }
 
 // execOK runs script and fatals unless it exits 0, returning the output.

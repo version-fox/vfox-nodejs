@@ -192,6 +192,7 @@ func runOne(t *testing.T, ctx context.Context, image, platform string, c common.
 	activation := fetchActivation(ctx, t, ctr, box)
 	installNodeVersion(ctx, t, ctr, box, activation, version)
 	npm := verifyToolchain(ctx, t, ctr, box, activation, version)
+	verifyGitBashNpm(ctx, t, ctr, box, version)
 	verifyShorthand(ctx, t, ctr, box, activation, version)
 	verifySearch(ctx, t, ctr, box, version, npm)
 
