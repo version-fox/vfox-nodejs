@@ -92,3 +92,49 @@ jobs:
           curl.exe -fsSL "https://github.com/docker/compose/releases/download/v5.5.1/docker-compose-windows-aarch64.exe" -o "$env:USERPROFILE\.docker\cli-plugins\docker-compose.exe"
           docker compose version
       - run: docker compose -f ${{ matrix.compose }} run --rm --build e2e
+
+  e2e-wsl:
+    if: github.repository == 'version-fox/vfox-nodejs'
+    name: WSL (windows-2025)
+    runs-on: windows-2025
+    timeout-minutes: 60
+    env:
+      WSL_DISTRO: Ubuntu-24.04
+      NODE_VERSION: 20.16.0
+      MIRROR: default
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          persist-credentials: false
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.27.1
+          cache: false
+      # The image ships WSL with --no-distribution: install Ubuntu without
+      # launching (launch would prompt for user creation), then boot it once
+      # as root. --web-download skips the Store, which CI cannot reach.
+      # Regression target: https://github.com/version-fox/vfox-nodejs/issues/32
+      - name: Install Ubuntu on WSL
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          wsl --install -d $env:WSL_DISTRO --no-launch --web-download
+          # The hosted Windows PATH contains entries with spaces and
+          # parentheses (e.g. Program Files (x86)); WSL appends it by default,
+          # and `vfox activate` emits an invalid bash export for that PATH.
+          # This distro is disposable CI state, so disable Windows PATH
+          # interop for a native Linux shell environment.
+          wsl -d $env:WSL_DISTRO -u root -- bash -c "printf '[interop]`nappendWindowsPath=false`n' > /etc/wsl.conf"
+          wsl --shutdown
+          $deadline = (Get-Date).AddMinutes(10)
+          do {
+            wsl -d $env:WSL_DISTRO -u root -e true
+            if ($LASTEXITCODE -eq 0) { break }
+            Start-Sleep -Seconds 15
+          } while ((Get-Date) -lt $deadline)
+          if ($LASTEXITCODE -ne 0) { throw 'WSL distro did not boot' }
+          wsl -l -v
+          wsl --version
+      - name: Run WSL E2E
+        run: go test -v -timeout 55m -run TestE2E ./wsl
+        working-directory: tests/e2e

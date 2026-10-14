@@ -186,6 +186,44 @@ curl.exe -fsSL `
 docker compose -f tests/e2e/windows/compose.arm64.yaml run --rm --build e2e
 ```
 
+## WSL
+
+The WSL suite (`tests/e2e/wsl/`) drives the Ubuntu distribution on the
+Windows host directly through `wsl.exe` — no containers. It exists to
+reproduce [issue #32](https://github.com/version-fox/vfox-nodejs/issues/32):
+inside WSL, `vfox install` reported success but `node` was missing from
+`PATH`. On top of the shared flow (install with checksum, toolchain,
+shorthands, search, legacy files) it asserts that `command -v node` resolves
+under `VFOX_HOME` and that `vfox env -s bash` exports the SDK bin directory.
+
+The pinned release defaults to `20.16.0` (the issue's version); `NODE_VERSION`
+overrides it. The LTS release (`LTS_NODE_VERSION`, default per
+`tests/e2e/common`) backs the `lts/<codename>` probe like the other suites.
+Combos share one distro and run sequentially, each isolated in
+its own `HOME`/`VFOX_HOME` slot. `MIRROR` defaults apply as usual; CI pins
+`MIRROR=default` to keep the run to the `latest`/`main` vfox channels.
+
+### CI
+
+The `WSL (windows-2025)` job installs `Ubuntu-24.04` with
+`wsl --install --no-launch --web-download` (the image ships WSL without a
+distro; `--web-download` skips the unreachable Store), boots it once as root
+to skip user creation, then runs `go test -run TestE2E ./wsl` from
+`tests/e2e`. The log records `wsl --version`, `wsl -l -v` (WSL 1 vs 2) and
+`uname -a` for interpretation.
+
+### Local run
+
+On Windows 11 with WSL and Go installed, in PowerShell:
+
+```powershell
+wsl --install -d Ubuntu-24.04
+$env:WSL_DISTRO = 'Ubuntu-24.04'
+$env:VFOX_VERSION = 'latest'; $env:MIRROR = 'default'; $env:NODE_VERSION = '20.16.0'
+cd ./vfox-nodejs/tests/e2e/
+go test -v -timeout 55m -run TestE2E ./wsl
+```
+
 ## Local checks
 
 Execute in Bash on Ubuntu before pushing.

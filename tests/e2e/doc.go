@@ -25,6 +25,9 @@
 //   - windows: the Windows container suite (pwsh-driven), run via
 //     tests/e2e/windows/compose.amd64.yaml (amd64) or
 //     tests/e2e/windows/compose.arm64.yaml (arm64).
+//   - wsl: the WSL suite (bash-driven through wsl.exe, no containers),
+//     run on a windows-2025 host with an installed distro; it reproduces
+//     https://github.com/version-fox/vfox-nodejs/issues/32.
 //
 // Pure unit tests without containers (matrix expansion and friends) run from
 // the module root:

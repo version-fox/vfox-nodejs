@@ -116,19 +116,18 @@ func verifySearch(ctx context.Context, t *testing.T, ctr tc.Container, box slotB
 // (latest) release fails the assertion.
 func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox, pinned, lts string) {
 	t.Helper()
-	// Each probe captures its own `vfox activate` rather than reusing the
-	// combo's shared activation: activation pins __VFOX_PID, which scopes the
-	// `vfox env` state cache (~/.vfox/tmp/<date>-<pid>/env-state.json).
-	// Reusing one activation for every exec would let the cached output of
-	// the previous (global) selection answer the legacy probe unchanged; a
-	// fresh activation is a new session without cache, exactly like a newly
-	// opened terminal. The probe prints the resolved node path plus its
-	// version, so failures show where node came from.
+	// Each probe activates a new PowerShell process because activation pins
+	// __VFOX_PID, which scopes the `vfox env` state cache. Windows may quickly
+	// reuse a just-exited PID, though, and `.nvmrc` changes are not among the
+	// cache's tracked config files. Remove the cache file explicitly so a prior
+	// legacy probe cannot supply its selected version to the next probe. The
+	// output includes the resolved node path and version to make failures clear.
 	run := func(dir string) string {
 		t.Helper()
 		script := fmt.Sprintf(
 			"Invoke-Expression -Command (vfox activate pwsh | Out-String); "+
 				"Set-Location -LiteralPath %s; "+
+				"if ($env:__VFOX_CURTMPPATH) { Remove-Item -LiteralPath (Join-Path $env:__VFOX_CURTMPPATH 'env-state.json') -Force -ErrorAction SilentlyContinue }; "+
 				"$__vfoxExport = vfox env -s pwsh | Out-String; "+
 				"if ($__vfoxExport.Trim()) { Invoke-Expression -Command $__vfoxExport }; "+
 				"(Get-Command node -CommandType Application | Select-Object -First 1).Source; "+

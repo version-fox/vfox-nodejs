@@ -28,5 +28,5 @@ uses as a fallback on musl Linux (see [musl](musl.md)):
   `unofficial-builds.nodejs.org` directly, ignoring the mirror.
 
 A mirror that cannot even serve `SHASUMS256.txt` still fails the install
-instead of falling back (this is covered by the bogus-mirror negative probes
-in [e2e](e2e.md)); only a missing musl filename falls through to unofficial.
+instead of falling back; only a missing musl filename falls through to
+unofficial builds.

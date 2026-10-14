@@ -17,6 +17,13 @@ usually nothing extra to do. If `node --version` ever fails with
 hook detects this case and fails the install with a pointer at the README
 instead of leaving the cryptic relocation error.
 
+`libatomic1` is sometimes needed by glibc Node.js binaries on Ubuntu, but it
+is **not** a requirement for the supported musl Node.js builds. In particular,
+Alpine does not need an extra `apk add libatomic` for this plugin. If another
+program on the system explicitly reports a missing `libatomic.so.1`, Alpine's
+package is named `libatomic` and can be installed with `apk add libatomic`;
+that is separate from Node.js's musl runtime requirement above.
+
 ## Which tarball is installed
 
 | Host | Tarball | Source |
