@@ -78,20 +78,3 @@ How example 1 resolves, step by step (`latest_installed`):
 ```
 .nvmrc "lts/jod" --resolve_version--> "22" --prefix-match installed--> "22.23.3"
 ```
-
-## E2E coverage
-
-The legacy-file suite needs an installed release whose major is inside the
-table, independently of the pinned release under test. `LTS_NODE_VERSION`
-(default `24.21.0`) provides it: the exact-version probes target
-`NODE_VERSION` while the `lts/<codename>` probe targets the LTS release.
-
-```sh
-# Narrow the matrix and watch the codename probe pick the LTS release:
-VFOX_VERSION=latest MIRROR=default E2E_MAX_JOBS=1 LTS_NODE_VERSION=24.21.0 \
-  docker compose -f tests/e2e/linux/compose.yaml run --rm e2e
-# PASS legacy files select 26.11.1 (.nvmrc, .node-version) and 24.21.0 (lts/krypton)
-```
-
-The E2E `LTSCodename` helper (`tests/e2e/common/common.go`) mirrors the
-plugin's table, so both sides stay in sync. See [e2e](e2e.md).
