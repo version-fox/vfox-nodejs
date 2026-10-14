@@ -1,9 +1,25 @@
+-- Copyright 2026 Han Li and contributors
+--
+-- Licensed under the Apache License, Version 2.0 (the "License");
+-- you may not use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--   http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+
 local http = require("http")
 local util = require("util")
+--- @class PreInstallContext
+--- @field version string User-input version
+
 --- Returns some pre-installed information, such as version number, download address, local files, etc.
 --- If checksum is provided, vfox will automatically check it for you.
---- @param ctx table
---- @field ctx.version string User-input version
+--- @param ctx PreInstallContext
 --- @return table Version information
 function PLUGIN:PreInstall(ctx)
     local version = ctx.version
@@ -19,7 +35,7 @@ function PLUGIN:PreInstall(ctx)
         version = shorthands[version]
     end
 
-    if (version == nil) then
+    if version == nil then
         error("version not found for provided version " .. (ctx.version or "null"))
     end
 
@@ -43,7 +59,9 @@ function PLUGIN:PreInstall(ctx)
         local major, _ = util.extract_semver(version)
         if major and tonumber(major) < 16 then
             arch_type = "x64"
-            print("Note: Node.js versions below 16 do not support Apple Silicon (arm64), using x64 architecture with Rosetta 2")
+            print(
+                "Note: Node.js versions below 16 do not support Apple Silicon (arm64), using x64 architecture with Rosetta 2"
+            )
         end
     end
 
@@ -51,7 +69,7 @@ function PLUGIN:PreInstall(ctx)
     local baseUrl = util.getBaseUrl() .. util.NodeBaseUrl:format(version)
 
     local resp, err = http.get({
-        url = baseUrl .. "SHASUMS256.txt"
+        url = baseUrl .. "SHASUMS256.txt",
     })
     if err ~= nil or resp.status_code ~= 200 then
         error("get checksum failed")

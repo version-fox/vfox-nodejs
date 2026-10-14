@@ -1,9 +1,26 @@
+-- Copyright 2026 Han Li and contributors
+--
+-- Licensed under the Apache License, Version 2.0 (the "License");
+-- you may not use this file except in compliance with the License.
+-- You may obtain a copy of the License at
+--
+--   http://www.apache.org/licenses/LICENSE-2.0
+--
+-- Unless required by applicable law or agreed to in writing, software
+-- distributed under the License is distributed on an "AS IS" BASIS,
+-- WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+-- See the License for the specific language governing permissions and
+-- limitations under the License.
+
 --- Parse the legacy file found by vfox to determine the version of the tool.
 --- Useful to extract version numbers from files like JavaScript's package.json or Golangs go.mod.
 function PLUGIN:ParseLegacyFile(ctx)
     local filepath = ctx.filepath
     local file = io.open(filepath, "r")
-    local content = file:read("*a")
+    if file == nil then
+        return {}
+    end
+    local content = file:read("*a") or ""
     file:close()
     content = content:gsub("%s+", "")
     if content == "" then
@@ -13,7 +30,7 @@ function PLUGIN:ParseLegacyFile(ctx)
         local list = {}
 
         if strategy == "latest_installed" then
-            list = ctx:getInstalledVersions()
+            list = ctx.getInstalledVersions()
         elseif strategy == "latest_available" then
             for _, av in pairs(self:Available({})) do
                 table.insert(list, av.version)
@@ -46,7 +63,7 @@ function PLUGIN:ParseLegacyFile(ctx)
     query = resolve_legacy_version(ctx.strategy, query)
 
     return {
-        version = query
+        version = query,
     }
 end
 
@@ -68,7 +85,7 @@ function resolve_version(query)
         gallium = 16,
         hydrogen = 18,
         iron = 20,
-        jod = 22
+        jod = 22,
     }
 
     for codename, version_number in pairs(nodejs_codenames) do
@@ -91,4 +108,3 @@ function resolve_version(query)
 
     return query
 end
-
