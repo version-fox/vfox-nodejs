@@ -93,8 +93,8 @@ func TestE2E(t *testing.T) {
 }
 
 // linuxBase selects the target userland for the Linux suite: "ubuntu"
-// (default) or "alpine" (musl, see docs/musl.md). Set via $E2E_LINUX_BASE,
-// wired by tests/e2e/linux/compose.alpine.yaml.
+// (default) or "alpine" (musl, see docs/musl.md). Set via $E2E_LINUX_BASE;
+// the CI musl job and the dev container both export it (docs/e2e.md).
 func linuxBase() string {
 	if v := os.Getenv("E2E_LINUX_BASE"); v != "" {
 		return v

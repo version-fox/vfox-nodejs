@@ -16,11 +16,11 @@ FROM ubuntu:26.04
 
 ENV DEBIAN_FRONTEND=noninteractive
 
-# NOTE: no heredoc here. This Dockerfile is built through the daemon's
-# classic `POST /build` endpoint via testcontainers-go
-# (tests/e2e/linux/e2e_test.go), which does not understand `RUN <<EOF`
-# heredocs and silently drops their body. The chained-`;` form below works
-# on both the classic builder and BuildKit (`docker build`).
+# NOTE: no heredoc here. This image is built through testcontainers-go, whose
+# classic-builder path accepts `RUN <<EOF` but silently drops the body, and
+# whose BuildKit opt-in (the API's `version=2`) fails because it closes the
+# build context before the daemon has consumed it. The chained-`;` form below
+# is safe on both builders.
 #
 # libatomic1: current Node.js linux-x64 releases link libatomic.so.1, which
 # the stock Ubuntu image does not carry.

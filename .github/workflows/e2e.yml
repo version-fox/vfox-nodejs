@@ -26,6 +26,13 @@ concurrency:
   group: e2e-${{ github.ref }}
   cancel-in-progress: true
 
+# The Linux and WSL jobs run the suite natively, the way the dev container
+# runs it locally: Go at the dev container's version (.devcontainer/Dockerfile)
+# plus the runner's stock Docker, with the same TESTCONTAINERS_RYUK_DISABLED
+# knob. The Windows jobs keep the compose runner image
+# (tests/e2e/windows/Dockerfile-runner), which carries its own Go toolchain,
+# so a Windows host needs only Docker. See docs/e2e.md.
+
 jobs:
   e2e-linux:
     if: github.repository == 'version-fox/vfox-nodejs'
@@ -36,11 +43,22 @@ jobs:
         runs-on: [ubuntu-latest, ubuntu-26.04-arm]
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 60
+    env:
+      # Ryuk publishes a port on the host daemon and waits for the suite to
+      # dial back to it; the dev container disables it (it runs
+      # Docker-out-of-Docker), and CI matches so both paths stay identical.
+      # Containers are terminated explicitly via t.Cleanup instead.
+      TESTCONTAINERS_RYUK_DISABLED: "true"
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - run: docker compose -f tests/e2e/linux/compose.yaml run --rm e2e
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.27.1
+          cache: false
+      - run: go test -v -timeout 55m -run TestE2E ./linux
+        working-directory: tests/e2e
 
   e2e-linux-musl:
     if: github.repository == 'version-fox/vfox-nodejs'
@@ -51,11 +69,21 @@ jobs:
         runs-on: [ubuntu-latest, ubuntu-26.04-arm]
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 60
+    env:
+      TESTCONTAINERS_RYUK_DISABLED: "true"
+      # Selects the Alpine userland in the Linux suite; the dev container
+      # equivalent is the same variable set on the interactive shell.
+      E2E_LINUX_BASE: alpine
     steps:
       - uses: actions/checkout@v7
         with:
           persist-credentials: false
-      - run: docker compose -f tests/e2e/linux/compose.alpine.yaml run --rm e2e
+      - uses: actions/setup-go@v6
+        with:
+          go-version: 1.27.1
+          cache: false
+      - run: go test -v -timeout 55m -run TestE2E ./linux
+        working-directory: tests/e2e
 
   e2e-windows:
     if: github.repository == 'version-fox/vfox-nodejs'

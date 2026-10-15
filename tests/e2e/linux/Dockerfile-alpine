@@ -17,7 +17,7 @@
 # (https://github.com/version-fox/vfox-nodejs/issues/29): the glibc tarball
 # cannot execute here, so install+run passing is the assertion.
 #
-# NOTE: no heredoc here, same classic-builder constraint as Dockerfile.
+# NOTE: no heredoc here, same build-path constraint as Dockerfile.
 FROM alpine:latest
 
 # bash: the Go suite drives every phase through `bash -c` (exec.go);

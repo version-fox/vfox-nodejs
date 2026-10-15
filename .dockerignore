@@ -18,6 +18,7 @@
 .git
 .gitignore
 .gitattributes
+.devcontainer
 .idea
 .github
 *.md
