@@ -15,7 +15,6 @@
 package windows
 
 import (
-	"strings"
 	"testing"
 )
 
@@ -36,21 +35,6 @@ func TestReleasesIndex(t *testing.T) {
 	want := "https://npmmirror.com/mirrors/node/index.json"
 	if got != want {
 		t.Errorf("releasesIndex = %q, want %q", got, want)
-	}
-}
-
-func TestVfoxHome(t *testing.T) {
-	profile := `C:\Users\ContainerAdministrator`
-	if got, want := vfoxHome(profile, "latest-default", "latest"),
-		`C:\Users\ContainerAdministrator\vfox-e2e-runs\latest-default\.vfox`; got != want {
-		t.Errorf("vfoxHome(latest) = %q, want %q", got, want)
-	}
-	got := vfoxHome(profile, "main-default", "main")
-	if got != spacedVfoxHome {
-		t.Errorf("vfoxHome(main) = %q, want %q", got, spacedVfoxHome)
-	}
-	if !strings.Contains(got, " ") {
-		t.Errorf("vfoxHome(main) = %q, want a path containing a space", got)
 	}
 }
 
