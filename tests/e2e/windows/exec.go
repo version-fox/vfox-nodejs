@@ -57,7 +57,7 @@ func execRun(ctx context.Context, t *testing.T, ctr tc.Container, script string,
 func execGitBashRun(ctx context.Context, t *testing.T, ctr tc.Container, script string, extraEnv ...string) (int, string) {
 	t.Helper()
 	command := fmt.Sprintf("& %s --login -c %s",
-		pwshQuote(`C:\Program Files\Git\bin\bash.exe`), pwshQuote(script))
+		pwshQuote(toolsMount+`\git\bin\bash.exe`), pwshQuote(script))
 	return execRun(ctx, t, ctr, command, extraEnv...)
 }
 

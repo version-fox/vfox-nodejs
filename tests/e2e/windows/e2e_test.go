@@ -34,6 +34,8 @@ import (
 	specs "github.com/opencontainers/image-spec/specs-go/v1"
 	tc "github.com/testcontainers/testcontainers-go"
 
+	"github.com/moby/moby/api/types/container"
+	"github.com/moby/moby/api/types/mount"
 	client "github.com/moby/moby/client"
 
 	"github.com/version-fox/vfox-nodejs/tests/e2e/common"
@@ -42,11 +44,18 @@ import (
 // TestE2E builds the image once, then runs one container per matrix combo.
 // Bounded parallelism via t.Parallel + semaphore (like E2E_MAX_JOBS).
 //
-// Full matrix runs in CI; locally scope it down, e.g.:
-// VFOX_VERSION=latest MIRROR=default E2E_MAX_JOBS=1 go test -v ./windows/
+// Run it through tests/e2e/windows/run.ps1, which fetches the tools,
+// pulls the base image and sets E2E_TOOLS_DIR / E2E_BASE_IMAGE. Full matrix
+// runs in CI; locally scope it down, e.g.:
+// $env:VFOX_VERSION='latest'; $env:MIRROR='default'; pwsh -File tests/e2e/windows/run.ps1
 func TestE2E(t *testing.T) {
 	if testing.Short() {
 		t.Skip("skip container E2E in short mode")
+	}
+	toolsDir := os.Getenv("E2E_TOOLS_DIR")
+	baseImage := os.Getenv("E2E_BASE_IMAGE")
+	if toolsDir == "" || baseImage == "" {
+		t.Fatal("E2E_TOOLS_DIR and E2E_BASE_IMAGE are unset: run the suite via tests/e2e/windows/run.ps1")
 	}
 	// Ryuk has no Windows image, so the reaper can never start here.
 	// Every container is terminated explicitly via t.Cleanup instead.
@@ -58,7 +67,6 @@ func TestE2E(t *testing.T) {
 	}
 	platform := "windows/" + arch
 	image := "vfox-nodejs-e2e:windows-" + arch
-	baseImage := "mcr.microsoft.com/windows/servercore:ltsc2025-KB5122871-" + arch
 
 	here, err := filepath.Abs(".")
 	if err != nil {
@@ -84,14 +92,14 @@ func TestE2E(t *testing.T) {
 			t.Parallel()
 			sem <- struct{}{}
 			defer func() { <-sem }()
-			runOne(t, ctx, image, platform, c)
+			runOne(t, ctx, image, platform, toolsDir, c)
 		})
 	}
 }
 
-// buildImage replicates `docker build --pull --platform $platform
+// buildImage replicates `docker build --platform $platform
 // --build-arg BASE_IMAGE=$baseImage -f tests/e2e/windows/Dockerfile
-// -t $image $repoRoot`.
+// -t $image $repoRoot`. run.ps1 has already pulled the base image.
 func buildImage(t *testing.T, ctx context.Context, repoRoot, image, platform, baseImage string) {
 	t.Helper()
 
@@ -117,7 +125,6 @@ func buildImage(t *testing.T, ctx context.Context, repoRoot, image, platform, ba
 			BuildLogWriter: os.Stdout,
 			BuildOptionsModifier: func(opts *client.ImageBuildOptions) {
 				opts.Platforms = []specs.Platform{pf}
-				opts.PullParent = true
 			},
 		},
 	})
@@ -133,8 +140,9 @@ func buildImage(t *testing.T, ctx context.Context, repoRoot, image, platform, ba
 // E2E flow (setup -> install -> verify) through pwsh exec calls, asserting
 // in Go. A combo passes when every phase exits 0 and the outputs carry the
 // expected markers. Every combo runs against a VFOX_HOME containing a space
-// (see spacedVfoxHome).
-func runOne(t *testing.T, ctx context.Context, image, platform string, c common.Combo) {
+// (see spacedVfoxHome). The host tools dir (see run.ps1) is mounted
+// read-only at toolsMount.
+func runOne(t *testing.T, ctx context.Context, image, platform, toolsDir string, c common.Combo) {
 	t.Helper()
 	prefix := c.Prefix(platform)
 
@@ -167,6 +175,14 @@ func runOne(t *testing.T, ctx context.Context, image, platform string, c common.
 		ImagePlatform: platform,
 		Name:          common.ContainerName(c.Slug()),
 		Env:           env,
+		HostConfigModifier: func(hc *container.HostConfig) {
+			hc.Mounts = append(hc.Mounts, mount.Mount{
+				Type:     mount.TypeBind,
+				Source:   toolsDir,
+				Target:   toolsMount,
+				ReadOnly: true,
+			})
+		},
 	})
 	if err != nil {
 		t.Fatalf("[%s] start container: %v", prefix, err)

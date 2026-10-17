@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# NOTE: tests/ is deliberately kept in the context: the Windows runner image
-# (tests/e2e/windows/Dockerfile-runner) is built from the repo root, and both
-# Windows Dockerfiles live under tests/.
+# NOTE: tests/ is deliberately kept in the context: the Windows image
+# (tests/e2e/windows/Dockerfile) is built from the repo root, and its
+# Dockerfile lives under tests/.
 .git
 .gitignore
 .gitattributes
