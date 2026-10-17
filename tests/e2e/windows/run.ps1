@@ -176,7 +176,8 @@ $runPattern = if ($env:E2E_RUN) { $env:E2E_RUN } else { 'TestE2E' }
 # go test runs a test binary from its package directory; do the same.
 Push-Location $PSScriptRoot
 try {
-    Invoke-Native { & $testBin -test.v -test.timeout 55m -test.run $runPattern } 'the Windows E2E suite'
+    # Quoted: PowerShell splits a bare -test.v into -test and .v.
+    Invoke-Native { & $testBin '-test.v' '-test.timeout=55m' "-test.run=$runPattern" } 'the Windows E2E suite'
 }
 finally {
     Pop-Location
