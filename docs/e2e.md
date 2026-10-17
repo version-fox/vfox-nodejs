@@ -166,12 +166,12 @@ The `windows-11-arm` runner has no Windows Hypervisor Platform feature, so
 Hyper-V isolation is unavailable; process isolation needs only the
 Containers feature.
 
-The `main` combos run with `VFOX_HOME` pointing inside a path containing a
+Every combination runs with `VFOX_HOME` pointing inside a path containing a
 space (`C:\Users\John Doe\.vfox`), mirroring
-[issue #33](https://github.com/version-fox/vfox-flutter/issues/33). Only vfox
-`main` carries the fix for such paths
-([vfox#712](https://github.com/version-fox/vfox/pull/712)), so `latest`
-combinations still run with an unspaced home.
+[issue #33](https://github.com/version-fox/vfox-flutter/issues/33). vfox
+handles such paths since 1.0.13
+([vfox#712](https://github.com/version-fox/vfox/pull/712)), so the `latest`
+release and `main` both run against it.
 
 ### x64
 
