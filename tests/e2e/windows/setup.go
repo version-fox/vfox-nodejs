@@ -29,8 +29,9 @@ import (
 // Node.js defaults live in the common package; only the Windows-specific
 // toolchain pin stays here.
 const (
-	// goWindowsVersion pins the Go toolchain MSI used to build vfox@main
-	// inside the container.
+	// goWindowsVersion pins the Go toolchain that builds vfox@main inside
+	// the container. The image installs it (GO_VERSION in
+	// tests/e2e/windows/Dockerfile); installVfoxMain asserts both agree.
 	goWindowsVersion = "1.27.1"
 
 	// spacedVfoxHome is the default vfox home of a Windows account whose
@@ -158,29 +159,19 @@ func installVfoxRelease(ctx context.Context, t *testing.T, ctr tc.Container, box
 	t.Logf("PASS installed vfox %s (%s)", tag, vfoxArch)
 }
 
-// installVfoxMain installs the pinned Go MSI, clones vfox, and builds
-// vfox.exe. msiexec exit codes 0/3010/1937 all mean success (ok /
-// reboot-required / in-use-files).
+// installVfoxMain clones vfox and builds vfox.exe with the Go toolchain
+// baked into the image (bootstrap-tools.ps1), after checking it is the
+// pinned version.
 func installVfoxMain(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox, procArch string) {
 	t.Helper()
 	goArch := "amd64"
 	if procArch == "ARM64" {
 		goArch = "arm64"
 	}
-	goMsi := box.tmp + `\go.msi`
-	execOK(ctx, t, ctr, fmt.Sprintf(
-		"curl.exe %s -fsSL -o %s %s",
-		curlRetry, pwshQuote(goMsi),
-		pwshQuote(fmt.Sprintf("https://go.dev/dl/go%s.windows-%s.msi", goWindowsVersion, goArch))),
-		box.vars...)
-	execOK(ctx, t, ctr, fmt.Sprintf(`$goInstall = $null
-for ($attempt = 1; $attempt -le 5; $attempt++) {
-  $goInstall = Start-Process msiexec.exe -Wait -PassThru -ArgumentList '/i', %s, '/quiet', '/norestart'
-  if ($goInstall.ExitCode -in 0, 3010, 1937) { break }
-  Start-Sleep -Seconds 15
-}
-if ($goInstall.ExitCode -notin 0, 3010, 1937) { throw ('FAIL the Go MSI install exited with code ' + $goInstall.ExitCode) }
-Remove-Item %s`, pwshQuote(goMsi), pwshQuote(goMsi)), box.vars...)
+	goVersion := execOK(ctx, t, ctr, `& 'C:\Program Files\Go\bin\go.exe' version`, box.vars...)
+	want := fmt.Sprintf("go%s windows/%s", goWindowsVersion, goArch)
+	require.Containsf(t, goVersion, want,
+		"image Go differs from goWindowsVersion; keep GO_VERSION in tests/e2e/windows/Dockerfile in sync")
 
 	src := box.workDir + `\vfox-src`
 	execOK(ctx, t, ctr,

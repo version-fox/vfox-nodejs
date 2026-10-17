@@ -90,8 +90,10 @@ func TestE2E(t *testing.T) {
 }
 
 // buildImage replicates `docker build --pull --platform $platform
-// --build-arg BASE_IMAGE=$baseImage -f tests/e2e/windows/Dockerfile
-// -t $image $repoRoot`.
+// --build-arg BASE_IMAGE=$baseImage --target e2e
+// -f tests/e2e/windows/Dockerfile -t $image $repoRoot`. Under the compose
+// runner the shared tools stage is already built, so only the plugin COPY
+// layers run here.
 func buildImage(t *testing.T, ctx context.Context, repoRoot, image, platform, baseImage string) {
 	t.Helper()
 
@@ -118,6 +120,7 @@ func buildImage(t *testing.T, ctx context.Context, repoRoot, image, platform, ba
 			BuildOptionsModifier: func(opts *client.ImageBuildOptions) {
 				opts.Platforms = []specs.Platform{pf}
 				opts.PullParent = true
+				opts.Target = "e2e"
 			},
 		},
 	})

@@ -29,9 +29,9 @@ concurrency:
 # The Linux and WSL jobs run the suite natively, the way the dev container
 # runs it locally: Go at the dev container's version (.devcontainer/Dockerfile)
 # plus the runner's stock Docker, with the same TESTCONTAINERS_RYUK_DISABLED
-# knob. The Windows jobs keep the compose runner image
-# (tests/e2e/windows/Dockerfile-runner), which carries its own Go toolchain,
-# so a Windows host needs only Docker. See docs/e2e.md.
+# knob. The Windows jobs keep the compose runner image (the `runner` stage of
+# tests/e2e/windows/Dockerfile), which carries its own Go toolchain, so a
+# Windows host needs only Docker. See docs/e2e.md.
 
 jobs:
   e2e-linux:
@@ -100,6 +100,11 @@ jobs:
             compose: tests/e2e/windows/compose.arm64.yaml
     runs-on: ${{ matrix.runs-on }}
     timeout-minutes: 60
+    env:
+      # Run every combo at once (amd64 has three, arm64 two) instead of the
+      # local default of 2, so the slowest combo alone bounds the test phase
+      # rather than a queued one running after it (see docs/e2e.md).
+      E2E_MAX_JOBS: "3"
     steps:
       - uses: actions/checkout@v7
         with:

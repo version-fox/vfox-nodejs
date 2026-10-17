@@ -16,9 +16,9 @@
 # Dockerfiles, ignore files and similar text formats are covered.
 # Some headers stay hand-written because `header fix` cannot place them:
 # go.mod, .gitattributes and .dockerignore have no comment style upstream,
-# the Windows Dockerfiles must keep `# escape=` on line 1 (their headers sit
+# the Windows Dockerfile must keep `# escape=` on line 1 (its header sits
 # right below it), and the fixer only recognises the exact name `Dockerfile`,
-# not Dockerfile-runner. The checker still verifies them all.
+# not Dockerfile-alpine. The checker still verifies them all.
 # PowerShell is check-only here (no `<# ... #>` fix support upstream):
 # tests/e2e/windows/*.ps1 is fixed and checked with addlicense instead (see
 # the addlicense step in .github/workflows/license.yml and docs/e2e.md).

@@ -156,9 +156,14 @@ suite needs an ARM64 host (a Copilot+ PC or the `windows-11-arm` CI runner).
 
 There is no dev container for this suite — the Dev Containers spec rejects
 Windows container images (see [Dev container](#dev-container)) — so it keeps
-its Docker Compose runner. The runner image (`Dockerfile-runner`: stock
-servercore plus the pinned Go MSI) drives the host daemon through the mounted
-named pipe; the host requirement is Docker in Windows-container mode plus the
+its Docker Compose runner. `tests/e2e/windows/Dockerfile` holds both Windows
+images: a shared `tools` stage (stock servercore plus pwsh, Git for Windows
+and the pinned Go; pwsh and Go are unpacked from their zips rather than run
+through msiexec, which is the slow path in a container), the compose `runner` stage
+on top of it, and the final `e2e` stage the suite runs per combo. Compose
+builds `runner` first, so the suite's own build reuses the `tools` layers
+and only copies the plugin in; the same Go also builds `vfox@main` inside
+each combo. The runner drives the host daemon through the mounted named pipe; the host requirement is Docker in Windows-container mode plus the
 Compose v5 plugin (installed once per machine below). Go never touches the
 host, so it cannot conflict with a vfox-managed toolchain.
 
@@ -244,7 +249,10 @@ docker compose -f tests/e2e/windows/compose.arm64.yaml run --rm --build e2e
 
 On arm64, Go is also what builds the engine, so `install-docker-arm64.ps1`
 runs before the suite; the compose runner image then carries its own pinned
-Go for the tests, and the host Go is not used again. Scope the run down with
+Go for the tests, and the host Go is not used again.
+
+CI sets `E2E_MAX_JOBS=3` on both Windows jobs so every combo runs at once;
+the local default stays at 2. Scope the run down with
 `$env:VFOX_VERSION = 'latest'; $env:MIRROR = 'default'` in front of the
 compose command, as on the other platforms.
 
