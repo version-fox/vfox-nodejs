@@ -58,28 +58,40 @@ if (Test-Engine) {
 else {
     $mobyVersion = '29.8.1'
     $root = 'C:\vfox-docker'
+    # The built binaries land in $bin, which CI restores through
+    # actions/cache (keyed on this script): a hit skips the Go install and
+    # the build, which take about four minutes on windows-11-arm.
+    $bin = Join-Path $root 'bin'
     New-Item -ItemType Directory -Force -Path $root | Out-Null
-    Write-Output 'Building docker from source for windows/arm64 ...'
 
-    if (-not (Get-Command go -ErrorAction SilentlyContinue)) { throw 'FAIL go is not on the PATH' }
-    $env:GOPATH = Join-Path $root 'gopath'
-
-    $moby = Join-Path $root 'moby'
-    Invoke-Native { git clone --depth 1 --branch "docker-v$mobyVersion" https://github.com/moby/moby.git $moby } 'the moby clone'
-    Invoke-Native { go install github.com/tc-hib/go-winres@v0.3.1 } 'the go-winres install'
-    $env:DOCKERCLI_VERSION = $mobyVersion
-    $env:VERSION = $mobyVersion
-    Push-Location $moby
-    try {
-        & .\hack\make.ps1 -Client -Daemon
+    if ((Test-Path (Join-Path $bin 'dockerd.exe')) -and (Test-Path (Join-Path $bin 'docker.exe'))) {
+        Write-Output "PASS reusing the cached docker $mobyVersion build in $bin"
     }
-    finally {
-        Pop-Location
-    }
+    else {
+        Write-Output 'Building docker from source for windows/arm64 ...'
 
-    $bin = Join-Path $moby 'bundles'
-    if (-not (Test-Path (Join-Path $bin 'dockerd.exe'))) { throw 'FAIL the moby build produced no dockerd.exe' }
-    if (-not (Test-Path (Join-Path $bin 'docker.exe'))) { throw 'FAIL the moby build produced no docker.exe' }
+        if (-not (Get-Command go -ErrorAction SilentlyContinue)) { throw 'FAIL go is not on the PATH' }
+        $env:GOPATH = Join-Path $root 'gopath'
+
+        $moby = Join-Path $root 'moby'
+        Invoke-Native { git clone --depth 1 --branch "docker-v$mobyVersion" https://github.com/moby/moby.git $moby } 'the moby clone'
+        Invoke-Native { go install github.com/tc-hib/go-winres@v0.3.1 } 'the go-winres install'
+        $env:DOCKERCLI_VERSION = $mobyVersion
+        $env:VERSION = $mobyVersion
+        Push-Location $moby
+        try {
+            & .\hack\make.ps1 -Client -Daemon
+        }
+        finally {
+            Pop-Location
+        }
+
+        $bundles = Join-Path $moby 'bundles'
+        if (-not (Test-Path (Join-Path $bundles 'dockerd.exe'))) { throw 'FAIL the moby build produced no dockerd.exe' }
+        if (-not (Test-Path (Join-Path $bundles 'docker.exe'))) { throw 'FAIL the moby build produced no docker.exe' }
+        New-Item -ItemType Directory -Force -Path $bin | Out-Null
+        Copy-Item -Path (Join-Path $bundles 'dockerd.exe'), (Join-Path $bundles 'docker.exe') -Destination $bin
+    }
     $env:PATH = "$bin;$env:PATH"
     if ($env:GITHUB_PATH) { Add-Content -Path $env:GITHUB_PATH -Value $bin }
 

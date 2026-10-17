@@ -246,6 +246,9 @@ pwsh -NoProfile -File .\tests\e2e\windows\run.ps1
 
 On arm64, a host Go is needed only to build the engine
 (`install-docker-arm64.ps1`); `run.ps1` uses its own cached Go for the suite.
+The script reuses an earlier build left in `C:\vfox-docker\bin`; CI restores
+that directory with `actions/cache`, keyed on the script, so a cache hit
+skips both `actions/setup-go` and the build.
 
 `$env:E2E_RUN` narrows the `-test.run` pattern (default `TestE2E`), e.g.
 `TestE2E/latest-default`. Scope the run down with
