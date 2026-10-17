@@ -19,6 +19,7 @@ UTIL.FileName = "node-v%s-%s-%s%s"
 UTIL.VersionSourceUrl = "/index.json"
 UTIL.UnofficialBaseUrl = "https://unofficial-builds.nodejs.org/download/release"
 UTIL.ReadmeUrl = "https://github.com/version-fox/vfox-nodejs/blob/main/README.md"
+UTIL.PnpmDocUrl = "https://github.com/version-fox/vfox-nodejs/blob/main/docs/pnpm.md"
 
 function UTIL.getBaseUrl()
     local mirror = os.getenv("VFOX_NODEJS_MIRROR")
@@ -118,6 +119,51 @@ function UTIL.libstdcxx_hint()
         return "the libstdcpp system package"
     end
     return "the libstdc++ system package (libstdcpp on OpenWrt)"
+end
+
+--- Whether a PATH entry belongs to vfox: like vfox's own check, one of its
+--- segments is `.vfox` (or the legacy `.version-fox`).
+local function is_vfox_path(dir)
+    for segment in string.gmatch(dir, "[^/\\]+") do
+        if segment == ".vfox" or segment == ".version-fox" then
+            return true
+        end
+    end
+    return false
+end
+
+--- First `node` that `vfox env` keeps ahead of the SDK paths. vfox leaves
+--- PATH entries before its first own path in front, as user-injected (so an
+--- activated virtualenv keeps priority); a `node` there, such as the one
+--- `pnpm runtime set node -g` writes to `$PNPM_HOME/bin`, shadows the
+--- version `vfox use` selects. With no vfox path on PATH yet, vfox puts its
+--- paths first and nothing shadows them.
+--- See https://github.com/version-fox/vfox-nodejs/blob/main/docs/pnpm.md
+--- @return string|nil path of the shadowing executable
+function UTIL.shadowing_node()
+    local path = os.getenv("PATH")
+    if path == nil or path == "" then
+        return nil
+    end
+    local windows = RUNTIME ~= nil and RUNTIME.osType == "windows"
+    local separator = windows and ";" or ":"
+    local names = windows and { "\\node.exe", "\\node.cmd" } or { "/node" }
+    local ahead = {}
+    for dir in string.gmatch(path, "[^" .. separator .. "]+") do
+        if is_vfox_path(dir) then
+            for _, candidate_dir in ipairs(ahead) do
+                for _, name in ipairs(names) do
+                    local candidate = (candidate_dir:gsub("[/\\]+$", "")) .. name
+                    if UTIL.file_exists(candidate) then
+                        return candidate
+                    end
+                end
+            end
+            return nil
+        end
+        table.insert(ahead, dir)
+    end
+    return nil
 end
 
 function UTIL.compare_versions(v1o, v2o)

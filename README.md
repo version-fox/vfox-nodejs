@@ -55,6 +55,10 @@ See [docs/source-build.md](docs/source-build.md) for details.
 
 See [docs/lts.md](docs/lts.md) for details.
 
+### pnpm
+
+See [docs/pnpm.md](docs/pnpm.md) for details.
+
 ### Testing
 
 See [docs/e2e.md](docs/e2e.md) for details.

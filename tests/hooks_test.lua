@@ -287,5 +287,75 @@ test("legacy latest_available resolves against the index", function()
     os.remove(path)
     assert(result.version == "22.23.3", tostring(result.version))
 end)
+-- PreUse notes a `node` that vfox keeps ahead of its own paths, such as the
+-- one `pnpm runtime set node -g` writes to $PNPM_HOME/bin.
+dofile("hooks/pre_use.lua")
+local function with_path(path, existing, fn)
+    local saved_getenv, saved_exists, saved_print = os.getenv, util.file_exists, print
+    local printed = {}
+    os.getenv = function(key)
+        if key == "PATH" then
+            return path
+        end
+        return saved_getenv(key)
+    end
+    util.file_exists = function(p)
+        return existing[p] == true
+    end
+    print = function(line)
+        table.insert(printed, line)
+    end
+    local ok, err = pcall(fn)
+    os.getenv, util.file_exists, print = saved_getenv, saved_exists, saved_print
+    assert(ok, err)
+    return printed
+end
+local installed = { ["24.21.0"] = { version = "24.21.0" }, ["22.23.3"] = { version = "22.23.3" } }
+test("pre_use notes a node ahead of vfox", function()
+    RUNTIME = { osType = "linux", archType = "amd64" }
+    local printed = with_path("/home/u/.local/share/pnpm/bin:/home/u/.vfox/sdks/nodejs/bin:/usr/bin", {
+        ["/home/u/.local/share/pnpm/bin/node"] = true,
+        ["/home/u/.vfox/sdks/nodejs/bin/node"] = true,
+    }, function()
+        assert(PLUGIN:PreUse({ version = "24", installedSdks = installed }).version == "24.21.0")
+    end)
+    assert(#printed == 1, "expected one note")
+    assert(printed[1]:find("/home/u/.local/share/pnpm/bin/node", 1, true), printed[1])
+    assert(printed[1]:find("nodejs@24.21.0", 1, true), printed[1])
+    assert(printed[1]:find("docs/pnpm.md", 1, true), printed[1])
+end)
+test("pre_use stays quiet when vfox comes first", function()
+    RUNTIME = { osType = "linux", archType = "amd64" }
+    local printed = with_path("/home/u/.vfox/sdks/nodejs/bin:/home/u/.local/share/pnpm/bin", {
+        ["/home/u/.local/share/pnpm/bin/node"] = true,
+    }, function()
+        assert(PLUGIN:PreUse({ version = "22.23.3", installedSdks = installed }).version == "22.23.3")
+    end)
+    assert(#printed == 0, tostring(printed[1]))
+end)
+test("shadowing_node follows vfox's PATH split", function()
+    RUNTIME = { osType = "linux", archType = "amd64" }
+    local existing = { ["/opt/node/bin/node"] = true }
+    with_path("/opt/node/bin/:/home/u/.version-fox/temp/1/nodejs/bin", existing, function()
+        assert(util.shadowing_node() == "/opt/node/bin/node", tostring(util.shadowing_node()))
+    end)
+    -- Behind another SDK's vfox path the entry ranks below every vfox path.
+    with_path("/home/u/.vfox/sdks/java/bin:/opt/node/bin:/home/u/.vfox/sdks/nodejs/bin", existing, function()
+        assert(util.shadowing_node() == nil)
+    end)
+    -- No vfox path yet: vfox will put its paths first.
+    with_path("/opt/node/bin:/usr/bin", existing, function()
+        assert(util.shadowing_node() == nil)
+    end)
+end)
+test("shadowing_node on windows", function()
+    RUNTIME = { osType = "windows", archType = "amd64" }
+    local pnpm = "C:\\Users\\u\\AppData\\Local\\pnpm\\bin"
+    with_path(pnpm .. ";C:\\Users\\u\\.vfox\\sdks\\nodejs;C:\\Windows", {
+        [pnpm .. "\\node.exe"] = true,
+    }, function()
+        assert(util.shadowing_node() == pnpm .. "\\node.exe", tostring(util.shadowing_node()))
+    end)
+end)
 print(state.passed .. " passed, " .. state.failed .. " failed")
 assert(state.failed == 0)
