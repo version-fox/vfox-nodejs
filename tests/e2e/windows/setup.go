@@ -29,10 +29,9 @@ import (
 // Node.js defaults live in the common package; only the Windows-specific
 // toolchain pin stays here.
 const (
-	// goWindowsVersion pins the Go toolchain that builds vfox@main inside
-	// the container. The image installs it (GO_VERSION in
-	// tests/e2e/windows/Dockerfile); installVfoxMain asserts both agree.
-	goWindowsVersion = "1.27.1"
+	// toolsMount is where every combo container sees the host tools dir
+	// that run.ps1 prepares (pwsh, git, go, vfox-main), read-only.
+	toolsMount = `C:\tools`
 
 	// spacedVfoxHome is the default vfox home of a Windows account whose
 	// name contains a space, the layout reported in
@@ -159,39 +158,26 @@ func installVfoxRelease(ctx context.Context, t *testing.T, ctr tc.Container, box
 	t.Logf("PASS installed vfox %s (%s)", tag, vfoxArch)
 }
 
-// installVfoxMain clones vfox and builds vfox.exe with the Go toolchain
-// baked into the image (bootstrap-tools.ps1), after checking it is the
-// pinned version.
-func installVfoxMain(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox, procArch string) {
+// installVfoxMain stages the vfox.exe that run.ps1 built from main on the
+// host (once per run, with the pinned Go) from the read-only tools mount.
+func installVfoxMain(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox) {
 	t.Helper()
-	goArch := "amd64"
-	if procArch == "ARM64" {
-		goArch = "arm64"
-	}
-	goVersion := execOK(ctx, t, ctr, `& 'C:\Program Files\Go\bin\go.exe' version`, box.vars...)
-	want := fmt.Sprintf("go%s windows/%s", goWindowsVersion, goArch)
-	require.Containsf(t, goVersion, want,
-		"image Go differs from goWindowsVersion; keep GO_VERSION in tests/e2e/windows/Dockerfile in sync")
-
-	src := box.workDir + `\vfox-src`
-	execOK(ctx, t, ctr,
-		fmt.Sprintf("git clone --depth 1 https://github.com/version-fox/vfox %s", pwshQuote(src)),
-		box.vars...)
+	built := toolsMount + `\vfox-main\vfox.exe`
 	execOK(ctx, t, ctr, fmt.Sprintf(
-		`& 'C:\Program Files\Go\bin\go.exe' -C %s build -trimpath -o %s .`,
-		pwshQuote(src), pwshQuote(box.vfoxExe)), box.vars...)
-	t.Logf("PASS built vfox from main with Go %s (%s)", goWindowsVersion, goArch)
+		"if (-not (Test-Path %s)) { throw 'FAIL no vfox@main build in the tools mount (run the suite via run.ps1)' }; "+
+			"Copy-Item -Path %s -Destination %s",
+		pwshQuote(built), pwshQuote(built), pwshQuote(box.vfoxExe)), box.vars...)
+	t.Logf("PASS staged vfox built from main: %s", strings.TrimSpace(execOK(ctx, t, ctr, "vfox --version", box.vars...)))
 }
 
 // setupVfox installs vfox (release, or builds main) and registers the local
 // nodejs plugin.
 func setupVfox(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox, vfoxVersion string) {
 	t.Helper()
-	procArch := procArchOfContainer(ctx, t, ctr)
 	if vfoxVersion == "main" {
-		installVfoxMain(ctx, t, ctr, box, procArch)
+		installVfoxMain(ctx, t, ctr, box)
 	} else {
-		installVfoxRelease(ctx, t, ctr, box, procArch)
+		installVfoxRelease(ctx, t, ctr, box, procArchOfContainer(ctx, t, ctr))
 	}
 	execOK(ctx, t, ctr, fmt.Sprintf(
 		"tar -a -cf %s -C 'C:\\e2e' metadata.lua hooks lib",

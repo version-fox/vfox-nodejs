@@ -36,7 +36,7 @@ const (
 	// defaultNodeVersion reproduces the issue report.
 	defaultNodeVersion = "20.16.0"
 	// goWslVersion pins the Go toolchain tarball used to build vfox@main
-	// inside WSL (matches goWindowsVersion in tests/e2e/windows/setup.go).
+	// inside WSL (matches $GoVersion in tests/e2e/windows/run.ps1).
 	goWslVersion = "1.27.1"
 )
 

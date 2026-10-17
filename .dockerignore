@@ -12,9 +12,9 @@
 # See the License for the specific language governing permissions and
 # limitations under the License.
 
-# NOTE: tests/ is deliberately kept in the context: the Windows images
-# (both stages of tests/e2e/windows/Dockerfile) are built from the repo root
-# and copy tests/e2e/windows/bootstrap-tools.ps1.
+# NOTE: tests/ is deliberately kept in the context: the Windows image
+# (tests/e2e/windows/Dockerfile) is built from the repo root, and its
+# Dockerfile lives under tests/.
 .git
 .gitignore
 .gitattributes

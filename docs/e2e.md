@@ -5,8 +5,9 @@ workflow. The end-to-end suite runs in containers against real vfox on Linux
 and Windows; each `vfox` x `mirror` combination gets its own throwaway
 container. On Linux, CI runs the suite natively on the stock runners (Docker
 plus Go from `actions/setup-go`), the way the repository dev container
-reproduces it locally. On Windows it runs through a Docker Compose runner
-image, since dev containers cannot host Windows container images (see below).
+reproduces it locally. On Windows it runs from the host through
+`tests/e2e/windows/run.ps1`, since dev containers cannot host Windows
+container images (see below).
 
 ## Dev container
 
@@ -58,7 +59,8 @@ Every combination runs the same flow (one long-lived container per combo,
 driven from Go through `docker exec`-style calls):
 
 1. vfox is installed from the requested channel — the latest release
-   (`latest`) or built from source with the in-image Go toolchain (`main`) —
+   (`latest`) or built from source with the pinned Go (`main`; inside the
+   container on Linux, once per run on the host by `run.ps1` on Windows) —
    and the local `nodejs` plugin is registered from this checkout.
 2. `$VFOX_NODEJS_MIRROR` is honoured positively and negatively: the
    configured mirror serves the version index, while a bogus mirror makes
@@ -155,17 +157,24 @@ Windows containers cannot be emulated across architectures, so the ARM64
 suite needs an ARM64 host (a Copilot+ PC or the `windows-11-arm` CI runner).
 
 There is no dev container for this suite — the Dev Containers spec rejects
-Windows container images (see [Dev container](#dev-container)) — so it keeps
-its Docker Compose runner. `tests/e2e/windows/Dockerfile` holds both Windows
-images: a shared `tools` stage (stock servercore plus pwsh, Git for Windows
-and the pinned Go; pwsh and Go are unpacked from their zips rather than run
-through msiexec, which is the slow path in a container), the compose `runner` stage
-on top of it, and the final `e2e` stage the suite runs per combo. Compose
-builds `runner` first, so the suite's own build reuses the `tools` layers
-and only copies the plugin in; the same Go also builds `vfox@main` inside
-each combo. The runner drives the host daemon through the mounted named pipe; the host requirement is Docker in Windows-container mode plus the
-Compose v5 plugin (installed once per machine below). Go never touches the
-host, so it cannot conflict with a vfox-managed toolchain.
+Windows container images (see [Dev container](#dev-container)) — so it runs
+from the Windows host through `tests/e2e/windows/run.ps1`. The host
+requirement is Docker in Windows-container mode; the script needs nothing
+beyond the `curl.exe` and `tar.exe` that ship with Windows. It fetches the
+pinned PowerShell, PortableGit (Git for Windows, including Git Bash) and Go
+into a per-arch cache (`$env:E2E_CACHE_DIR`, default
+`%LOCALAPPDATA%\vfox-nodejs-e2e\<arch>`, reused across runs), builds
+`vfox@main` once with that Go, compiles the suite, and runs it. None of it is
+installed or put on the user `PATH`, so it cannot conflict with a
+vfox-managed toolchain.
+
+The cached tools are bind-mounted read-only at `C:\tools` into every combo
+container, so `tests/e2e/windows/Dockerfile` only adds `PATH` entries and the
+plugin files to stock servercore. Baking the tools into an image layer
+instead costs minutes of layer commit on the hosted runners (they are tens of
+thousands of files). The servercore pull — five to seven minutes on a fresh
+CI runner — runs in the background while the tools are fetched and the Go
+code is compiled.
 
 The `windows-11-arm` runner has no Windows Hypervisor Platform feature, so
 Hyper-V isolation is unavailable; process isolation needs only the
@@ -208,15 +217,9 @@ curl.exe -fsSL `
 3. Execute in PowerShell 7,
 
 ```powershell
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.docker\cli-plugins" | Out-Null
-
-curl.exe -fsSL `
-    "https://github.com/docker/compose/releases/download/v5.5.1/docker-compose-windows-x86_64.exe" `
-    -o "$env:USERPROFILE\.docker\cli-plugins\docker-compose.exe"
-
 git clone git@github.com:version-fox/vfox-nodejs.git
 cd ./vfox-nodejs/
-docker compose -f tests/e2e/windows/compose.amd64.yaml run --rm --build e2e
+pwsh -NoProfile -File tests/e2e/windows/run.ps1
 ```
 
 ### arm64
@@ -238,23 +241,18 @@ winget install --id GoLang.Go --source winget --exact
 git clone git@github.com:version-fox/vfox-nodejs.git
 cd ./vfox-nodejs/
 pwsh -NoProfile -File .\tests\e2e\windows\install-docker-arm64.ps1
-New-Item -ItemType Directory -Force -Path "$env:USERPROFILE\.docker\cli-plugins" | Out-Null
-
-curl.exe -fsSL `
-    "https://github.com/docker/compose/releases/download/v5.5.1/docker-compose-windows-aarch64.exe" `
-    -o "$env:USERPROFILE\.docker\cli-plugins\docker-compose.exe"
-
-docker compose -f tests/e2e/windows/compose.arm64.yaml run --rm --build e2e
+pwsh -NoProfile -File .\tests\e2e\windows\run.ps1
 ```
 
-On arm64, Go is also what builds the engine, so `install-docker-arm64.ps1`
-runs before the suite; the compose runner image then carries its own pinned
-Go for the tests, and the host Go is not used again.
+On arm64, a host Go is needed only to build the engine
+(`install-docker-arm64.ps1`); `run.ps1` uses its own cached Go for the suite.
 
-CI sets `E2E_MAX_JOBS=3` on both Windows jobs so every combo runs at once;
-the local default stays at 2. Scope the run down with
-`$env:VFOX_VERSION = 'latest'; $env:MIRROR = 'default'` in front of the
-compose command, as on the other platforms.
+`$env:E2E_RUN` narrows the `-test.run` pattern (default `TestE2E`), e.g.
+`TestE2E/latest-default`. Scope the run down with
+`$env:VFOX_VERSION = 'latest'; $env:MIRROR = 'default'` in front of it, as on
+the other platforms; without `main` in `VFOX_VERSION` the script skips the
+`vfox@main` build. CI sets `E2E_MAX_JOBS=3` on both Windows jobs so every
+combo runs at once; the local default stays at 2.
 
 ## WSL
 
