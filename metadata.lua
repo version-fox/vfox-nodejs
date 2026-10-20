@@ -19,7 +19,7 @@ PLUGIN = {}
 --- Plugin name
 PLUGIN.name = "nodejs"
 --- Plugin version
-PLUGIN.version = "0.5.2"
+PLUGIN.version = "0.5.3"
 --- Plugin repository
 PLUGIN.homepage = "https://github.com/version-fox/vfox-nodejs"
 --- Plugin license
