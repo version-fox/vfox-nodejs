@@ -1,5 +1,7 @@
 # Development
 
+[中文](zh-CN/development.md) | [English](development.md)
+
 ## Layout
 
 ```text
@@ -251,17 +253,22 @@ Afterwards `plugins/nodejs.json` in
 [vfox-plugins](https://github.com/version-fox/vfox-plugins) shows the version
 that `vfox add nodejs` serves.
 
-The documentation marks what is newer than the last release with "Unreleased".
-After a release, move those entries in [changes.md](changes.md) under the new
-version and take the remarks out: `grep -rn -i unreleased docs README*`. Also
-search for the number of the previous release: a few sentences compare against
-it without saying "Unreleased".
+The documentation marks what is newer than the last release with "Unreleased"
+("未发布" in Chinese). After a release, move those entries in
+[changes.md](changes.md) under the new version and take the remarks out, in both
+languages: `grep -rn -i -e unreleased -e 未发布 docs README*`. Also search for
+the number of the previous release: a few sentences compare against it without
+saying "Unreleased".
 
 ## Writing the docs
 
-English pages are in `docs/`. Prose is wrapped at 80 columns, tables are not.
-Pages that quote data give the day it was taken (the platform and musl tables,
-the mirror list, the LTS table, the outputs of `vfox search`), and nothing
-checks them. CI does not lint Markdown, so run the commands you add, and the
-outputs in a page are the ones they printed. When a change in the plugin makes a
-page wrong, change the page in the same pull request.
+English pages are in `docs/`, the Chinese ones in `docs/zh-CN/` under the same
+names (the Chinese README is `README_CN.md`), and each page starts with a link to
+the other language. Prose is wrapped at 80 columns in the English pages, tables
+are not. Pages that quote data give the day it was taken (the platform and musl
+tables, the mirror list, the LTS table, the outputs of `vfox search`), and
+nothing checks them. CI does not lint Markdown, so run the commands you add, and
+the outputs in a page are the ones they printed. When a change in the plugin
+makes a page wrong, change the page and its translation in the same pull request.
+A link to `page.md#heading` in a Chinese page uses the heading of the Chinese
+page, whose address is not the English one.

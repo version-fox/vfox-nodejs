@@ -1,5 +1,7 @@
 # LTS releases
 
+[中文](zh-CN/lts.md) | [English](lts.md)
+
 Node.js majors with even numbers become **LTS** (long-term support) lines:
 they keep receiving fixes long after odd releases go end-of-life, so most
 production setups pin an LTS line. Each LTS line has a codename

@@ -1,5 +1,7 @@
 # Mirror
 
+[中文](zh-CN/mirror.md) | [English](mirror.md)
+
 The Node.js packages and the version index (`index.json`, `SHASUMS256.txt`)
 are downloaded from `https://nodejs.org/dist` by default. Set
 `VFOX_NODEJS_MIRROR` to use another mirror:

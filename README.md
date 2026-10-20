@@ -1,5 +1,7 @@
 # vfox-nodejs
 
+[中文](README_CN.md) | [English](README.md)
+
 Node.js plugin for [vfox](https://vfox.dev/).
 
 It installs the Node.js release archives published on

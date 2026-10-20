@@ -1,5 +1,7 @@
 # Platform support
 
+[中文](zh-CN/platforms.md) | [English](platforms.md)
+
 The plugin picks the package for the operating system and the CPU architecture
 of the vfox binary (`RUNTIME.osType` and `RUNTIME.archType`, Go's `GOOS` and
 `GOARCH`) and, on Linux, for the C library. The file it asks for is named

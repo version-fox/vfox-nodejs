@@ -1,5 +1,7 @@
 # Troubleshooting
 
+[中文](zh-CN/troubleshooting.md) | [English](troubleshooting.md)
+
 The messages below were produced with vfox 1.0.12 and 1.0.13. vfox prefixes the
 plugin's own errors with `plugin [PreInstall] method error: <path>:<line>:`
 (`[Available]` for the search) and follows them with a Lua stack trace, which this

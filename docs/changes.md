@@ -1,5 +1,7 @@
 # Changes
 
+[中文](zh-CN/changes.md) | [English](changes.md)
+
 What changed in each release, as a user notices it. GitHub's
 [release pages](https://github.com/version-fox/vfox-nodejs/releases) list the
 pull requests. The newest release at the time of writing is 0.5.2, and `main` is
@@ -41,6 +43,7 @@ ahead of it by everything under "Unreleased".
   `get checksum failed` and nothing else. See
   [troubleshooting.md](troubleshooting.md#messages-from-the-plugin).
 - `VFOX_NODEJS_MIRROR` may end in several slashes. Release 0.5.2 strips one.
+- The documentation has a Chinese version, see [README_CN.md](../README_CN.md).
 
 ## 0.5.2 (2026-10-17)
 

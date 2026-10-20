@@ -1,5 +1,7 @@
 # npm and global packages
 
+[中文](zh-CN/npm.md) | [English](npm.md)
+
 Every release comes with the npm that Node.js ships it with. `vfox search nodejs`
 lists that version after the release, and `npm -v` prints it once the release is
 in use:

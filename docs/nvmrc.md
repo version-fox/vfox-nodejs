@@ -1,5 +1,7 @@
 # `.nvmrc` and `.node-version`
 
+[中文](zh-CN/nvmrc.md) | [English](nvmrc.md)
+
 vfox can read `.nvmrc`, the project file of [nvm](https://github.com/nvm-sh/nvm),
 and `.node-version`, the one that nodenv, fnm and others use, through this
 plugin (it lists both in `PLUGIN.legacyFilenames`). A project that already pins

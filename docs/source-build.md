@@ -1,5 +1,7 @@
 # Installing the plugin from source
 
+[中文](zh-CN/source-build.md) | [English](source-build.md)
+
 Normally you install from the registry:
 
 ```sh

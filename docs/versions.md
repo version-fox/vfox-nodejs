@@ -1,5 +1,7 @@
 # Versions and names
 
+[中文](zh-CN/versions.md) | [English](versions.md)
+
 The part after `nodejs@` in `vfox install` and `vfox use` is a Node.js release
 number, or the start of one:
 

@@ -1,5 +1,7 @@
 # musl libc support (Alpine, OpenWrt/ImmortalWrt)
 
+[中文](zh-CN/musl.md) | [English](musl.md)
+
 Node.js official Linux tarballs link glibc (`ld-linux-*`). On musl systems
 there is no glibc loader, so the stock download fails with `not found` /
 `Error loading shared library ld-linux-aarch64.so.1`.

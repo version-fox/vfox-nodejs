@@ -1,5 +1,7 @@
 # pnpm
 
+[中文](zh-CN/pnpm.md) | [English](pnpm.md)
+
 pnpm as a package manager, for example from `npm install -g pnpm`, works
 next to this plugin. The conflict starts when pnpm also installs Node.js:
 `pnpm runtime set node <version> -g` (or the deprecated
