@@ -72,8 +72,6 @@ vfox 加载 `metadata.lua`，命令需要时调用相应的钩子，并向钩子
 
 `vfox` 随后会选中这个结果，前提是它已安装。面向用户的规则和示例见 [nvmrc.md](nvmrc.md) 和 [lts.md](lts.md)。
 
-未发布：0.5.2 把查询当作 Lua 模式，去匹配每个版本的开头，按 vfox 列出它们的顺序逐个尝试，取第一个匹配的。见 [nvmrc.md](nvmrc.md#前缀怎样匹配)。
-
 ## Node.js 把一条版本线升为 LTS 时
 
 每年十月，一条偶数版本线会得到代号，见 [lts.md](lts.md#nodejs-升级版本线时)。要让插件认识新的代号：
@@ -143,7 +141,7 @@ curl -s https://nodejs.org/dist/index.json | jq -r '
 
 维护者在默认分支上执行 **Actions → Plugin → Run workflow**，填入不带 `v` 的版本号。共享工作流具体做什么，README 里有说明。发布之后，[vfox-plugins](https://github.com/version-fox/vfox-plugins) 里的 `plugins/nodejs.json` 会显示 `vfox add nodejs` 提供的是哪个版本。
 
-文档里用“未发布”（英文是“Unreleased”）标记比最近一次发布更新的内容。发布之后，把 [changes.md](changes.md) 里的这些条目移到新版本下面，并去掉这些标注，两种语言都要处理：`grep -rn -i -e unreleased -e 未发布 docs README*`。上一个版本的版本号也要搜一遍：有几句话是拿它做对比的，没有写“未发布”。
+在 `main` 比最近一次发布更靠前的这段时间里，文档用“未发布”（英文是“Unreleased”）标记更新的内容：条目放在 [changes.md](changes.md) 顶部的“未发布”标题下面，描述新行为的页面会加一句以“未发布：X.Y.Z”开头的话，说明最近一次发布的行为，README 里则有一段话，解释这个标记，并指向 [changes.md](changes.md) 和 [source-build.md](source-build.md)。发布之后，把 [changes.md](changes.md) 里的条目移到新版本下面，每条附上对应的 PR，并去掉这些标注和 README 里的那段话，两种语言都要处理：`grep -rn -i -e unreleased -e 未发布 docs README*`。上一个版本的版本号也要搜一遍：有几句话是拿它做对比的，没有写“未发布”。
 
 ## 编写文档
 

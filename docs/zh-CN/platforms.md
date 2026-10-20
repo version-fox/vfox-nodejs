@@ -27,7 +27,7 @@ Node.js package node-v19.8.1-win-arm64.zip is not listed in https://nodejs.org/d
 | Linux ppc64le | `linux-ppc64le.tar.gz` | 4.3.2 及以后，5.0.0 到 5.6.0 除外 |
 | Linux s390x | `linux-s390x.tar.gz` | 6.6.0 及以后 |
 | Linux 386 | `linux-x86.tar.gz` | 0.8.6 到 9.11.2，0.9.0、0.11.4 和 0.11.6 除外 |
-| Linux arm | `linux-armv7l.tar.gz` | 4.0.0 到 23.11.1，8.1.1 除外。未发布：0.5.2 请求的是 `linux-arm`，Node.js 从未发布过，所以每次安装都会失败 |
+| Linux arm | `linux-armv7l.tar.gz` | 4.0.0 到 23.11.1，8.1.1 除外 |
 | Linux amd64，musl | `linux-x64-musl.tar.gz` | 见 [musl.md](musl.md#哪些版本有-musl-构建) |
 | Linux arm64，musl | `linux-arm64-musl.tar.gz` | 见 [musl.md](musl.md#哪些版本有-musl-构建) |
 | macOS amd64 | `darwin-x64.tar.gz` | 0.8.6 及以后，0.9.0、0.11.4 和 0.11.6 除外 |
@@ -42,7 +42,7 @@ Node.js package node-v19.8.1-win-arm64.zip is not listed in https://nodejs.org/d
 
 ## 不支持的情况
 
-- **ARMv6，以及 24 起的 32 位 ARM。** vfox 提供一个 `armv7` 的二进制，它报告的是 `arm`，插件为它选 `linux-armv7l` 包，而这个包 Node.js 只发布到 23.11.1。24 起就没有了，安装最终会报 `Node.js package node-v26.12.0-linux-armv7l.tar.gz is not listed in ...`。ARMv6 的包（nodejs.org 上的 `linux-armv6l`，4.0.0 到 11.15.0）从不会被选中。未发布：0.5.2 请求的是 `linux-arm`，Node.js 从未发布过，所以 32 位 ARM 上每次安装都会失败，报 `Node.js package node-v20.19.5-linux-arm.tar.gz is not listed in ...`。
+- **ARMv6，以及 24 起的 32 位 ARM。** vfox 提供一个 `armv7` 的二进制，它报告的是 `arm`，插件为它选 `linux-armv7l` 包，而这个包 Node.js 只发布到 23.11.1。24 起就没有了，安装最终会报 `Node.js package node-v26.12.0-linux-armv7l.tar.gz is not listed in ...`。ARMv6 的包（nodejs.org 上的 `linux-armv6l`，4.0.0 到 11.15.0）从不会被选中。
 - **Linux riscv64 和 loong64。** nodejs.org 没有它们的包。[Unofficial Builds](https://github.com/nodejs/unofficial-builds) 站点有 riscv64（17.7.1 到 26.0.0）和 loong64（18.18.0 及以后），但插件只在 musl 上使用那个站点。
 
 ## Linux

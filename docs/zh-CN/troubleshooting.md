@@ -14,8 +14,6 @@
 
 插件读不到这个版本的 `SHASUMS256.txt`，原因写在冒号后面。`HTTP 404 from <address>` 表示服务器上没有这个文件：要么这个版本不存在（`24.99.0`），要么镜像里没有它。网络错误（`Get "<address>": tls: failed to verify certificate: x509: certificate signed by unknown authority`、`... connection refused`、`... EOF`）表示连不上服务器：镜像不可用、代理有问题，或者 TLS 出了问题。见[网络](#网络)。
 
-未发布：0.5.2 只打印 `get checksum failed`，没有别的内容，所以看不出原因。`vfox search nodejs` 向同一台服务器请求索引，会打印真正的错误。
-
 ### `Node.js package node-v19.8.1-win-arm64.zip is not listed in https://nodejs.org/dist/v19.8.1/SHASUMS256.txt`
 
 这个版本是存在的，但 Node.js 没有以插件请求的名字为你的平台发布包。`vfox search nodejs` 列出的版本里，有的并没有你所在平台的包，因为索引里没有写明哪些版本有。提示里的文件名就是插件要找的那个。请对照 [platforms.md](platforms.md)，它也列出了不支持的情况（ARMv6、24 起的 32 位 ARM、riscv64、loong64）。
@@ -38,11 +36,9 @@ vfox 没有告诉插件当前运行在哪种 CPU 上。这是不应该出现的�
 
 这个 musl 系统缺少 Node.js 的 musl 包所链接的库：所有 musl 包都链接 `libstdc++`，26.8.0 及以后的 musl 包还链接 `libatomic`。提示里写明了缺的是哪个包，以及在 Alpine（`apk add libatomic`）和 OpenWrt（`opkg install libatomic`）上安装它的命令。安装在解压之后失败，不会登记任何内容。请先安装这个库，再重新执行安装。见 [musl.md](musl.md#依赖的系统库)。
 
-未发布：0.5.2 只查找 `libstdc++`，提示里也没有命令。缺少 `libatomic` 要到后面才会暴露，表现为 `node` 自己报的错，见下文。
-
 ### `Node.js (musl build) cannot run on this system: Error relocating ...`
 
-解压出来的 `node` 需要一个符号，而系统里没有任何库提供它。安装在解压之后失败，不会登记任何内容。未发布：0.5.2 在解压之后不会运行 `node`，这个错误要到你自己运行它的时候才会出现。见 [musl.md](musl.md#依赖的系统库)。
+解压出来的 `node` 需要一个符号，而系统里没有任何库提供它。安装在解压之后失败，不会登记任何内容。见 [musl.md](musl.md#依赖的系统库)。
 
 ### `checksum error`
 
@@ -81,8 +77,8 @@ vfox 会打印 `Verifying checksum <sum>...`，拿下载的文件和这个校验
 
 - `node: error while loading shared libraries: libatomic.so.1: cannot open shared object file`。Node.js 25 及以后的版本要链接 `libatomic`，而原版 Debian 和 Ubuntu 没有它：`sudo apt install --assume-yes libatomic1`。见 [platforms.md](platforms.md#linux)。
 - 在 Alpine 上报 `node: not found`，尽管文件是存在的。这是把 glibc 的包安装到了 musl 系统上：要么插件没有检测到 musl，要么 `VFOX_NODEJS_LIBC` 的值是 `gnu` 或 `glibc`。见 [musl.md](musl.md#检测与覆盖)。
-- 在 Alpine 上先报 `Error loading shared library libatomic.so.1: No such file or directory`，接着报 `Error relocating ...: __atomic_compare_exchange: symbol not found`。26.8.0 及以后的 musl 包需要 `libatomic`：`apk add libatomic`。未发布：安装本身会以上面那条提示停下来，0.5.2 则要到这里才会报错。见 [musl.md](musl.md#依赖的系统库)。
-- 在 musl 系统上报 `Error relocating ... symbol not found`，而且前面没有上一条里关于 `libatomic` 的那一行。说明缺少某个库，或者库的版本太旧。未发布：安装会以 `cannot run on this system` 停下来，0.5.2 则要到这里才会报错。见 [musl.md](musl.md#依赖的系统库)。
+- 在 Alpine 上先报 `Error loading shared library libatomic.so.1: No such file or directory`，接着报 `Error relocating ...: __atomic_compare_exchange: symbol not found`。26.8.0 及以后的 musl 包需要 `libatomic`：`apk add libatomic`。从 0.5.3 起，安装本身就会以上面那条提示停下来，所以遇到这个错误的，是早期版本的插件装好的版本。见 [musl.md](musl.md#依赖的系统库)。
+- 在 musl 系统上报 `Error relocating ... symbol not found`，而且前面没有上一条里关于 `libatomic` 的那一行。说明缺少某个库，或者库的版本太旧。从 0.5.3 起，`node --version` 这样失败时，安装会以 `cannot run on this system` 停下来。见 [musl.md](musl.md#依赖的系统库)。
 
 ## 网络
 
@@ -105,7 +101,7 @@ vfox config proxy.url http://127.0.0.1:7890
 
 `proxy.enable` 为 `false` 时，通常的 `HTTP_PROXY`、`HTTPS_PROXY` 和 `NO_PROXY` 环境变量依然有效。代理不可用时，搜索会显示 `proxyconnect tcp: dial tcp 127.0.0.1:7890: connect: connection refused`。
 
-`vfox search nodejs` 的常见失败原因如下。`vfox install` 会在 `get checksum failed:` 之后报告同样的原因。未发布：0.5.2 会省略它，只有搜索会打印：
+`vfox search nodejs` 的常见失败原因如下。`vfox install` 会在 `get checksum failed:` 之后报告同样的原因：
 
 | `Failed to fetch Node.js versions:` 之后 | 原因 |
 | --- | --- |

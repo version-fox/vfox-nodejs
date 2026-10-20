@@ -32,8 +32,6 @@ node -v
 
 `vfox search nodejs` 会列出每个版本及其自带的 npm，属于 LTS 版本线的版本带有标记。在交互式终端里可以从中选一个。
 
-只存在于 `main`、还没进入最新发布版的行为，在下面各页里标有“未发布”。[docs/zh-CN/changes.md](docs/zh-CN/changes.md) 里列出了这些行为，想直接用上 `main`，见 [docs/zh-CN/source-build.md](docs/zh-CN/source-build.md)。
-
 ### 示例：Ubuntu 26.04
 
 ```bash
@@ -54,7 +52,7 @@ vfox install nodejs@24
 vfox use --global nodejs@24
 ```
 
-Node.js 的 musl 构建需要 `libstdc++`，26.8.0 及以后的构建还需要 `libatomic`。原版 Alpine 镜像两者都没有，而插件不会安装系统库。安装会中止，并给出一条提示，写明缺少哪个包以及安装它的命令（`apk add libatomic`；OpenWrt 把 `libstdc++` 称为 `libstdcpp` 包）。未发布：0.5.2 只检查 `libstdc++`，缺少 `libatomic` 时，要到 `node` 运行失败、报 `Error loading shared library libatomic.so.1` 才能发现。musl 构建只提供 x64 和 arm64。musl 的详细情况（OpenWrt、压缩包对照表、镜像回退、哪些版本有构建）见 [docs/zh-CN/musl.md](docs/zh-CN/musl.md)。
+Node.js 的 musl 构建需要 `libstdc++`，26.8.0 及以后的构建还需要 `libatomic`。原版 Alpine 镜像两者都没有，而插件不会安装系统库。安装会中止，并给出一条提示，写明缺少哪个包以及安装它的命令（`apk add libatomic`；OpenWrt 把 `libstdc++` 称为 `libstdcpp` 包）。musl 构建只提供 x64 和 arm64。musl 的详细情况（OpenWrt、压缩包对照表、镜像回退、哪些版本有构建）见 [docs/zh-CN/musl.md](docs/zh-CN/musl.md)。
 
 ## 版本与命名
 
@@ -62,7 +60,7 @@ Node.js 的 musl 构建需要 `libstdc++`，26.8.0 及以后的构建还需要 `
 
 ## 平台
 
-Node.js 为 Linux（x64、arm64、ppc64le、s390x）、macOS（x64 和 arm64）和 Windows（x64、arm64，以及到 22.x 为止的 x86）发布包。并不是每个版本都有上面所有的包：Windows on ARM 从 19.9.0 起，Linux arm64 从 4.0.0 起，Apple silicon 从 16.0.0 起（更早的版本在 Rosetta 2 下安装 x64 的包）。32 位 ARM Linux 到 23.11.1 为止有包。未发布：0.5.2 无法安装它们。不支持 riscv64 和 loong64。不论你的平台是什么，`vfox search` 都会列出所有版本。表格见 [docs/zh-CN/platforms.md](docs/zh-CN/platforms.md)。
+Node.js 为 Linux（x64、arm64、ppc64le、s390x）、macOS（x64 和 arm64）和 Windows（x64、arm64，以及到 22.x 为止的 x86）发布包。并不是每个版本都有上面所有的包：Windows on ARM 从 19.9.0 起，Linux arm64 从 4.0.0 起，Apple silicon 从 16.0.0 起（更早的版本在 Rosetta 2 下安装 x64 的包）。32 位 ARM Linux 到 23.11.1 为止有包。不支持 riscv64 和 loong64。不论你的平台是什么，`vfox search` 都会列出所有版本。表格见 [docs/zh-CN/platforms.md](docs/zh-CN/platforms.md)。
 
 ## npm 与全局包
 

@@ -27,10 +27,6 @@ by unknown authority`, `... connection refused`, `... EOF`) means the server
 could not be reached: a mirror that is down, a proxy, a TLS problem. See
 [Network](#network).
 
-Unreleased: release 0.5.2 prints `get checksum failed` and nothing else, so the
-cause is hidden. `vfox search nodejs` asks the same server for the index and
-prints the real error.
-
 ### `Node.js package node-v19.8.1-win-arm64.zip is not listed in https://nodejs.org/dist/v19.8.1/SHASUMS256.txt`
 
 The release exists, and Node.js published no package for your platform under the
@@ -73,16 +69,11 @@ The message names the package, and the command that installs it on Alpine
 after the unpack and nothing is registered. Install the library and run the
 install again. See [musl.md](musl.md#requirements).
 
-Unreleased: release 0.5.2 looks for `libstdc++` only, and its message has no
-command. A missing `libatomic` shows later, as an error of `node` itself, see
-below.
-
 ### `Node.js (musl build) cannot run on this system: Error relocating ...`
 
 The unpacked `node` needs a symbol that no library of the system provides. The
-install fails after the unpack and nothing is registered. Unreleased: release
-0.5.2 does not run `node` after the unpack, and the error shows when you run it.
-See [musl.md](musl.md#requirements).
+install fails after the unpack and nothing is registered. See
+[musl.md](musl.md#requirements).
 
 ### `checksum error`
 
@@ -142,12 +133,13 @@ These come from `node` after a successful install.
 - `Error loading shared library libatomic.so.1: No such file or directory`,
   followed by `Error relocating ...: __atomic_compare_exchange: symbol not
   found`, on Alpine. The musl packages of 26.8.0 and later need `libatomic`:
-  `apk add libatomic`. Unreleased: the install itself stops with the message
-  above, and release 0.5.2 gets this far. See [musl.md](musl.md#requirements).
+  `apk add libatomic`. Since 0.5.3 the install itself stops with the message
+  above, so this is a release that an earlier version installed. See
+  [musl.md](musl.md#requirements).
 - `Error relocating ... symbol not found` on a musl system, without the
-  `libatomic` line above. A library is missing or too old. Unreleased: the
-  install stops with `cannot run on this system`, and release 0.5.2 gets this
-  far. See [musl.md](musl.md#requirements).
+  `libatomic` line above. A library is missing or too old. Since 0.5.3 the
+  install stops with `cannot run on this system` when `node --version` fails
+  like this. See [musl.md](musl.md#requirements).
 
 ## Network
 
@@ -175,8 +167,7 @@ While `proxy.enable` is `false`, the usual `HTTP_PROXY`, `HTTPS_PROXY` and
 as `proxyconnect tcp: dial tcp 127.0.0.1:7890: connect: connection refused`.
 
 The usual failures of `vfox search nodejs`. `vfox install` reports the same cause
-after `get checksum failed:`. Unreleased: release 0.5.2 leaves it out, and only
-the search prints it:
+after `get checksum failed:`:
 
 | After `Failed to fetch Node.js versions:` | Cause |
 | --- | --- |

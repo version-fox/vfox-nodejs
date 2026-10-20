@@ -28,7 +28,7 @@ vfox install nodejs@latest     # 所有版本线中最新的版本
 - “最新”指索引里列出的所有版本中数字最大的那个，不论是否属于 LTS。尚未进入长期支持的版本线（比如现在的 26）可以比最新的 LTS 版本线更新，所以 `latest` 并不等于 LTS 版本。
 - `24` 和 `24.21` 是在索引里查找的，不是在已安装的版本里查找。`vfox install nodejs@24` 会装上比你已有的更新的 24.x；已经是最新版本时，则打印 `nodejs@24.22.0 is already installed`。
 - 索引里只列出由三段数字组成的版本，别的一概没有：没有 `-rc` 构建、每日构建，也没有四段数字的版本号。这些写法最终都会报 `version not found for provided version ...`。
-- 不存在的版本号（`24.99.0`）最终会报 `get checksum failed: HTTP 404 from ...`，因为 nodejs.org 上没有对应的目录（未发布：0.5.2 省略了 `failed` 后面的部分）。版本存在但没有你所在平台的包时，最终会报 `Node.js package ... is not listed in ...`。见 [troubleshooting.md](troubleshooting.md#插件给出的提示) 和 [platforms.md](platforms.md)。
+- 不存在的版本号（`24.99.0`）最终会报 `get checksum failed: HTTP 404 from ...`，因为 nodejs.org 上没有对应的目录。版本存在但没有你所在平台的包时，最终会报 `Node.js package ... is not listed in ...`。见 [troubleshooting.md](troubleshooting.md#插件给出的提示) 和 [platforms.md](platforms.md)。
 - 每次下载都会对照该版本 `SHASUMS256.txt` 里的 SHA-256 校验和进行检查。vfox 会打印 `Verifying checksum <sum>...`，校验和不一致时会报 `checksum error` 并停止，什么也不会安装。
 - 安装时如果发现同名的版本已经存在，就不会下载任何东西。
 

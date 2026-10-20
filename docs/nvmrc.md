@@ -74,9 +74,6 @@ Before it looks at the text, the plugin removes all whitespace, drops a leading
 the newest release with that codename. A release number may end in `x`, `X` or
 `*` for the parts it leaves open: `22.x`, `22.x.x` and `22.*` all mean 22.
 
-Unreleased: release 0.5.2 drops every `v` of the file, so a codename with a `v`
-in it does not match, and it does not know `22.x`.
-
 The results on 2026-10-21 with 20.20.2, 22.23.3, 24.21.0, 25.9.0 and 26.12.0
 installed, when 24.22.0 is the newest 24.x and 22.23.3 the newest 22.x:
 
@@ -125,13 +122,6 @@ starts with it:
   comes before `22.23.3`. The plugin does not go by that order: with 22.9.0,
   22.3.0 and 22.23.3 installed, `22` selects 22.23.3 and `22.3` selects 22.3.0.
   `vfox use nodejs@22` compares numbers as well.
-
-Unreleased: release 0.5.2 compares text, and takes the first installed release
-that starts with it. `22.2` also matches `22.23.3`, and with 22.9.0 and 22.23.3
-installed `22` under `latest_installed` selects 22.9.0 (checked with 22.9.0,
-22.3.0 and 22.23.3 installed). Keep one release per line installed, or write the
-full release number, to get the same answer there. The text is also used as a
-Lua pattern, so `22.*` happens to work and `22.x` does not.
 
 ## Not finding it
 

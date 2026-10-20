@@ -4,11 +4,9 @@
 
 What changed in each release, as a user notices it. GitHub's
 [release pages](https://github.com/version-fox/vfox-nodejs/releases) list the
-pull requests. The newest release at the time of writing is 0.5.2, and `main` is
-ahead of it by everything under "Unreleased".
-[source-build.md](source-build.md) gets you those changes now.
+pull requests.
 
-## Unreleased
+## 0.5.3 (2026-10-20)
 
 - 32-bit ARM Linux installs the `linux-armv7l` package, which Node.js published
   up to 23.11.1: `vfox install nodejs@20` works there. vfox's `armv7` build
@@ -16,7 +14,8 @@ ahead of it by everything under "Unreleased".
   every install on 32-bit ARM ends with `Node.js package
   node-v20.19.5-linux-arm.tar.gz is not listed in ...`. From 24 on there is no
   package, and the ARMv6 one is never chosen. See
-  [platforms.md](platforms.md#not-supported).
+  [platforms.md](platforms.md#not-supported)
+  ([#41](https://github.com/version-fox/vfox-nodejs/pull/41)).
 - On musl the install stops when the unpacked `node` cannot run for lack of a
   library. After the unpack the plugin runs `node --version` once, and the dynamic
   loader names what is missing. The musl packages of 26.8.0 and later need
@@ -27,7 +26,8 @@ ahead of it by everything under "Unreleased".
   install succeeds and `node` fails with `Error loading shared library
   libatomic.so.1`. The message about `libstdc++` names its command too, where
   release 0.5.2 says `It is normally installed automatically`. See
-  [musl.md](musl.md#requirements).
+  [musl.md](musl.md#requirements)
+  ([#41](https://github.com/version-fox/vfox-nodejs/pull/41)).
 - `.nvmrc` and `.node-version` name a release by its numbers under
   `legacyVersionFile.strategy` `latest_installed` and `latest_available`. With
   22.9.0 and 22.23.3 installed, `22` selects 22.23.3, where release 0.5.2 selects
@@ -36,14 +36,28 @@ ahead of it by everything under "Unreleased".
   nothing for `22.x`. Only a leading `v` is dropped, so `lts/<codename>` works for
   a codename with a `v` in it. Text that is no release number (`node`, `(`,
   `22[`) is left alone, where release 0.5.2 fails with `unfinished capture at
-  EOS` and vfox hides the error. See [nvmrc.md](nvmrc.md#how-a-prefix-is-matched).
+  EOS` and vfox hides the error. See
+  [nvmrc.md](nvmrc.md#how-a-prefix-is-matched)
+  ([#41](https://github.com/version-fox/vfox-nodejs/pull/41)).
 - A failed request for `SHASUMS256.txt` says why: `get checksum failed: HTTP 404
   from https://nodejs.org/dist/v24.99.0/SHASUMS256.txt`, or the network error,
   such as `x509: certificate signed by unknown authority`. Release 0.5.2 prints
   `get checksum failed` and nothing else. See
-  [troubleshooting.md](troubleshooting.md#messages-from-the-plugin).
-- `VFOX_NODEJS_MIRROR` may end in several slashes. Release 0.5.2 strips one.
-- The documentation has a Chinese version, see [README_CN.md](../README_CN.md).
+  [troubleshooting.md](troubleshooting.md#messages-from-the-plugin)
+  ([#41](https://github.com/version-fox/vfox-nodejs/pull/41)).
+- `VFOX_NODEJS_MIRROR` may end in several slashes. Release 0.5.2 strips one
+  ([#41](https://github.com/version-fox/vfox-nodejs/pull/41)).
+- The documentation has a page for versions and names, platforms, `.nvmrc` and
+  `.node-version`, npm, troubleshooting, development and the changes, and a
+  Chinese version, see [README_CN.md](../README_CN.md)
+  ([#41](https://github.com/version-fox/vfox-nodejs/pull/41)).
+- The Windows e2e suite runs from the host through `tests/e2e/windows/run.ps1`,
+  which replaces the Docker Compose runner. The script fetches PowerShell,
+  PortableGit and Go into a cache that every combo container mounts read-only at
+  `C:\tools`, so no image runs the PowerShell MSI and the Git installer any
+  more, and CI starts all the Windows combos at once. See
+  [e2e.md](e2e.md#windows-11)
+  ([#40](https://github.com/version-fox/vfox-nodejs/pull/40)).
 
 ## 0.5.2 (2026-10-17)
 

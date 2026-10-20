@@ -93,9 +93,8 @@ VFOX_NODEJS_MIRROR=https://example.invalid/dist vfox search nodejs
 ```
 
 On the same mirror `vfox install nodejs@24.21.0` fails with `get checksum failed:
-Get "https://example.invalid/dist/v24.21.0/SHASUMS256.txt": ...` (Unreleased:
-release 0.5.2 leaves out what follows `failed`). A mirror that serves no
-`index.json` at that address fails the search with
+Get "https://example.invalid/dist/v24.21.0/SHASUMS256.txt": ...`. A mirror that
+serves no `index.json` at that address fails the search with
 `Failed to fetch Node.js versions: HTTP 404`, see
 [troubleshooting.md](troubleshooting.md#network). vfox caches the search for 12
 hours, so after a change run `vfox config cache.availableHookDuration 0` or
