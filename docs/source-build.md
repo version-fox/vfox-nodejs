@@ -15,7 +15,7 @@ and `lib/` at its top level; that is the plugin package contract (see the
 [shared workflow documentation](https://github.com/version-fox/plugin-manifest-action)).
 
 A released plugin zip URL also works as `--source`, e.g.
-`vfox add --source https://github.com/version-fox/vfox-nodejs/releases/download/v0.0.5/vfox-nodejs_0.0.5.zip`.
+`vfox add --source https://github.com/version-fox/vfox-nodejs/releases/download/v0.5.3/vfox-nodejs-0.5.3.zip`.
 
 Prerequisites on all systems: [vfox](https://github.com/version-fox/vfox)
 itself plus `git`.

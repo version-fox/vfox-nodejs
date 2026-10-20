@@ -58,10 +58,11 @@ gets the message without a command. A symbol that the libraries lack, which the
 loader reports as `Error relocating ...: symbol not found`, ends in `Node.js
 (musl build) cannot run on this system: Error relocating ...`.
 
-Unreleased: release 0.5.2 looks for `libstdc++` only, and its message says `It
-is normally installed automatically; install it and reinstall.` instead of
-naming the command. It does not look for `libatomic`: the install succeeds, and
-`node` then fails.
+The loader prints this for a missing `libatomic`, and the hook reads the name of
+the library from it. Before 0.5.3 the plugin did not run `node` after the
+unpack, so a release that an earlier version of the plugin installed fails with
+these lines when you run it. Installing the library is all it needs, there is
+nothing to reinstall:
 
 ```text
 Error loading shared library libatomic.so.1: No such file or directory (needed by /root/.vfox/cache/nodejs/v-26.12.0/nodejs-26.12.0/bin/node)

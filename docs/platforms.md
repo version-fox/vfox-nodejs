@@ -39,7 +39,7 @@ in [development.md](development.md#refreshing-the-platform-table).
 | Linux ppc64le | `linux-ppc64le.tar.gz` | 4.3.2 and later, except 5.0.0 to 5.6.0 |
 | Linux s390x | `linux-s390x.tar.gz` | 6.6.0 and later |
 | Linux 386 | `linux-x86.tar.gz` | 0.8.6 to 9.11.2, except 0.9.0, 0.11.4 and 0.11.6 |
-| Linux arm | `linux-armv7l.tar.gz` | 4.0.0 to 23.11.1, except 8.1.1. Unreleased: release 0.5.2 asks for `linux-arm`, which Node.js never published, so every install fails |
+| Linux arm | `linux-armv7l.tar.gz` | 4.0.0 to 23.11.1, except 8.1.1 |
 | Linux amd64, musl | `linux-x64-musl.tar.gz` | see [musl.md](musl.md#which-releases-have-a-musl-build) |
 | Linux arm64, musl | `linux-arm64-musl.tar.gz` | see [musl.md](musl.md#which-releases-have-a-musl-build) |
 | macOS amd64 | `darwin-x64.tar.gz` | 0.8.6 and later, except 0.9.0, 0.11.4 and 0.11.6 |
@@ -65,9 +65,7 @@ above, see [troubleshooting.md](troubleshooting.md#messages-from-the-plugin).
   Node.js published up to 23.11.1. From 24 on there is none, and the install
   ends with `Node.js package node-v26.12.0-linux-armv7l.tar.gz is not listed in
   ...`. The ARMv6 package (`linux-armv6l`, 4.0.0 to 11.15.0 on nodejs.org) is
-  never chosen. Unreleased: release 0.5.2 asks for `linux-arm`, which Node.js
-  never published, so every install on 32-bit ARM fails with `Node.js package
-  node-v20.19.5-linux-arm.tar.gz is not listed in ...`.
+  never chosen.
 - **Linux riscv64 and loong64.** nodejs.org has no packages for them. The
   [Unofficial Builds](https://github.com/nodejs/unofficial-builds) site has
   riscv64 (17.7.1 to 26.0.0) and loong64 (18.18.0 and later), but the plugin

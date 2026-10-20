@@ -10,7 +10,7 @@ vfox add nodejs
 
 需要尚未发布的内容（`main` 分支，或者检出的某个 PR）时，就从源码安装：把检出的代码打包成 zip，交给 `vfox add --source`。zip 的顶层必须有 `metadata.lua`、`hooks/` 和 `lib/`，这是插件包的约定（见[共享工作流文档](https://github.com/version-fox/plugin-manifest-action)）。
 
-已发布的插件 zip 的 URL 也可以用作 `--source`，例如 `vfox add --source https://github.com/version-fox/vfox-nodejs/releases/download/v0.0.5/vfox-nodejs_0.0.5.zip`。
+已发布的插件 zip 的 URL 也可以用作 `--source`，例如 `vfox add --source https://github.com/version-fox/vfox-nodejs/releases/download/v0.5.3/vfox-nodejs-0.5.3.zip`。
 
 所有系统都需要事先装好 [vfox](https://github.com/version-fox/vfox) 本身和 `git`。
 

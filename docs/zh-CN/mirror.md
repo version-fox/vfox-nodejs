@@ -76,7 +76,7 @@ VFOX_NODEJS_MIRROR=https://example.invalid/dist vfox search nodejs
 # Failed to fetch Node.js versions: Get "https://example.invalid/dist/index.json": ...
 ```
 
-在同一个镜像上，`vfox install nodejs@24.21.0` 会失败，报 `get checksum failed: Get "https://example.invalid/dist/v24.21.0/SHASUMS256.txt": ...`（未发布：0.5.2 会省略 `failed` 后面的内容）。镜像在那个地址上没有提供 `index.json` 时，搜索会失败，报 `Failed to fetch Node.js versions: HTTP 404`，见 [troubleshooting.md](troubleshooting.md#网络)。vfox 会把搜索结果缓存 12 小时，所以改动之后请执行 `vfox config cache.availableHookDuration 0`，否则在一段时间内看到的还是旧列表。
+在同一个镜像上，`vfox install nodejs@24.21.0` 会失败，报 `get checksum failed: Get "https://example.invalid/dist/v24.21.0/SHASUMS256.txt": ...`。镜像在那个地址上没有提供 `index.json` 时，搜索会失败，报 `Failed to fetch Node.js versions: HTTP 404`，见 [troubleshooting.md](troubleshooting.md#网络)。vfox 会把搜索结果缓存 12 小时，所以改动之后请执行 `vfox config cache.availableHookDuration 0`，否则在一段时间内看到的还是旧列表。
 
 代理是另一项设置，对镜像同样有效，见 [troubleshooting.md](troubleshooting.md#网络)。
 

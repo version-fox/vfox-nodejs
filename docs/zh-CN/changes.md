@@ -2,16 +2,17 @@
 
 [中文](changes.md) | [English](../changes.md)
 
-按发布版本列出用户能感受到的变化。GitHub 的 [Release 页面](https://github.com/version-fox/vfox-nodejs/releases)列出了对应的 PR。写这篇文档时最新的发布版是 0.5.2，`main` 比它多出“未发布”下面的所有内容。想现在就用上这些变化，见 [source-build.md](source-build.md)。
+按发布版本列出用户能感受到的变化。GitHub 的 [Release 页面](https://github.com/version-fox/vfox-nodejs/releases)列出了对应的 PR。
 
-## 未发布
+## 0.5.3（2026-10-20）
 
-- 32 位 ARM 的 Linux 会安装 `linux-armv7l` 包，Node.js 到 23.11.1 为止都发布了这个包：`vfox install nodejs@20` 在那里可以用。vfox 的 `armv7` 构建报告的是 `arm`，而 0.5.2 请求 `linux-arm`，这个包并不存在，所以 32 位 ARM 上的每次安装都以 `Node.js package node-v20.19.5-linux-arm.tar.gz is not listed in ...` 告终。从 24 起没有这个包了，ARMv6 的包也永远不会被选中。见 [platforms.md](platforms.md#不支持的情况)。
-- 在 musl 上，解压出来的 `node` 因缺少库而无法运行时，安装会中止。解压之后，插件会运行一次 `node --version`，由动态加载器指出缺少什么。26.8.0 及以后的 musl 包需要 `libatomic`，原版 Alpine 没有它：安装会以 ``Node.js (musl build) requires the libatomic system package, which was not found on this system. Install it with `apk add libatomic` and reinstall.`` 结束，不会登记任何内容。0.5.2 只检查 `libstdc++`，所以安装能成功，而 `node` 会报 `Error loading shared library libatomic.so.1`。关于 `libstdc++` 的提示同样会给出命令，0.5.2 的提示则是 `It is normally installed automatically`。见 [musl.md](musl.md#依赖的系统库)。
-- 在 `legacyVersionFile.strategy` 为 `latest_installed` 和 `latest_available` 时，`.nvmrc` 和 `.node-version` 按版本号的数字匹配版本。已安装 22.9.0 和 22.23.3 时，`22` 选中 22.23.3，而 0.5.2 选中 22.9.0，因为 vfox 是按文本排列已安装版本的。`22.2` 不再匹配 22.23.3。`22.x`、`22.x.x` 和 `22.*` 都表示 22，0.5.2 对 `22.x` 什么也选不中。只会去掉开头的 `v`，所以代号里带 `v` 的 `lts/<codename>` 也能用。不是版本号的文本（`node`、`(`、`22[`）不做处理，0.5.2 对它们会报 `unfinished capture at EOS`，而 vfox 把这个错误藏了起来。见 [nvmrc.md](nvmrc.md#前缀怎样匹配)。
-- 获取 `SHASUMS256.txt` 的请求失败时会说明原因：`get checksum failed: HTTP 404 from https://nodejs.org/dist/v24.99.0/SHASUMS256.txt`，或者网络错误，比如 `x509: certificate signed by unknown authority`。0.5.2 只打印 `get checksum failed`，没有别的内容。见 [troubleshooting.md](troubleshooting.md#插件给出的提示)。
-- `VFOX_NODEJS_MIRROR` 的结尾可以有多个斜杠。0.5.2 只去掉一个。
-- 文档有了中文版，见 [README_CN.md](../../README_CN.md)。
+- 32 位 ARM 的 Linux 会安装 `linux-armv7l` 包，Node.js 到 23.11.1 为止都发布了这个包：`vfox install nodejs@20` 在那里可以用。vfox 的 `armv7` 构建报告的是 `arm`，而 0.5.2 请求 `linux-arm`，这个包并不存在，所以 32 位 ARM 上的每次安装都以 `Node.js package node-v20.19.5-linux-arm.tar.gz is not listed in ...` 告终。从 24 起没有这个包了，ARMv6 的包也永远不会被选中。见 [platforms.md](platforms.md#不支持的情况)（[#41](https://github.com/version-fox/vfox-nodejs/pull/41)）。
+- 在 musl 上，解压出来的 `node` 因缺少库而无法运行时，安装会中止。解压之后，插件会运行一次 `node --version`，由动态加载器指出缺少什么。26.8.0 及以后的 musl 包需要 `libatomic`，原版 Alpine 没有它：安装会以 ``Node.js (musl build) requires the libatomic system package, which was not found on this system. Install it with `apk add libatomic` and reinstall.`` 结束，不会登记任何内容。0.5.2 只检查 `libstdc++`，所以安装能成功，而 `node` 会报 `Error loading shared library libatomic.so.1`。关于 `libstdc++` 的提示同样会给出命令，0.5.2 的提示则是 `It is normally installed automatically`。见 [musl.md](musl.md#依赖的系统库)（[#41](https://github.com/version-fox/vfox-nodejs/pull/41)）。
+- 在 `legacyVersionFile.strategy` 为 `latest_installed` 和 `latest_available` 时，`.nvmrc` 和 `.node-version` 按版本号的数字匹配版本。已安装 22.9.0 和 22.23.3 时，`22` 选中 22.23.3，而 0.5.2 选中 22.9.0，因为 vfox 是按文本排列已安装版本的。`22.2` 不再匹配 22.23.3。`22.x`、`22.x.x` 和 `22.*` 都表示 22，0.5.2 对 `22.x` 什么也选不中。只会去掉开头的 `v`，所以代号里带 `v` 的 `lts/<codename>` 也能用。不是版本号的文本（`node`、`(`、`22[`）不做处理，0.5.2 对它们会报 `unfinished capture at EOS`，而 vfox 把这个错误藏了起来。见 [nvmrc.md](nvmrc.md#前缀怎样匹配)（[#41](https://github.com/version-fox/vfox-nodejs/pull/41)）。
+- 获取 `SHASUMS256.txt` 的请求失败时会说明原因：`get checksum failed: HTTP 404 from https://nodejs.org/dist/v24.99.0/SHASUMS256.txt`，或者网络错误，比如 `x509: certificate signed by unknown authority`。0.5.2 只打印 `get checksum failed`，没有别的内容。见 [troubleshooting.md](troubleshooting.md#插件给出的提示)（[#41](https://github.com/version-fox/vfox-nodejs/pull/41)）。
+- `VFOX_NODEJS_MIRROR` 的结尾可以有多个斜杠。0.5.2 只去掉一个（[#41](https://github.com/version-fox/vfox-nodejs/pull/41)）。
+- 文档新增了版本与命名、平台、`.nvmrc` 和 `.node-version`、npm、问题排查、开发和变更记录各页，并有了中文版，见 [README_CN.md](../../README_CN.md)（[#41](https://github.com/version-fox/vfox-nodejs/pull/41)）。
+- Windows 的 E2E 套件改为从宿主通过 `tests/e2e/windows/run.ps1` 运行，取代了 Docker Compose runner。脚本把 PowerShell、PortableGit 和 Go 取到一个缓存里，每个组合容器都以只读方式把它挂载到 `C:\tools`，所以不再有镜像去运行 PowerShell 的 MSI 和 Git 的安装程序，CI 也会同时启动所有 Windows 组合。见 [e2e.md](e2e.md#windows-11)（[#40](https://github.com/version-fox/vfox-nodejs/pull/40)）。
 
 ## 0.5.2（2026-10-17）
 

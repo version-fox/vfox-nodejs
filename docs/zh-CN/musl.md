@@ -40,7 +40,7 @@ failed to install nodejs
 
 在 OpenWrt 上，命令是 `opkg install libstdcpp`。既不是 Alpine 也不是 OpenWrt 的系统，得到的信息里不带命令。库里缺少某个符号时，加载器会报 `Error relocating ...: symbol not found`，安装最终则报 `Node.js (musl build) cannot run on this system: Error relocating ...`。
 
-未发布：0.5.2 只查找 `libstdc++`，它的报错信息写的是 `It is normally installed automatically; install it and reinstall.`，没有给出命令。它不查找 `libatomic`：安装会成功，之后 `node` 运行失败。
+缺少 `libatomic` 时，动态加载器会打印下面的内容，钩子就是从中读出库的名字。0.5.3 之前，插件在解压之后不会运行 `node`，所以早期版本的插件装好的版本，一运行就会出现这几行。只要装上这个库就行，不需要重新安装：
 
 ```text
 Error loading shared library libatomic.so.1: No such file or directory (needed by /root/.vfox/cache/nodejs/v-26.12.0/nodejs-26.12.0/bin/node)

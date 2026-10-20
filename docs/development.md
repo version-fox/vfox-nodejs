@@ -135,10 +135,6 @@ fallback when that finds nothing or the request fails.
 `vfox` then selects the answer if it is installed. User-facing rules and
 examples are in [nvmrc.md](nvmrc.md) and [lts.md](lts.md).
 
-Unreleased: release 0.5.2 matches the query as a Lua pattern against the start of
-each release, in the order vfox lists them, and takes the first one that matches.
-See [nvmrc.md](nvmrc.md#how-a-prefix-is-matched).
-
 ## When Node.js promotes a line to LTS
 
 Each October an even-numbered line gets a codename, see
@@ -253,12 +249,18 @@ Afterwards `plugins/nodejs.json` in
 [vfox-plugins](https://github.com/version-fox/vfox-plugins) shows the version
 that `vfox add nodejs` serves.
 
-The documentation marks what is newer than the last release with "Unreleased"
-("未发布" in Chinese). After a release, move those entries in
-[changes.md](changes.md) under the new version and take the remarks out, in both
-languages: `grep -rn -i -e unreleased -e 未发布 docs README*`. Also search for
-the number of the previous release: a few sentences compare against it without
-saying "Unreleased".
+While `main` is ahead of the last release, the documentation marks what is newer
+with "Unreleased" ("未发布" in Chinese): the entries sit under an "Unreleased"
+heading at the top of [changes.md](changes.md), a page that describes the new
+behavior adds a remark that starts with "Unreleased: release X.Y.Z" and tells
+what the last release does, and the README has a paragraph that explains the
+mark and points at [changes.md](changes.md) and
+[source-build.md](source-build.md). After a release, move the entries in
+[changes.md](changes.md) under the new version, with the pull request of each,
+and take the remarks and the README paragraph out, in both languages:
+`grep -rn -i -e unreleased -e 未发布 docs README*`. Also search for the number of
+the previous release: a few sentences compare against it without saying
+"Unreleased".
 
 ## Writing the docs
 

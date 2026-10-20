@@ -38,10 +38,6 @@ node -v
 `vfox search nodejs` lists every release, with the npm that comes with it and a
 mark on the ones of an LTS line. In an interactive terminal it lets you pick one.
 
-Behavior that only exists on `main` and not in the latest release is marked
-"Unreleased" in the pages below. [docs/changes.md](docs/changes.md) lists it, and
-[docs/source-build.md](docs/source-build.md) gets you `main`.
-
 ### Example: Ubuntu 26.04
 
 ```bash
@@ -70,9 +66,7 @@ The Node.js musl builds need `libstdc++`, and the ones of 26.8.0 and later need
 `libatomic` as well. A stock Alpine image has neither, and the plugin does not
 install system libraries. The install stops with a message that names the
 missing package and the command that installs it (`apk add libatomic`; OpenWrt
-calls `libstdc++` the `libstdcpp` package). Unreleased: release 0.5.2 checks for
-`libstdc++` only, and a missing `libatomic` shows when `node` fails with `Error
-loading shared library libatomic.so.1`. musl builds exist for x64 and arm64
+calls `libstdc++` the `libstdcpp` package). musl builds exist for x64 and arm64
 only. musl details (OpenWrt, tarball matrix, mirror fallback, which releases
 have a build): see [docs/musl.md](docs/musl.md).
 
@@ -91,10 +85,9 @@ Node.js publishes packages for Linux (x64, arm64, ppc64le, s390x), macOS (x64 an
 arm64) and Windows (x64, arm64, and x86 up to 22.x). Not every release has every
 one of them: Windows on ARM starts at 19.9.0, Linux arm64 at 4.0.0, Apple silicon
 at 16.0.0 (older releases install the x64 package under Rosetta 2). 32-bit ARM
-Linux has packages up to 23.11.1. Unreleased: release 0.5.2 cannot install them.
-riscv64 and loong64 are not supported. `vfox search` lists every release
-whatever your platform is. See [docs/platforms.md](docs/platforms.md) for the
-table.
+Linux has packages up to 23.11.1. riscv64 and loong64 are not supported.
+`vfox search` lists every release whatever your platform is. See
+[docs/platforms.md](docs/platforms.md) for the table.
 
 ## npm and global packages
 

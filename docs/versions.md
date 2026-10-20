@@ -39,10 +39,9 @@ checks it and unpacks it. These are the answers on 2026-10-21:
   builds, nightlies or four-part numbers. Those end in `version not found for
   provided version ...`.
 - A release number that does not exist (`24.99.0`) ends in `get checksum
-  failed: HTTP 404 from ...`, as nodejs.org has no directory for it
-  (Unreleased: release 0.5.2 leaves out what follows `failed`). A release that
-  exists but has no package for your platform ends in `Node.js package ... is
-  not listed in ...`. See
+  failed: HTTP 404 from ...`, as nodejs.org has no directory for it. A release
+  that exists but has no package for your platform ends in `Node.js package ...
+  is not listed in ...`. See
   [troubleshooting.md](troubleshooting.md#messages-from-the-plugin) and
   [platforms.md](platforms.md).
 - Every download is checked against the SHA-256 sum in the release's
