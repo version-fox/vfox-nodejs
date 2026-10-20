@@ -26,8 +26,9 @@ function UTIL.getBaseUrl()
     if mirror == "" or mirror == nil then
         return "https://nodejs.org/dist"
     end
-    -- Strip trailing slash to avoid double slashes in URL paths
-    return mirror:gsub("/$", "")
+    -- Strip trailing slashes to avoid double slashes in URL paths. The
+    -- parentheses keep gsub's second result (the count) out of the return.
+    return (mirror:gsub("/+$", ""))
 end
 
 function UTIL.file_exists(path)
@@ -105,20 +106,97 @@ function UTIL.has_libstdcxx()
     return false
 end
 
---- Name of the system package providing libstdc++.so.6, picked by probing
---- the distribution (Alpine, OpenWrt).
-function UTIL.libstdcxx_hint()
+--- System packages that provide the shared libraries the Node.js musl builds
+--- link, by their Alpine (apk) and OpenWrt (opkg) names. libatomic is linked
+--- by the musl builds of 26.8.0 and later, the others by every one.
+UTIL.MuslLibraries = {
+    ["libstdc++.so.6"] = { apk = "libstdc++", opkg = "libstdcpp" },
+    ["libatomic.so.1"] = { apk = "libatomic", opkg = "libatomic" },
+    ["libgcc_s.so.1"] = { apk = "libgcc", opkg = "libgcc" },
+}
+
+--- "apk" on Alpine, "opkg" on OpenWrt and ImmortalWrt, nil on anything else,
+--- picked by probing the distribution.
+--- @return string|nil
+function UTIL.package_manager()
     if UTIL.file_exists("/etc/alpine-release") or UTIL.file_exists("/sbin/apk") or UTIL.file_exists("/usr/bin/apk") then
-        return "the libstdc++ system package"
+        return "apk"
     end
     if
         UTIL.file_exists("/etc/openwrt_release")
         or UTIL.file_exists("/bin/opkg")
         or UTIL.file_exists("/usr/bin/opkg")
     then
-        return "the libstdcpp system package"
+        return "opkg"
     end
-    return "the libstdc++ system package (libstdcpp on OpenWrt)"
+    return nil
+end
+
+--- Phrase naming the system package that provides a shared library, such as
+--- "the libatomic system package". Falls back to the library itself.
+--- @param soname string e.g. "libatomic.so.1"
+--- @return string
+function UTIL.library_package_hint(soname)
+    local package = UTIL.MuslLibraries[soname]
+    if package == nil then
+        return "the " .. soname .. " shared library"
+    end
+    local manager = UTIL.package_manager()
+    if manager == "apk" or (manager == nil and package.apk == package.opkg) then
+        return "the " .. package.apk .. " system package"
+    end
+    if manager == "opkg" then
+        return "the " .. package.opkg .. " system package"
+    end
+    return "the " .. package.apk .. " system package (" .. package.opkg .. " on OpenWrt)"
+end
+
+--- Command that installs the package providing a shared library, nil when the
+--- distribution or the library is not known.
+--- @param soname string e.g. "libatomic.so.1"
+--- @return string|nil
+function UTIL.install_command(soname)
+    local package = UTIL.MuslLibraries[soname]
+    local manager = UTIL.package_manager()
+    if package == nil or manager == nil then
+        return nil
+    end
+    if manager == "apk" then
+        return "apk add " .. package.apk
+    end
+    return "opkg install " .. package.opkg
+end
+
+--- Quote a string as one word for a POSIX shell.
+--- @param text string
+--- @return string
+function UTIL.shell_quote(text)
+    return "'" .. text:gsub("'", "'\\''") .. "'"
+end
+
+--- Run a shell command and capture what it prints, stderr included.
+--- @param command string
+--- @return string|nil output nil when no command can be run here
+--- @return number|nil status the exit status, when the runtime reports one
+function UTIL.capture(command)
+    if type(io.popen) ~= "function" then
+        return nil, nil
+    end
+    local started, handle = pcall(io.popen, command .. " 2>&1")
+    if not started or not handle then
+        return nil, nil
+    end
+    local output = handle:read("*a") or ""
+    -- vfox's Lua returns the exit status here, standard Lua `true` or nil.
+    --- @type boolean|number|nil
+    local closed = handle:close()
+    if closed == true then
+        return output, 0
+    end
+    if type(closed) == "number" then
+        return output, closed
+    end
+    return output, nil
 end
 
 --- Whether a PATH entry belongs to vfox: like vfox's own check, one of its
@@ -190,6 +268,86 @@ function UTIL.compare_versions(v1o, v2o)
     end
 
     return false
+end
+
+--- The numbers of a release such as "22.23.3". nil unless every part is a
+--- number.
+--- @param version string
+--- @return number[]|nil
+function UTIL.version_parts(version)
+    if type(version) ~= "string" then
+        return nil
+    end
+    local parts = {}
+    for part in string.gmatch(version .. ".", "([^.]*)%.") do
+        if not part:match("^%d+$") then
+            return nil
+        end
+        table.insert(parts, tonumber(part))
+    end
+    return parts
+end
+
+--- What a version file asks for, as the numbers a release has to start with:
+--- "22" is { 22 }, "22.23" is { 22, 23 }, and "22.x", "22.x.x" and "22.*" are
+--- { 22 }. nil for anything else, such as "lts/jod", "node", ">=20" or "x".
+--- @param query string
+--- @return number[]|nil
+function UTIL.version_prefix(query)
+    if type(query) ~= "string" then
+        return nil
+    end
+    local prefix = {}
+    local wildcard = false
+    for part in string.gmatch(query .. ".", "([^.]*)%.") do
+        if part == "x" or part == "X" or part == "*" then
+            wildcard = true
+        elseif wildcard or not part:match("^%d+$") then
+            return nil
+        else
+            table.insert(prefix, tonumber(part))
+        end
+    end
+    if #prefix == 0 then
+        return nil
+    end
+    return prefix
+end
+
+--- Whether a release starts with the numbers of a prefix, part by part: "22.23.3"
+--- starts with { 22 } and { 22, 23 }, not with { 22, 2 }.
+--- @param version string
+--- @param prefix number[]
+--- @return boolean
+function UTIL.version_starts_with(version, prefix)
+    local parts = UTIL.version_parts(version)
+    if parts == nil or #parts < #prefix then
+        return false
+    end
+    for i, number in ipairs(prefix) do
+        if parts[i] ~= number then
+            return false
+        end
+    end
+    return true
+end
+
+--- The newest release that starts with the prefix, compared as numbers. vfox
+--- lists installed releases as text, so "22.9.0" comes before "22.23.3" there.
+--- @param versions table|nil releases as text, in any order
+--- @param prefix number[]
+--- @return string|nil
+function UTIL.newest_matching(versions, prefix)
+    local newest = nil
+    for _, version in pairs(versions or {}) do
+        if
+            UTIL.version_starts_with(version, prefix)
+            and (newest == nil or UTIL.compare_versions({ version = version }, { version = newest }))
+        then
+            newest = version
+        end
+    end
+    return newest
 end
 
 function UTIL.get_checksum(file_content, file_name)

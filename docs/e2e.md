@@ -1,5 +1,7 @@
 # E2E
 
+[中文](zh-CN/e2e.md) | [English](e2e.md)
+
 The offline Lua hook tests (`tests/hooks_test.lua`) run in the **Test Plugin**
 workflow. The end-to-end suite runs in containers against real vfox on Linux
 and Windows; each `vfox` x `mirror` combination gets its own throwaway
@@ -50,8 +52,9 @@ the Windows filesystem works too.
 Windows *container* coverage (`tests/e2e/windows`) cannot run in a dev
 container: the Dev Containers spec does not support Windows container images
 ([vscode-remote-release#445](https://github.com/microsoft/vscode-remote-release/issues/445)),
-and Windows containers only run on a Windows daemon. That suite keeps its
-Docker Compose runner on a Windows host; see [Windows 11](#windows-11) below.
+and Windows containers only run on a Windows daemon. That suite runs from a
+Windows host through `tests/e2e/windows/run.ps1`; see [Windows 11](#windows-11)
+below.
 
 ## What the suite verifies
 
@@ -140,6 +143,12 @@ with `libstdc++`) and asserts the musl userland before running the standard
 flow, proving the plugin selects the `*-musl` tarballs
 ([issue #29](https://github.com/version-fox/vfox-nodejs/issues/29)).
 See [docs/musl.md](musl.md) for the tarball matrix.
+
+The image installs `libstdc++` on purpose. It gets `libatomic` only through
+`go`, which depends on `gcc`, so the suite does not cover a stock Alpine, where
+the musl packages of 26.8.0 and later need `libatomic` and the install stops
+without it. The hook tests cover that check (`post_install names the library the
+loader cannot find`), see [docs/musl.md](musl.md#requirements).
 
 Set `E2E_LINUX_BASE` to switch the same Linux suite onto the Alpine image:
 

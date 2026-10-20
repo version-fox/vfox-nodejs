@@ -64,37 +64,33 @@ function PLUGIN:ParseLegacyFile(ctx)
     if content == "" then
         return {}
     end
-    function resolve_legacy_version(strategy, query)
-        local list = {}
+    --- `specified` leaves the text to vfox. The other strategies read it as the
+    --- start of a release number (`22`, `22.23`, `22.x`) and take the newest
+    --- release that starts with it. The comparison is by numbers: vfox lists the
+    --- installed releases as text, where `22.9.0` comes before `22.23.3`, and
+    --- `22.2` must not match `22.23.3`. Text that is not a release number
+    --- (`node`, `lts/unknown`, ranges) is returned as it is.
+    local function resolve_legacy_version(strategy, query)
+        local prefix = util.version_prefix(query)
+        if prefix == nil or (strategy ~= "latest_installed" and strategy ~= "latest_available") then
+            return query
+        end
 
         if strategy == "latest_installed" then
-            list = ctx.getInstalledVersions()
-        elseif strategy == "latest_available" then
-            for _, av in pairs(self:Available({})) do
-                table.insert(list, av.version)
+            local installed = util.newest_matching(ctx.getInstalledVersions(), prefix)
+            if installed ~= nil then
+                return installed
             end
-        else
-            -- Just return the original query
-            return query
-        end
-
-        local resolved = ""
-        for _, item in pairs(list) do
-            if item:match("^" .. query) then
-                resolved = item
-                break
-            end
-        end
-
-        if resolved ~= "" then
-            return resolved
-        elseif strategy ~= "latest_available" then
             -- If no version is installed, fallback to latest_available
             return resolve_legacy_version("latest_available", query)
-        else
-            -- Give up and pretty the query itself
-            return query
         end
+
+        local available = {}
+        for _, av in pairs(self:Available({})) do
+            table.insert(available, av.version)
+        end
+        -- Give up and pretty the query itself
+        return util.newest_matching(available, prefix) or query
     end
     local query = resolve_version(content, ctx.strategy)
 
@@ -106,9 +102,12 @@ function PLUGIN:ParseLegacyFile(ctx)
 end
 
 function resolve_version(query, strategy)
-    query = string.lower(query:gsub("v", ""))
+    -- Only a leading `v` goes (v22.23.3): a codename may have one inside.
+    query = (string.lower(query):gsub("^v", ""))
 
-    if query:match("^lts-") then
+    -- `lts-jod` is `lts/jod`. The `-` is escaped: in a pattern it repeats the
+    -- character before it, so `^lts-` matched anything that starts with `lt`.
+    if query:match("^lts%-") then
         query = query:gsub("-", "/")
     end
 

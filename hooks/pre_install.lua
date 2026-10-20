@@ -49,6 +49,9 @@ function PLUGIN:PreInstall(ctx)
         arch_type = "x64"
     elseif RUNTIME.archType == "386" then
         arch_type = "x86"
+    elseif RUNTIME.archType == "arm" then
+        -- vfox reports 32-bit ARM as `arm`, Node.js names the package armv7l.
+        arch_type = "armv7l"
     end
     if RUNTIME.osType == "windows" then
         ext = ".zip"
@@ -93,11 +96,17 @@ function PLUGIN:PreInstall(ctx)
         filename = util.FileName:format(version, osType, arch_type, ext)
     end
 
+    local sums_url = baseUrl .. "SHASUMS256.txt"
     local resp, err = http.get({
-        url = baseUrl .. "SHASUMS256.txt",
+        url = sums_url,
     })
-    if err ~= nil or resp.status_code ~= 200 then
-        error("get checksum failed")
+    -- Keep the cause: a missing release, a dead mirror and a TLS problem all
+    -- end here.
+    if err ~= nil then
+        error("get checksum failed: " .. tostring(err))
+    end
+    if resp.status_code ~= 200 then
+        error("get checksum failed: HTTP " .. tostring(resp.status_code) .. " from " .. sums_url)
     end
     local checksum = util.get_checksum(resp.body, filename)
     if checksum ~= nil then
