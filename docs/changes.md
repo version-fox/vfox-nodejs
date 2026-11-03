@@ -25,11 +25,18 @@ ahead of it by everything under "Unreleased".
   requests, `vfox/1.0.13 vfox-nodejs/0.5.3` under vfox 1.0.13, and all of the
   mirrors of [mirror.md](mirror.md#mirrors-that-work) install 24.21.0. China
   Telecom Cloud, `https://mirrors.ctyun.cn/nodejs-release`, is in that list now.
-- `lts/lithium` is known, and `lts` and `lts/*` mean Node.js 26. Node.js 26
-  entered long-term support on 2026-10-28 as Lithium. The codename table of
-  release 0.5.3 ends at Krypton (24), so there `lts/lithium` selects nothing
-  under `latest_installed`, and `lts` and `lts/*` select a 24.x. See
-  [lts.md](lts.md#when-nodejs-promotes-a-line).
+- The plugin learns the LTS lines from the version index, so a line that
+  Node.js promotes later needs no release of the plugin. It keeps what it
+  learned in `.lts-cache` next to the plugin. It writes the file when
+  `vfox search`, or an install of `latest` or of a major, reads the index, and
+  when an install of an exact release finds the file missing or a day old. It
+  reads it for `lts/<codename>`, `lts` and `lts/*` under `specified` and
+  `latest_installed`, without any request. Before it has learned anything, or
+  where it cannot write the file, it uses a table of the codenames, which now
+  ends at Lithium (26): Node.js 26 entered long-term support on 2026-10-28.
+  Release 0.5.3 has the table only, and it ends at Krypton (24), so there
+  `lts/lithium` selects nothing under `latest_installed`, and `lts` and `lts/*`
+  select a 24.x. See [lts.md](lts.md#what-this-plugin-understands).
 - A `.nvmrc` or `.node-version` in UTF-16, or in UTF-8 with a byte order mark,
   is read. Windows PowerShell 5.1 writes the first with `>` and `Out-File`, and
   the second with `-Encoding UTF8`. Release 0.5.3 reads the bytes as they are,

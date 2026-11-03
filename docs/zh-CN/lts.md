@@ -23,7 +23,13 @@ $ vfox search nodejs | grep -m1 '(LTS)'
 
 ## 插件认识哪些代号
 
-在 `latest_available` 策略下，插件从版本索引里动态获取 LTS 代号（`index.json` 在每个版本的 `lts` 字段里写明了代号），所以插件发布之后才出现的代号，在这个策略下仍然有效。其他情况下，以及离线时的回退，用的是 `hooks/parse_legacy_file.lua` 里硬编码的表，因为 `specified` 和 `latest_installed` 必须在没有网络的情况下完成解析。“首个 LTS 版本”和“最后一个版本”取自 2026-11-03 的索引，Jod、Krypton 和 Lithium 仍在发布新版本：
+`index.json` 在每个版本的 `lts` 字段里写明了 LTS 版本线的代号（`"lts": "Lithium"`，不在长期支持内的版本是 `false`）。插件从那里读取代号，而不是靠维护者手工维护的一份清单：
+
+- 在 `latest_available` 策略下，插件读取文件时向索引查询，也就是带有这个文件的目录里每个提示符都查一次，所以插件发布之后才出现的代号，当天就能用。
+- 在 `specified` 和 `latest_installed` 下，插件同样在每个提示符运行，不能每次都去取索引。它使用上一次拿到索引时学到的内容：`vfox search`，或者安装 `latest` 或某个大版本（比如 `nodejs@26`），向它要版本列表时（vfox 会把答案保留一段时间，所以不是每次搜索都会这样），以及安装某个版本、而这个文件不存在或者已有一天的时候。它把学到的内容放在插件旁边的 `.lts-cache` 里，vfox 自己的 `.available.cache` 也在那里。删掉这个文件就等于让它忘掉，下一次安装时会重新学到。
+- 在学到任何内容之前，或者文件无法写入的地方，它使用下面的表。这张表只是个起点：表里没有的版本线，插件一拿到索引就会学到。
+
+“首个 LTS 版本”和“最后一个版本”取自 2026-11-03 的索引，Jod、Krypton 和 Lithium 仍在发布新版本：
 
 | 代号 | 大版本 | 首个 LTS 版本 | 最后一个版本 |
 | --- | --- | --- | --- |
@@ -42,13 +48,13 @@ $ vfox search nodejs | grep -m1 '(LTS)'
 
 ## Node.js 升级版本线时
 
-编号为偶数的版本线每年十月进入长期支持，并在那时得到代号。Node.js 26 在 2026-10-28 就是这样，代号是 Lithium：26.13.0 是索引里第一个带 `lts` 标记的版本。未发布：0.5.3 发布得更早，所以它的表到 Krypton 为止；2026-11-03，已安装 22.23.4、24.22.2 和 26.13.0 时，它在 `latest_installed` 下 `lts/*` 选中 24.22.2，`lts/lithium` 什么也选不中。升级版本线在实践中是这样的：
+编号为偶数的版本线每年十月进入长期支持，并在那时得到代号。Node.js 26 在 2026-10-28 就是这样，代号是 Lithium：26.13.0 是索引里第一个带 `lts` 标记的版本。升级版本线在实践中是这样的：
 
 - 在 `latest_available` 下，新代号一出现在索引里，插件当天就能找到。这时 `lts` 和 `lts/*` 指的是新版本线的最新版本，`lts/lithium` 在那里当天就能用，0.5.3 也一样。
-- 在 `specified` 和 `latest_installed` 下由上面的表决定，而这张表只有随着插件发布新版本才会改变。在那之前，`lts/<new codename>` 什么都选不中，`lts` 和 `lts/*` 仍然指表里最高的版本线，撰写本文时为 26。
+- 在 `specified` 和 `latest_installed` 下，插件从升级之后第一次拿到索引起就认识这条版本线：也就是把新版本线带给你的那次 `vfox search` 或者安装。`latest_installed` 在没有安装这条版本线的任何版本之前什么也选不中，所以这已经够早了。在那之前，`lts/<new codename>` 什么都选不中，`lts` 和 `lts/*` 指的是插件认识的最新的版本线。
 - `vfox search` 里的 `(LTS)` 跟随索引，所以会立刻变化。
 
-这张表在 `hooks/parse_legacy_file.lua` 里，见 [development.md](development.md#nodejs-把一条版本线升为-lts-时)。
+未发布：0.5.3 只有那张表，没有这个文件。这张表发布时 Lithium 还没有出现，到 Krypton 为止，所以 2026-11-03，已安装 22.23.4、24.22.2 和 26.13.0 时，它在 `latest_installed` 下 `lts/*` 选中 24.22.2，`lts/lithium` 什么也选不中，要让它认识一条版本线，只有发布插件的新版本。插件如何学到这些，见 [development.md](development.md#插件如何学到-lts-版本线)。
 
 ## 示例
 
@@ -64,7 +70,7 @@ v22.23.4
 ```
 
 ```sh
-# 2. 单独的 `lts`（或 `lts/*`）表示“映射表里最高的大版本”，
+# 2. 单独的 `lts`（或 `lts/*`）表示“插件认识的最新的 LTS 版本线”，
 # 撰写本文时为 26（未发布：0.5.3 里是 24）。
 $ printf 'lts\n' > .nvmrc
 $ cd <dir-with-.nvmrc> && eval "$(vfox activate bash)" && eval "$(vfox env -s bash)" && node --version
@@ -72,7 +78,7 @@ v26.13.0
 ```
 
 ```sh
-# 3. 写全版本号时，完全不经过代号表。
+# 3. 写全版本号时，不需要代号。
 $ printf '22.23.4\n' > .nvmrc
 $ cd <dir-with-.nvmrc> && eval "$(vfox activate bash)" && eval "$(vfox env -s bash)" && node --version
 v22.23.4
@@ -89,8 +95,8 @@ v24.21.0
 ```
 
 ```sh
-# 5. 在 latest_available 下会查询索引，所以连比上面的表更新的代号
-# 也能解析（离线时回退到这张表）。
+# 5. 在 latest_available 下会查询索引，所以连插件还没有学到的代号
+# 也能解析（离线时回退到插件学到的内容，再回退到上面的表）。
 $ vfox config legacyVersionFile.strategy latest_available
 $ printf 'lts/<future-codename>\n' > .nvmrc
 $ cd <dir-with-.nvmrc> && eval "$(vfox activate bash)" && eval "$(vfox env -s bash)" && node --version

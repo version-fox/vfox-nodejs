@@ -89,7 +89,7 @@ vfox config legacyVersionFile.strategy latest_installed
 
 ## 文件里可以写什么
 
-插件在处理文本之前，会先对它解码，去掉所有空白，去掉开头的 `v`，把其余部分转成小写，并把 `lts-jod` 改成 `lts/jod`。所以 `v22.23.3`、CRLF 换行的文件，以及版本前后的空白，都没有问题。`lts/jod` 这样的名字，会按 [lts.md](lts.md) 里的表变成它所在版本线的大版本（22）；`latest_available` 除外，它会向索引查询带有这个代号的最新版本。版本号末尾可以用 `x`、`X` 或 `*` 代替不作限定的部分：`22.x`、`22.x.x` 和 `22.*` 都表示 22。
+插件在处理文本之前，会先对它解码，去掉所有空白，去掉开头的 `v`，把其余部分转成小写，并把 `lts-jod` 改成 `lts/jod`。所以 `v22.23.3`、CRLF 换行的文件，以及版本前后的空白，都没有问题。`lts/jod` 这样的名字，会变成它所在版本线的大版本（22），这是插件从索引里知道的，见 [lts.md](lts.md)；`latest_available` 除外，它会向索引查询带有这个代号的最新版本。版本号末尾可以用 `x`、`X` 或 `*` 代替不作限定的部分：`22.x`、`22.x.x` 和 `22.*` 都表示 22。
 
 解码的意思是，UTF-16 的文件，或者带字节顺序标记的 UTF-8 文件，读起来和纯文本一样。Windows PowerShell 5.1 的 `>`、`Out-File` 和 `-Encoding UTF8` 写出的就是这样的文件，见 [scenarios.md](scenarios.md#在-windows-powershell-51-里写这个文件)。未发布：0.5.3 按原样读取字节，所以标记或者 UTF-16 的零字节会成为文本的一部分，没有任何版本能匹配它，而 vfox 不会有任何提示。
 
@@ -108,7 +108,7 @@ vfox config legacyVersionFile.strategy latest_installed
 
 `latest_available` 不会回退到较旧的已安装版本。索引里列出的版本比你已安装的更新时，什么都不会选中。想选中已安装的最新版本，请用 `latest_installed`。
 
-`lts` 和 `lts/*` 指最新的 LTS 版本线。在 `specified` 和 `latest_installed` 下，指的是代号表里最高的大版本（撰写本文时为 26）；在 `latest_available` 下，指的是索引里带有任意代号的最新版本。代号表，以及 Node.js 把一条新版本线升为 LTS 时会发生什么，见 [lts.md](lts.md)。未发布：0.5.3 的代号表到 Krypton（24）为止，因为它发布时 Node.js 26 还不是 LTS 版本线。在那里，`latest_installed` 下 `lts/lithium` 什么也选不中，`lts` 和 `lts/*` 在上面的表里选中 24.21.0。
+`lts` 和 `lts/*` 指最新的 LTS 版本线。在 `specified` 和 `latest_installed` 下，指的是插件认识的最新的版本线（撰写本文时为 26）；在 `latest_available` 下，指的是索引里带有任意代号的最新版本。插件如何认识版本线，以及 Node.js 把一条新版本线升为 LTS 时会发生什么，见 [lts.md](lts.md)。未发布：0.5.3 只认识一张到 Krypton（24）为止的表，因为它发布时 Node.js 26 还不是 LTS 版本线。在那里，`latest_installed` 下 `lts/lithium` 什么也选不中，`lts` 和 `lts/*` 在上面的表里选中 24.21.0。
 
 ## 不认识的写法
 

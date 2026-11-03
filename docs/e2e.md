@@ -97,6 +97,12 @@ driven from Go through `docker exec`-style calls):
    probes rely on that instead of removing it themselves.
 7. `vfox search nodejs` lists the installed release with the same npm
    version the binary bundles.
+8. After the installs and the search, the plugin directory holds `.lts-cache`
+   (see [lts](lts.md#what-this-plugin-understands)) with every codename of the
+   plugin's table at the same major, and a newest LTS major of 26 or more. The
+   index names all of them, so a table that is wrong shows here. On Windows it
+   also tries the path with backslashes that the plugin finds its directory by,
+   and a rename over an existing file.
 
 The default matrix is:
 

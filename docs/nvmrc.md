@@ -148,10 +148,11 @@ network at every prompt, and a prompt in such a directory waits for it.
 Before it looks at the text, the plugin decodes it, removes all whitespace,
 drops a leading `v`, makes the rest lower case and turns `lts-jod` into
 `lts/jod`. So `v22.23.3`, a CRLF file and blanks around the version are fine. A
-name such as `lts/jod` becomes the major of its line (22) with the table in
-[lts.md](lts.md), except under `latest_available`, where the index is asked for
-the newest release with that codename. A release number may end in `x`, `X` or
-`*` for the parts it leaves open: `22.x`, `22.x.x` and `22.*` all mean 22.
+name such as `lts/jod` becomes the major of its line (22), which the plugin
+knows from the index, see [lts.md](lts.md), except under `latest_available`,
+where the index is asked for the newest release with that codename. A release
+number may end in `x`, `X` or `*` for the parts it leaves open: `22.x`, `22.x.x`
+and `22.*` all mean 22.
 
 Decoding means that a file in UTF-16, or in UTF-8 with a byte order mark, reads
 like plain text. Windows PowerShell 5.1 writes such files with `>`, `Out-File`
@@ -180,13 +181,13 @@ index names a newer release than the one you have, nothing is selected. Use
 `latest_installed` if you want the newest one you have.
 
 `lts` and `lts/*` mean the newest LTS line. Under `specified` and
-`latest_installed` that is the highest major in the codename table (26 at the
-time of writing), under `latest_available` the newest release that carries any
-codename in the index. See [lts.md](lts.md) for the table and what happens
-when Node.js promotes a new line. Unreleased: the table of release 0.5.3 ends
-at Krypton (24), because it was published before Node.js 26 became an LTS line.
-There `lts/lithium` selects nothing under `latest_installed`, and `lts/*` and
-`lts` select 24.21.0 in the table above.
+`latest_installed` that is the newest line that the plugin knows (26 at the time
+of writing), under `latest_available` the newest release that carries any
+codename in the index. See [lts.md](lts.md) for how the plugin knows lines and
+what happens when Node.js promotes a new one. Unreleased: release 0.5.3 knows
+only a table that ends at Krypton (24), because it was published before Node.js
+26 became an LTS line. There `lts/lithium` selects nothing under
+`latest_installed`, and `lts/*` and `lts` select 24.21.0 in the table above.
 
 ## Not understood
 
