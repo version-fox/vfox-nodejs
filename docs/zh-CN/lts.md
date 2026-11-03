@@ -12,14 +12,14 @@ Node.js 中编号为偶数的大版本会成为 **LTS**（长期支持）版本�
 vfox install nodejs@24
 ```
 
-`vfox search nodejs` 会用 `(LTS)` 标出 LTS 版本线的版本，所以最新的 LTS 版本就是第一个带这个标记的行：
+`vfox search nodejs` 会用 `(LTS)` 标出 LTS 版本线的版本，所以最新的 LTS 版本就是第一个带这个标记的行（2026-11-03 的结果）：
 
 ```text
 $ vfox search nodejs | grep -m1 '(LTS)'
- - 24.22.0 (LTS) [npm 11.19.1]
+ - 26.13.0 (LTS) [npm 11.20.0]
 ```
 
-用 `vfox install nodejs@24.22.0` 安装它，或者用 `nodejs@24` 跟随这条版本线。这个标记来自版本索引的 `lts` 字段，Node.js 从一条版本线进入长期支持的那天起设置它：24.11.0 是 Krypton 中第一个带它的版本，24.10.0 及更早的版本没有。`lts/<codename>` 只在 `.nvmrc` 和 `.node-version` 文件里才会被识别，见 [nvmrc.md](nvmrc.md)。
+用 `vfox install nodejs@26.13.0` 安装它，或者用 `nodejs@26` 跟随这条版本线。这个标记来自版本索引的 `lts` 字段，Node.js 从一条版本线进入长期支持的那天起设置它：24.11.0 是 Krypton 中第一个带它的版本，24.10.0 及更早的版本没有。`lts/<codename>` 只在 `.nvmrc` 和 `.node-version` 文件里才会被识别，见 [nvmrc.md](nvmrc.md)。
 
 ## 插件认识哪些代号
 
@@ -41,10 +41,10 @@ $ vfox search nodejs | grep -m1 '(LTS)'
 
 ## Node.js 升级版本线时
 
-编号为偶数的版本线每年十月进入长期支持，并在那时得到代号。根据[发布计划](https://github.com/nodejs/Release)，Node.js 26 定于 2026-10-28 进入长期支持，目前还没有公布代号。
+编号为偶数的版本线每年十月进入长期支持，并在那时得到代号。Node.js 26 在 2026-10-28 就是这样，代号是 Lithium：26.13.0 是索引里第一个带 `lts` 标记的版本。上面的表还没有它，所以下面几条描述的就是你现在会看到的情形。
 
-- 在 `latest_available` 下，新代号一出现在索引里，插件当天就能找到。这时 `lts` 和 `lts/*` 指的是新版本线的最新版本。
-- 在 `specified` 和 `latest_installed` 下由上面的表决定，而这张表只有随着插件发布新版本才会改变。在那之前，`lts/<new codename>` 什么都选不中，`lts` 和 `lts/*` 仍然指表里最高的版本线，撰写本文时为 24。
+- 在 `latest_available` 下，新代号一出现在索引里，插件当天就能找到。这时 `lts` 和 `lts/*` 指的是新版本线的最新版本。2026-11-03，已安装 22.23.4、24.22.2 和 26.13.0 时，`lts/*` 和 `lts/lithium` 都选中 26.13.0。
+- 在 `specified` 和 `latest_installed` 下由上面的表决定，而这张表只有随着插件发布新版本才会改变。在那之前，`lts/<new codename>` 什么都选不中，`lts` 和 `lts/*` 仍然指表里最高的版本线，撰写本文时为 24。2026-11-03，安装了同样的版本时，`latest_installed` 下 `lts/*` 选中 24.22.2，`lts/lithium` 什么也选不中。
 - `vfox search` 里的 `(LTS)` 跟随索引，所以会立刻变化。
 
 这张表在 `hooks/parse_legacy_file.lua` 里，见 [development.md](development.md#nodejs-把一条版本线升为-lts-时)。

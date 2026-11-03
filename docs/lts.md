@@ -18,14 +18,14 @@ vfox install nodejs@24
 ```
 
 `vfox search nodejs` marks the releases of LTS lines with `(LTS)`, so the newest
-LTS release is the first line that has the mark:
+LTS release is the first line that has the mark (on 2026-11-03):
 
 ```text
 $ vfox search nodejs | grep -m1 '(LTS)'
- - 24.22.0 (LTS) [npm 11.19.1]
+ - 26.13.0 (LTS) [npm 11.20.0]
 ```
 
-Install it with `vfox install nodejs@24.22.0`, or with `nodejs@24` to follow the
+Install it with `vfox install nodejs@26.13.0`, or with `nodejs@26` to follow the
 line. The mark is the `lts` field of the version index, which Node.js sets from
 the day a line enters long-term support: 24.11.0 is the first release of
 Krypton with it, 24.10.0 and the ones before have none. `lts/<codename>` is
@@ -60,16 +60,20 @@ releases:
 ## When Node.js promotes a line
 
 An even-numbered line enters long-term support each October and gets its
-codename then. The [release schedule](https://github.com/nodejs/Release) puts
-Node.js 26 on 2026-10-28, with no codename announced yet.
+codename then. Node.js 26 did on 2026-10-28, as Lithium: 26.13.0 is the first
+release with the `lts` mark in the index. The table above does not have it yet,
+which makes the bullets below what you see now.
 
 - Under `latest_available` the plugin finds the new codename in the index the
   day it appears. `lts` and `lts/*` then name the newest release of the new
-  line.
+  line. On 2026-11-03, with 22.23.4, 24.22.2 and 26.13.0 installed, `lts/*` and
+  `lts/lithium` select 26.13.0.
 - Under `specified` and `latest_installed` the table above decides, and the
   table changes with a release of the plugin. Until then `lts/<new codename>`
   selects nothing, and `lts` and `lts/*` keep meaning the highest line in the
-  table, 24 at the time of writing.
+  table, 24 at the time of writing. On 2026-11-03, with the same releases
+  installed, `latest_installed` selects 24.22.2 for `lts/*` and nothing for
+  `lts/lithium`.
 - `(LTS)` in `vfox search` follows the index, so it changes at once.
 
 The table is in `hooks/parse_legacy_file.lua`, see
