@@ -73,6 +73,7 @@ E2E 套件里没有 macOS 作业，见[下文](#ci-覆盖什么)。钩子测试�
 - 用户主目录里带空格（`C:\Users\John Doe`）时，需要 vfox 1.0.13 及以后的版本（[vfox#712](https://github.com/version-fox/vfox/pull/712)）。E2E 套件对每种组合都用这样的主目录跑一遍。
 - 在 Git Bash 里，vfox 挂载到 Shell 之后，`node`、`npm.cmd` 和不带扩展名的 `npm` 都能运行（[vfox#293](https://github.com/version-fox/vfox/issues/293)）。
 - `VFOX_NODEJS_MIRROR` 从运行 vfox 的进程的环境里读取。在 PowerShell 里用 `$env:VFOX_NODEJS_MIRROR = '...'` 为当前会话设置，见 [mirror.md](mirror.md#怎样设置)。
+- 从零开始使用 Windows PowerShell 5.1（执行策略、配置文件、`.nvmrc` 的编码），见 [scenarios.md](scenarios.md#windows-powershell-51)。
 
 ## vfox 自己支持的平台
 
@@ -90,4 +91,4 @@ vfox 1.0.13 提供这些平台的二进制：Linux 的 x86_64、aarch64、armv7�
 | Windows 容器，amd64 和 arm64 | `windows-latest`、`windows-11-arm` |
 | WSL 上的 Ubuntu 24.04 | `windows-2025` |
 
-macOS、32 位系统、ppc64le 和 s390x 没有覆盖。钩子测试（`tests/hooks_test.lua`）离线运行，检查以下平台的包名：`windows` 的 amd64、386 和 arm64，`linux` 的 amd64 和 arm，musl 的 amd64 和 arm64，以及 `darwin` 的 arm64。
+macOS、32 位系统、ppc64le 和 s390x 没有覆盖，Windows PowerShell 5.1（`powershell.exe`）也没有：Windows 作业驱动的是 PowerShell 7（`pwsh`），Windows PowerShell 只用来构建它们的镜像。钩子测试（`tests/hooks_test.lua`）离线运行，检查以下平台的包名：`windows` 的 amd64、386 和 arm64，`linux` 的 amd64 和 arm，musl 的 amd64 和 arm64，以及 `darwin` 的 arm64。

@@ -17,6 +17,14 @@ ahead of it by everything under "Unreleased".
   `version not found for provided version 27.0.0-alpha.0.0.0`. `nodejs@26` and
   the other numbers work. Only releases of three numbers are listed now. See
   [versions.md](versions.md#installing).
+- The documentation has a page of scenarios: the nvm-sh/nvm commands next to
+  vfox's, Windows PowerShell 5.1 from scratch, one Node.js for a whole team,
+  several projects in one shell, `vfox exec`, mirrors and editors. See
+  [scenarios.md](scenarios.md). It also corrects the other pages on one point:
+  `.nvmrc` and `.node-version` are read when a shell starts in the directory,
+  not when you `cd` into it from a running shell, because vfox 1.0.13 keeps the
+  first result it worked out for the shell. `.vfox.toml` switches on `cd`. See
+  [nvmrc.md](nvmrc.md#when-the-file-is-read).
 
 ## 0.5.3 (2026-10-20)
 

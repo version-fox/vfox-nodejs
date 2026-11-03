@@ -7,6 +7,7 @@
 ## 未发布
 
 - `vfox install nodejs@latest` 重新安装最新的版本，`vfox search nodejs` 也不再列出预发布版本。2026-10-29 起，nodejs.org 的索引里最新的一条是 `27.0.0-alpha.0.0.0`。0.5.3 把它排在最前面，所以 `latest` 解析成它，安装以 `version not found for provided version 27.0.0-alpha.0.0.0` 告终。`nodejs@26` 等按编号安装的写法不受影响。现在只列出由三段数字组成的版本。见 [versions.md](versions.md#安装)。
+- 文档新增了一页使用场景：nvm-sh/nvm 与 vfox 的命令对照、从零开始使用 Windows PowerShell 5.1、全团队使用同一个 Node.js、一个 Shell 里的多个项目、`vfox exec`、镜像和编辑器。见 [scenarios.md](scenarios.md)。它还更正了其他页面里的一点：`.nvmrc` 和 `.node-version` 在 Shell 于该目录里启动时读取，而不是在已经运行的 Shell 里 `cd` 进来时，因为 vfox 1.0.13 会保留 Shell 第一次算出的结果；`.vfox.toml` 则在 `cd` 时切换。见 [nvmrc.md](nvmrc.md#什么时候读取这个文件)。
 
 ## 0.5.3（2026-10-20）
 

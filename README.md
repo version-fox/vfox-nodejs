@@ -10,6 +10,13 @@ and checks every download against the SHA-256 sums published next to it. Each
 release comes with its own npm. On Alpine, OpenWrt and other musl systems it
 installs the musl builds. vfox reads `.nvmrc` and `.node-version` through it.
 
+It does for vfox what [nvm-sh/nvm](https://github.com/nvm-sh/nvm) does for POSIX
+shells: several releases side by side, one chosen per shell, per project or as
+the default, and `.nvmrc` read. nvm-sh/nvm is written for POSIX shells and does
+not run in PowerShell. vfox does, so Windows PowerShell 5.1 gets the same work.
+[docs/scenarios.md](docs/scenarios.md) shows it in concrete cases, with the
+commands side by side.
+
 ## Install
 
 After installing [vfox](https://github.com/version-fox/vfox), install the plugin by running:
@@ -74,6 +81,13 @@ calls `libstdc++` the `libstdcpp` package). musl builds exist for x64 and arm64
 only. musl details (OpenWrt, tarball matrix, mirror fallback, which releases
 have a build): see [docs/musl.md](docs/musl.md).
 
+## Scenarios
+
+See [docs/scenarios.md](docs/scenarios.md) for concrete cases: the nvm-sh/nvm
+commands next to vfox's, Windows PowerShell 5.1 from scratch, one Node.js for a
+whole team, several projects in one shell, running a command on a given release,
+mirrors and editors.
+
 ## Versions and names
 
 A version is a release number: `24.21.0`, or the start of one, `24.21` and `24`,
@@ -107,8 +121,10 @@ details and for mirrors that were checked.
 
 ## `.nvmrc` and `.node-version`
 
-vfox reads these files when you enter a directory, and selects the release they
-name if it is installed. What a file can say depends on vfox's
+vfox reads these files when a shell starts in a directory that has one, and
+selects the release they name if it is installed. A shell that is already
+running does not read them when you `cd`: for switching on `cd`, `vfox use
+--project` writes a `.vfox.toml`. What a file can say depends on vfox's
 `legacyVersionFile.strategy`: with the default, `specified`, only a full release
 number selects something. See [docs/nvmrc.md](docs/nvmrc.md) for details.
 

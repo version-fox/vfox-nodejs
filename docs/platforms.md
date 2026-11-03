@@ -120,6 +120,9 @@ no `bin` directory as on Linux and macOS.
 - `VFOX_NODEJS_MIRROR` is read from the environment of the process that runs
   vfox. In PowerShell set it with `$env:VFOX_NODEJS_MIRROR = '...'` for the
   session, see [mirror.md](mirror.md#setting-it).
+- For Windows PowerShell 5.1 from scratch (the execution policy, the profile,
+  the encoding of `.nvmrc`), see
+  [scenarios.md](scenarios.md#windows-powershell-51).
 
 ## vfox's own platforms
 
@@ -141,7 +144,9 @@ pinned LTS release and `nodejs@latest` on:
 | Windows containers, amd64 and arm64 | `windows-latest`, `windows-11-arm` |
 | Ubuntu 24.04 on WSL | `windows-2025` |
 
-macOS, 32-bit systems, ppc64le and s390x are not covered. The hook tests
+macOS, 32-bit systems, ppc64le and s390x are not covered. Nor is Windows
+PowerShell 5.1 (`powershell.exe`): the Windows jobs drive PowerShell 7 (`pwsh`),
+and Windows PowerShell only runs the build of their images. The hook tests
 (`tests/hooks_test.lua`) run offline and check the package name for `windows`
 on amd64, 386 and arm64, `linux` on amd64 and arm, musl on amd64 and arm64, and
 `darwin` on arm64.
