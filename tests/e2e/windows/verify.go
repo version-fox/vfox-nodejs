@@ -132,8 +132,9 @@ func verifySearch(ctx context.Context, t *testing.T, ctr tc.Container, box slotB
 // anyway, and ParseLegacyFile, which runs at every prompt and must not fetch the
 // index, reads the file (docs/lts.md). The index names every line of the
 // plugin's built-in table, so each of them must be there with the same major.
-// This is also where Windows paths and a rename over an existing file are
-// tried: the plugin finds its directory in package.path, which has backslashes.
+// The vfox home of these containers is spacedVfoxHome, so the file is also where
+// the plugin shows that it finds its directory on Windows, with a space in the
+// path, and writes to it.
 func verifyLearnedLTS(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox) {
 	t.Helper()
 	text := execOK(ctx, t, ctr,

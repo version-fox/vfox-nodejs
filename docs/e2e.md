@@ -100,9 +100,10 @@ driven from Go through `docker exec`-style calls):
 8. After the installs and the search, the plugin directory holds `.lts-cache`
    (see [lts](lts.md#what-this-plugin-understands)) with every codename of the
    plugin's table at the same major, and a newest LTS major of 26 or more. The
-   index names all of them, so a table that is wrong shows here. On Windows it
-   also tries the path with backslashes that the plugin finds its directory by,
-   and a rename over an existing file.
+   index names all of them, so a table that is wrong shows here. The Windows
+   containers keep vfox in `C:\Users\John Doe\.vfox`, so there the file also
+   shows that the plugin finds its directory with a space in the path and
+   writes to it.
 
 The default matrix is:
 
@@ -294,8 +295,9 @@ Windows host directly through `wsl.exe` — no containers. It exists to
 reproduce [issue #32](https://github.com/version-fox/vfox-nodejs/issues/32):
 inside WSL, `vfox install` reported success but `node` was missing from
 `PATH`. On top of the shared flow (install with checksum, toolchain,
-shorthands, search, legacy files) it asserts that `command -v node` resolves
-under `VFOX_HOME` and that `vfox env -s bash` exports the SDK bin directory.
+shorthands, search, learned LTS lines, legacy files) it asserts that
+`command -v node` resolves under `VFOX_HOME` and that `vfox env -s bash`
+exports the SDK bin directory.
 
 The pinned release defaults to `20.16.0` (the issue's version); `NODE_VERSION`
 overrides it. The LTS release (`LTS_NODE_VERSION`, default per
