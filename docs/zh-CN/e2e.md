@@ -74,6 +74,8 @@ go test -v -timeout 55m -run TestE2E ./linux
 VFOX_VERSION=latest MIRROR=default E2E_MAX_JOBS=1 go test -v -timeout 55m -run TestE2E ./linux
 ```
 
+改动 `hooks/` 或 `lib/` 之后要加 `-count=1`。Go 认为测试打开的东西没有变化时，会重放上一次的结果；改过 `lib/util.lua` 之后再跑一次，仍然打印 `ok ... (cached)`，输出和耗时都是第一次的。
+
 在原生宿主上，同一条命令也能用，只需要两个前提：Docker Engine（rootful 或 rootless）和 Go 1.27.1，这正是 CI 准备的环境。使用 rootless Docker 的用户要把 Docker 客户端指向自己的 socket（`export DOCKER_HOST="unix://$XDG_RUNTIME_DIR/docker.sock"`）；开发容器挂载的 socket 已经替你处理了这种情况。ARM64 只运行默认镜像。
 
 ## Alpine（musl）

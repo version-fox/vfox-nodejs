@@ -135,6 +135,11 @@ Scope it down while iterating the same way:
 VFOX_VERSION=latest MIRROR=default E2E_MAX_JOBS=1 go test -v -timeout 55m -run TestE2E ./linux
 ```
 
+Add `-count=1` after you edit `hooks/` or `lib/`. Go replays the result of an
+earlier run when what the test opened looks unchanged, and a second run after a
+change to `lib/util.lua` still printed `ok ... (cached)`, with the output and
+the timings of the first.
+
 On a native host the same command works with two prerequisites — Docker
 Engine (rootful or rootless) and Go 1.27.1 — which is exactly what CI
 provisions. Rootless Docker users point the Docker client at their socket
