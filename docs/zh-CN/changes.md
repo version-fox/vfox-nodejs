@@ -7,6 +7,7 @@
 ## 未发布
 
 - `vfox install nodejs@latest` 重新安装最新的版本，`vfox search nodejs` 也不再列出预发布版本。2026-10-29 起，nodejs.org 的索引里最新的一条是 `27.0.0-alpha.0.0.0`。0.5.3 把它排在最前面，所以 `latest` 解析成它，安装以 `version not found for provided version 27.0.0-alpha.0.0.0` 告终。`nodejs@26` 等按编号安装的写法不受影响。现在只列出由三段数字组成的版本。见 [versions.md](versions.md#安装)。
+- 华为云、TUNA、USTC 和北外现在可以用作镜像。0.5.3 把安装包的下载交给 vfox，而 vfox 请求时使用 Go HTTP 客户端的 `User-Agent`，这四个镜像对它返回的是错误页面或者空内容，而不是文件（依次是 HTTP 418、403、204 和 403），安装以 `checksum error` 结束。插件现在让 vfox 下载时使用它自己请求时的 `User-Agent`（vfox 1.0.13 下是 `vfox/1.0.13 vfox-nodejs/0.5.3`），[mirror.md](mirror.md#可用的镜像) 里的所有镜像都能安装 24.21.0。天翼云 `https://mirrors.ctyun.cn/nodejs-release` 也加进了这份列表。
 - `lts/lithium` 被认识了，`lts` 和 `lts/*` 指的是 Node.js 26。Node.js 26 在 2026-10-28 以 Lithium 的代号进入长期支持。0.5.3 的代号表到 Krypton（24）为止，所以在那里 `latest_installed` 下 `lts/lithium` 什么也选不中，`lts` 和 `lts/*` 选中某个 24.x。见 [lts.md](lts.md#nodejs-升级版本线时)。
 - UTF-16 的 `.nvmrc` 或 `.node-version`，以及带字节顺序标记的 UTF-8 文件，现在可以读取了。Windows PowerShell 5.1 用 `>` 和 `Out-File` 写出前者，用 `-Encoding UTF8` 写出后者。0.5.3 按原样读取字节，所以没有任何版本能匹配这段文本，而 vfox 不会有任何提示。见 [nvmrc.md](nvmrc.md#文件里可以写什么)。
 - `.nvmrc` 和 `.node-version` 在每个提示符出现在它们所在的目录里时都会读取，所以 `cd` 进去就会切换，改动文件则在下一个提示符生效。0.5.3 在 Shell 于该目录里启动时读取，`cd` 之后不读取，因为 vfox 1.0.13 会保留它为 Shell 第一次算出的结果，并且不跟踪版本文件。现在，每当 vfox 请插件读取这样的文件时，插件就会删除那个结果。从这个目录 `cd` 到完全没有配置的目录时还不会切换回来，而 `.vfox.toml` 一直都会。见 [nvmrc.md](nvmrc.md#什么时候读取这个文件)。用[一个补丁](../patches/vfox-1.0.13-env-state-working-dir.patch)构建的 vfox 会切换回来，见 [development.md](development.md#注意到-cd-的-vfox)。

@@ -17,6 +17,14 @@ ahead of it by everything under "Unreleased".
   `version not found for provided version 27.0.0-alpha.0.0.0`. `nodejs@26` and
   the other numbers work. Only releases of three numbers are listed now. See
   [versions.md](versions.md#installing).
+- Huawei Cloud, TUNA, USTC and BFSU work as mirrors. Release 0.5.3 leaves the
+  download of the package to vfox, which asks with the `User-Agent` of Go's HTTP
+  client, and these four answer that with an error page, or with nothing, in
+  place of the file (HTTP 418, 403, 204 and 403): the install ends in `checksum
+  error`. The plugin now has vfox download with the `User-Agent` of its own
+  requests, `vfox/1.0.13 vfox-nodejs/0.5.3` under vfox 1.0.13, and all of the
+  mirrors of [mirror.md](mirror.md#mirrors-that-work) install 24.21.0. China
+  Telecom Cloud, `https://mirrors.ctyun.cn/nodejs-release`, is in that list now.
 - `lts/lithium` is known, and `lts` and `lts/*` mean Node.js 26. Node.js 26
   entered long-term support on 2026-10-28 as Lithium. The codename table of
   release 0.5.3 ends at Krypton (24), so there `lts/lithium` selects nothing

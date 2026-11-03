@@ -26,10 +26,14 @@ nodejs.org has listed that pre-release as its newest entry since 2026-10-29.
 
 The plugin could not read the `SHASUMS256.txt` of the release, and says why
 after the colon. `HTTP 404 from <address>` means the server has no such file:
-the release does not exist (`24.99.0`), or the mirror lacks it. A network error
-(`Get "<address>": tls: failed to verify certificate: x509: certificate signed
-by unknown authority`, `... connection refused`, `... EOF`) means the server
-could not be reached: a mirror that is down, a proxy, a TLS problem. See
+the release does not exist (`24.99.0`), or the mirror lacks it. A mirror can
+lack the file of a release that it lists in its `index.json` and carries the
+packages of: npmmirror and Huawei Cloud did for 26.13.0 on 2026-11-03. Point
+`VFOX_NODEJS_MIRROR` at another mirror, see
+[mirror.md](mirror.md#mirrors-that-work), or unset it for nodejs.org. A network
+error (`Get "<address>": tls: failed to verify certificate: x509: certificate
+signed by unknown authority`, `... connection refused`, `... EOF`) means the
+server could not be reached: a mirror that is down, a proxy, a TLS problem. See
 [Network](#network).
 
 ### `Node.js package node-v19.8.1-win-arm64.zip is not listed in https://nodejs.org/dist/v19.8.1/SHASUMS256.txt`
@@ -87,6 +91,12 @@ stops when they differ. It names the file it dropped: `Checksum error, file:
 ~/.vfox/cache/nodejs/node-v24.21.0-linux-x64.tar.gz`. Typical causes are a
 cut-off download and a mirror whose files differ from its `SHASUMS256.txt`.
 Nothing is installed. Run it again, or try another [mirror](mirror.md).
+
+Unreleased: release 0.5.3 also ends here through Huawei Cloud, TUNA, USTC and
+BFSU. vfox downloads with the `User-Agent` of Go's HTTP client, which they
+answer with an error page, or with nothing, in place of the package, and vfox
+checks that answer against the sum. The plugin now has the download send the
+`User-Agent` of its own requests, see [mirror.md](mirror.md#mirrors-that-work).
 
 ### `nodejs@24.99 is not installed`
 

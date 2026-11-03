@@ -14,7 +14,7 @@
 
 ### `get checksum failed: HTTP 404 from https://nodejs.org/dist/v24.99.0/SHASUMS256.txt`
 
-插件读不到这个版本的 `SHASUMS256.txt`，原因写在冒号后面。`HTTP 404 from <address>` 表示服务器上没有这个文件：要么这个版本不存在（`24.99.0`），要么镜像里没有它。网络错误（`Get "<address>": tls: failed to verify certificate: x509: certificate signed by unknown authority`、`... connection refused`、`... EOF`）表示连不上服务器：镜像不可用、代理有问题，或者 TLS 出了问题。见[网络](#网络)。
+插件读不到这个版本的 `SHASUMS256.txt`，原因写在冒号后面。`HTTP 404 from <address>` 表示服务器上没有这个文件：要么这个版本不存在（`24.99.0`），要么镜像里没有它。镜像可能在 `index.json` 里列出了某个版本、也有它的包，却没有它的 `SHASUMS256.txt`：2026-11-03 的 npmmirror 和华为云对 26.13.0 就是这样。请把 `VFOX_NODEJS_MIRROR` 指向另一个镜像，见 [mirror.md](mirror.md#可用的镜像)，或者取消设置，改用 nodejs.org。网络错误（`Get "<address>": tls: failed to verify certificate: x509: certificate signed by unknown authority`、`... connection refused`、`... EOF`）表示连不上服务器：镜像不可用、代理有问题，或者 TLS 出了问题。见[网络](#网络)。
 
 ### `Node.js package node-v19.8.1-win-arm64.zip is not listed in https://nodejs.org/dist/v19.8.1/SHASUMS256.txt`
 
@@ -45,6 +45,8 @@ vfox 没有告诉插件当前运行在哪种 CPU 上。这是不应该出现的�
 ### `checksum error`
 
 vfox 会打印 `Verifying checksum <sum>...`，拿下载的文件和这个校验和比对，不一致就停下来，并指出它丢弃的文件：`Checksum error, file: ~/.vfox/cache/nodejs/node-v24.21.0-linux-x64.tar.gz`。常见的原因是下载被截断，或者镜像上的文件与它自己的 `SHASUMS256.txt` 对不上。不会安装任何东西。请重试，或者换一个[镜像](mirror.md)。
+
+未发布：0.5.3 通过华为云、TUNA、USTC 和北外安装时也会停在这里。vfox 下载时使用 Go HTTP 客户端的 `User-Agent`，这几个镜像对它返回的是错误页面或者空内容，而不是安装包，vfox 再拿这个回应去比对校验和。插件现在让下载使用它自己请求时的 `User-Agent`，见 [mirror.md](mirror.md#可用的镜像)。
 
 ### `nodejs@24.99 is not installed`
 
