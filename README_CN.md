@@ -80,7 +80,7 @@ Node.js 为 Linux（x64、arm64、ppc64le、s390x）、macOS（x64 和 arm64）�
 
 ## `.nvmrc` 和 `.node-version`
 
-Shell 在带有这些文件的目录里启动时，vfox 会读取它们，并选中其中指定的版本（前提是已经安装）。已经在运行的 Shell 里 `cd` 进来不会读取它们：想在 `cd` 时自动切换，用 `vfox use --project` 写出 `.vfox.toml`。文件里能写什么取决于 vfox 的 `legacyVersionFile.strategy`：默认值 `specified` 下，只有完整的版本号才能选中某个版本。详见 [docs/zh-CN/nvmrc.md](docs/zh-CN/nvmrc.md)。
+每个提示符出现在带有这些文件的目录里时，vfox 都会读取它们，并选中其中指定的版本（前提是已经安装），所以 `cd` 进这个目录就会切换。未发布：0.5.3 在 Shell 于该目录里启动时读取，已经在运行的 Shell 里 `cd` 进来则不读取。两者在 `cd` 到完全没有配置的目录时都不会切换回来；`vfox use --project` 写出的 `.vfox.toml` 则会。文件里能写什么取决于 vfox 的 `legacyVersionFile.strategy`：默认值 `specified` 下，只有完整的版本号才能选中某个版本。UTF-16 的文件或带字节顺序标记的文件（Windows PowerShell 5.1 会写出这样的文件）也能读取（未发布）。详见 [docs/zh-CN/nvmrc.md](docs/zh-CN/nvmrc.md)。
 
 ## LTS
 

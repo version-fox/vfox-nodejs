@@ -121,7 +121,7 @@ vfox config proxy.url http://127.0.0.1:7890
 - **`vfox current nodejs` 和 `node -v` 的结果不一致。** 原因同上。前者给出的是会话或作用域里的选择，后者是 `PATH` 实际找到的。
 - **`vfox use` 之后，全局安装的 npm 包不见了。** 全局包属于某个版本，见 [npm.md](npm.md#全局包属于某个版本)。
 - **找不到 `corepack`。** Node.js 25 及以后的版本不自带它，见 [npm.md](npm.md#yarnpnpm-与-corepack)。
-- **`.nvmrc` 什么也没选中。** 请检查 Shell 是不是从这个目录启动的（在已经运行的 Shell 里 `cd` 进去不会读取这个文件）、策略和文件里的内容，见 [nvmrc.md](nvmrc.md#没有生效)。
+- **`.nvmrc` 什么也没选中。** 请检查策略和文件里的内容，以及 Shell 是不是从带有版本文件的目录进入了完全没有配置的目录（它会保持原有的版本）。0.5.3 在已经运行的 Shell 里 `cd` 之后也不会读取这个文件。见 [nvmrc.md](nvmrc.md#没有生效)。
 - **`git status` 列出了 `.vfox/`。** vfox 会把这个版本以 `.vfox/sdks/nodejs` 的形式链接到项目里。请在 `.gitignore` 里忽略 `.vfox/`，并保留 `.vfox.toml`。
 - **安装后的版本名里没有 `v`。** 版本的名字形如 `24.21.0`，你输入时带的 `v` 会被去掉。
 

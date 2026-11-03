@@ -2,7 +2,7 @@
 
 [中文](lts.md) | [English](../lts.md)
 
-Node.js 中编号为偶数的大版本会成为 **LTS**（长期支持）版本线：奇数版本结束生命周期很久之后，它们仍会继续收到修复，所以大多数生产环境都会固定使用某条 LTS 版本线。每条 LTS 版本线都有一个代号（4 是 `argon`，6 是 `boron`，……，24 是 `krypton`）。
+Node.js 中编号为偶数的大版本会成为 **LTS**（长期支持）版本线：奇数版本结束生命周期很久之后，它们仍会继续收到修复，所以大多数生产环境都会固定使用某条 LTS 版本线。每条 LTS 版本线都有一个代号（4 是 `argon`，6 是 `boron`，……，26 是 `lithium`）。
 
 ## 安装一条 LTS 版本线
 
@@ -23,7 +23,7 @@ $ vfox search nodejs | grep -m1 '(LTS)'
 
 ## 插件认识哪些代号
 
-在 `latest_available` 策略下，插件从版本索引里动态获取 LTS 代号（`index.json` 在每个版本的 `lts` 字段里写明了代号），所以插件发布之后才出现的代号，在这个策略下仍然有效。其他情况下，以及离线时的回退，用的是 `hooks/parse_legacy_file.lua` 里硬编码的表，因为 `specified` 和 `latest_installed` 必须在没有网络的情况下完成解析。“首个 LTS 版本”和“最后一个版本”取自 2026-10-21 的索引，Krypton 仍在发布新版本：
+在 `latest_available` 策略下，插件从版本索引里动态获取 LTS 代号（`index.json` 在每个版本的 `lts` 字段里写明了代号），所以插件发布之后才出现的代号，在这个策略下仍然有效。其他情况下，以及离线时的回退，用的是 `hooks/parse_legacy_file.lua` 里硬编码的表，因为 `specified` 和 `latest_installed` 必须在没有网络的情况下完成解析。“首个 LTS 版本”和“最后一个版本”取自 2026-11-03 的索引，Jod、Krypton 和 Lithium 仍在发布新版本：
 
 | 代号 | 大版本 | 首个 LTS 版本 | 最后一个版本 |
 | --- | --- | --- | --- |
@@ -36,22 +36,23 @@ $ vfox search nodejs | grep -m1 '(LTS)'
 | gallium | 16 | 16.13.0 | 16.20.2 |
 | hydrogen | 18 | 18.12.0 | 18.20.8 |
 | iron | 20 | 20.9.0 | 20.20.2 |
-| jod | 22 | 22.11.0 | 22.23.3 |
-| krypton | 24 | 24.11.0 | 24.22.0 |
+| jod | 22 | 22.11.0 | 22.23.4 |
+| krypton | 24 | 24.11.0 | 24.22.2 |
+| lithium | 26 | 26.13.0 | 26.13.0 |
 
 ## Node.js 升级版本线时
 
-编号为偶数的版本线每年十月进入长期支持，并在那时得到代号。Node.js 26 在 2026-10-28 就是这样，代号是 Lithium：26.13.0 是索引里第一个带 `lts` 标记的版本。上面的表还没有它，所以下面几条描述的就是你现在会看到的情形。
+编号为偶数的版本线每年十月进入长期支持，并在那时得到代号。Node.js 26 在 2026-10-28 就是这样，代号是 Lithium：26.13.0 是索引里第一个带 `lts` 标记的版本。未发布：0.5.3 发布得更早，所以它的表到 Krypton 为止；2026-11-03，已安装 22.23.4、24.22.2 和 26.13.0 时，它在 `latest_installed` 下 `lts/*` 选中 24.22.2，`lts/lithium` 什么也选不中。升级版本线在实践中是这样的：
 
-- 在 `latest_available` 下，新代号一出现在索引里，插件当天就能找到。这时 `lts` 和 `lts/*` 指的是新版本线的最新版本。2026-11-03，已安装 22.23.4、24.22.2 和 26.13.0 时，`lts/*` 和 `lts/lithium` 都选中 26.13.0。
-- 在 `specified` 和 `latest_installed` 下由上面的表决定，而这张表只有随着插件发布新版本才会改变。在那之前，`lts/<new codename>` 什么都选不中，`lts` 和 `lts/*` 仍然指表里最高的版本线，撰写本文时为 24。2026-11-03，安装了同样的版本时，`latest_installed` 下 `lts/*` 选中 24.22.2，`lts/lithium` 什么也选不中。
+- 在 `latest_available` 下，新代号一出现在索引里，插件当天就能找到。这时 `lts` 和 `lts/*` 指的是新版本线的最新版本，`lts/lithium` 在那里当天就能用，0.5.3 也一样。
+- 在 `specified` 和 `latest_installed` 下由上面的表决定，而这张表只有随着插件发布新版本才会改变。在那之前，`lts/<new codename>` 什么都选不中，`lts` 和 `lts/*` 仍然指表里最高的版本线，撰写本文时为 26。
 - `vfox search` 里的 `(LTS)` 跟随索引，所以会立刻变化。
 
 这张表在 `hooks/parse_legacy_file.lua` 里，见 [development.md](development.md#nodejs-把一条版本线升为-lts-时)。
 
 ## 示例
 
-假设有一个 `.nvmrc`（`.node-version` 同理），并且已安装 `22.23.3` 和 `24.21.0`。示例 1 到 4 都在 `latest_installed` 策略下运行，这个策略由示例 1 设置，各个策略见 [nvmrc.md](nvmrc.md#由策略决定)：
+假设有一个 `.nvmrc`（`.node-version` 同理），并且已安装 `22.23.4`、`24.21.0` 和 `26.13.0`，情形是 2026-11-03 的。示例 1 到 4 都在 `latest_installed` 策略下运行，这个策略由示例 1 设置，各个策略见 [nvmrc.md](nvmrc.md#由策略决定)：
 
 ```sh
 # 1. LTS 代号 -> 大版本，再由策略选出具体的版本。
@@ -59,26 +60,29 @@ $ cat .nvmrc
 lts/jod
 $ vfox config legacyVersionFile.strategy latest_installed
 $ cd <dir-with-.nvmrc> && eval "$(vfox activate bash)" && eval "$(vfox env -s bash)" && node --version
-v22.23.3
+v22.23.4
 ```
 
 ```sh
 # 2. 单独的 `lts`（或 `lts/*`）表示“映射表里最高的大版本”，
-# 撰写本文时为 24。
+# 撰写本文时为 26（未发布：0.5.3 里是 24）。
 $ printf 'lts\n' > .nvmrc
 $ cd <dir-with-.nvmrc> && eval "$(vfox activate bash)" && eval "$(vfox env -s bash)" && node --version
-v24.21.0
+v26.13.0
 ```
 
 ```sh
 # 3. 写全版本号时，完全不经过代号表。
-$ printf '22.23.3\n' > .nvmrc
+$ printf '22.23.4\n' > .nvmrc
 $ cd <dir-with-.nvmrc> && eval "$(vfox activate bash)" && eval "$(vfox env -s bash)" && node --version
-v22.23.3
+v22.23.4
 ```
 
 ```sh
-# 4. 当前的 LTS 版本线也是同样的做法。
+# 4. 当前的 LTS 版本线也是同样的做法，它的上一条也一样。
+$ printf 'lts/lithium\n' > .nvmrc
+$ cd <dir-with-.nvmrc> && eval "$(vfox activate bash)" && eval "$(vfox env -s bash)" && node --version
+v26.13.0
 $ printf 'lts/krypton\n' > .nvmrc
 $ cd <dir-with-.nvmrc> && eval "$(vfox activate bash)" && eval "$(vfox env -s bash)" && node --version
 v24.21.0
@@ -97,5 +101,5 @@ $ vfox config legacyVersionFile.strategy specified
 示例 1 是怎样一步步解析出来的（`latest_installed`）：
 
 ```
-.nvmrc "lts/jod" --resolve_version--> "22" --prefix-match installed--> "22.23.3"
+.nvmrc "lts/jod" --resolve_version--> "22" --prefix-match installed--> "22.23.4"
 ```

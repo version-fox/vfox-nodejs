@@ -121,12 +121,16 @@ details and for mirrors that were checked.
 
 ## `.nvmrc` and `.node-version`
 
-vfox reads these files when a shell starts in a directory that has one, and
-selects the release they name if it is installed. A shell that is already
-running does not read them when you `cd`: for switching on `cd`, `vfox use
---project` writes a `.vfox.toml`. What a file can say depends on vfox's
+vfox reads these files at every prompt in a directory that has one, and selects
+the release they name if it is installed, so a `cd` into the directory switches.
+Unreleased: release 0.5.3 reads them when a shell starts in the directory, not
+after a `cd` from a running shell. Neither switches back when you `cd` into a
+directory with no config at all; a `.vfox.toml`, which `vfox use --project`
+writes, does. What a file can say depends on vfox's
 `legacyVersionFile.strategy`: with the default, `specified`, only a full release
-number selects something. See [docs/nvmrc.md](docs/nvmrc.md) for details.
+number selects something. A file in UTF-16 or with a byte order mark, which
+Windows PowerShell 5.1 writes, is read too (Unreleased). See
+[docs/nvmrc.md](docs/nvmrc.md) for details.
 
 ## LTS
 

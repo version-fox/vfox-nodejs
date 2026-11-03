@@ -17,14 +17,28 @@ ahead of it by everything under "Unreleased".
   `version not found for provided version 27.0.0-alpha.0.0.0`. `nodejs@26` and
   the other numbers work. Only releases of three numbers are listed now. See
   [versions.md](versions.md#installing).
+- `lts/lithium` is known, and `lts` and `lts/*` mean Node.js 26. Node.js 26
+  entered long-term support on 2026-10-28 as Lithium. The codename table of
+  release 0.5.3 ends at Krypton (24), so there `lts/lithium` selects nothing
+  under `latest_installed`, and `lts` and `lts/*` select a 24.x. See
+  [lts.md](lts.md#when-nodejs-promotes-a-line).
+- A `.nvmrc` or `.node-version` in UTF-16, or in UTF-8 with a byte order mark,
+  is read. Windows PowerShell 5.1 writes the first with `>` and `Out-File`, and
+  the second with `-Encoding UTF8`. Release 0.5.3 reads the bytes as they are,
+  so no release matches the text and vfox says nothing. See
+  [nvmrc.md](nvmrc.md#what-the-file-may-hold).
+- `.nvmrc` and `.node-version` are read at every prompt in their directory, so a
+  `cd` into it switches, and a change of the file takes effect at the next
+  prompt. Release 0.5.3 reads them when a shell starts in the directory and not
+  after a `cd`, because vfox 1.0.13 keeps the first result it worked out for the
+  shell and does not track version files. The plugin now removes that result
+  whenever vfox asks it to read such a file. A `cd` out of the directory into
+  one with no config at all does not switch back yet, and a `.vfox.toml` always
+  did. See [nvmrc.md](nvmrc.md#when-the-file-is-read).
 - The documentation has a page of scenarios: the nvm-sh/nvm commands next to
   vfox's, Windows PowerShell 5.1 from scratch, one Node.js for a whole team,
   several projects in one shell, `vfox exec`, mirrors and editors. See
-  [scenarios.md](scenarios.md). It also corrects the other pages on one point:
-  `.nvmrc` and `.node-version` are read when a shell starts in the directory,
-  not when you `cd` into it from a running shell, because vfox 1.0.13 keeps the
-  first result it worked out for the shell. `.vfox.toml` switches on `cd`. See
-  [nvmrc.md](nvmrc.md#when-the-file-is-read).
+  [scenarios.md](scenarios.md).
 
 ## 0.5.3 (2026-10-20)
 

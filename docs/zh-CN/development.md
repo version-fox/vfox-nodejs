@@ -62,7 +62,9 @@ vfox 加载 `metadata.lua`，命令需要时调用相应的钩子，并向钩子
 
 ## 兼容版本文件
 
-`ParseLegacyFile` 读取文件，去掉所有空白字符，再把文本交给 `resolve_version(query, strategy)`：它去掉开头的 `v`，转成小写，把 `lts-x` 变成 `lts/x`，把 `lts/<codename>` 映射到一个大版本，把 `lts` 和 `lts/*` 映射到 `nodejs_codenames` 里最高的大版本。在 `latest_available` 策略下，代号先从索引里取（`discover_lts`），索引里没找到或请求失败时，回退到代号表。
+`ParseLegacyFile` 首先从会话目录里删掉 `env-state.json`（`util.forget_env_state`）。vfox 把 `vfox env` 的结果保存在那里，并且不跟踪版本文件，没有这一步的话，`cd` 进只有版本文件的目录就注意不到。vfox 在加载那个文件之前就调用这个钩子，这就是这个权宜之计能起作用的原因，也是它在离开目录时帮不上忙的原因：没有东西可读的地方不会调用它。见 [nvmrc.md](nvmrc.md#什么时候读取这个文件)。
+
+接着它读取文件并解码（`util.decode_text` 把带标记的 UTF-16 变成 UTF-8，并去掉 UTF-8 的标记，因为 Windows PowerShell 5.1 两种都会写出来）。去掉所有空白字符，再把文本交给 `resolve_version(query, strategy)`：它去掉开头的 `v`，转成小写，把 `lts-x` 变成 `lts/x`，把 `lts/<codename>` 映射到一个大版本，把 `lts` 和 `lts/*` 映射到 `nodejs_codenames` 里最高的大版本。在 `latest_available` 策略下，代号先从索引里取（`discover_lts`），索引里没找到或请求失败时，回退到代号表。
 
 接着 `resolve_legacy_version(strategy, query)` 用 `util.version_prefix` 解析查询：`22` 得到 `{ 22 }`，`22.23` 得到 `{ 22, 23 }`，`22.x`、`22.x.x` 和 `22.*` 都得到 `{ 22 }`。不是这类前缀的文本（`node`、`lts/unknown`、`>=20`）原样返回。对于前缀：
 
@@ -77,10 +79,11 @@ vfox 加载 `metadata.lua`，命令需要时调用相应的钩子，并向钩子
 每年十月，一条偶数版本线会得到代号，见 [lts.md](lts.md#nodejs-升级版本线时)。要让插件认识新的代号：
 
 1. 在 `hooks/parse_legacy_file.lua` 的 `nodejs_codenames` 里加上 `<codename> = <major>`。
-2. 在 `tests/hooks_test.lua` 里，挨着 `legacy lts krypton maps to its major` 加一个用例。
-3. 在 [lts.md](lts.md#插件认识哪些代号) 的表里加一行，并修改 [lts.md](lts.md) 和 [nvmrc.md](nvmrc.md) 里写着“撰写本文时是 24”的句子。
-4. `tests/e2e/common/common.go` 里的 `DefaultLTSVersion` 可以不动：它只要仍在表内即可。
-5. 发布。
+2. 在 `tests/hooks_test.lua` 里，挨着 `legacy lts lithium maps to its major` 加一个用例，并修改 `legacy bare lts is the newest line of the table` 所期望的大版本。
+3. 把代号加进 `tests/e2e/common/common.go` 的 `LTSCodenames`，并给 `TestLTSCodename` 加一个用例。
+4. 在 [lts.md](lts.md#插件认识哪些代号) 的表里加一行，并修改 [lts.md](lts.md) 和 [nvmrc.md](nvmrc.md) 里写着“撰写本文时为 26”的句子，以及 [lts.md](lts.md#示例) 里的示例。
+5. `tests/e2e/common/common.go` 里的 `DefaultLTSVersion` 可以不动：它只要仍在表内即可。
+6. 发布。
 
 ## 测试
 
@@ -90,7 +93,7 @@ vfox 加载 `metadata.lua`，命令需要时调用相应的钩子，并向钩子
 go run github.com/yuin/gopher-lua/cmd/glua@v1.1.1 tests/hooks_test.lua
 ```
 
-请在仓库根目录运行。`tests/hooks_test.lua` 自己模拟了 `http` 和 `json`（通过 `package.preload`），为每个用例设置 `RUNTIME`，请求的应答来自 `state.response`、`state.decoded` 和 `state.responder`。一个用例写作 `test("name", function() ... end)`，调用它会重置状态和 `available_result`。测试覆盖 `Available` 及其失败情况、各平台的包名和校验和请求失败时的错误、musl 与 `PostInstall`（通过 `with_util` 模拟了 `util.capture`、`util.file_exists` 和 `util.has_libstdcxx`）、各策略下的 `ParseLegacyFile`、有 `node` 遮蔽 vfox 时的 `PreUse`，以及 `lib/util.lua` 里的辅助函数。改动需要的用例就加在那里。
+请在仓库根目录运行。`tests/hooks_test.lua` 自己模拟了 `http` 和 `json`（通过 `package.preload`），为每个用例设置 `RUNTIME`，请求的应答来自 `state.response`、`state.decoded` 和 `state.responder`。一个用例写作 `test("name", function() ... end)`，调用它会重置状态和 `available_result`。测试覆盖 `Available` 及其失败情况、各平台的包名和校验和请求失败时的错误、musl 与 `PostInstall`（通过 `with_util` 模拟了 `util.capture`、`util.file_exists` 和 `util.has_libstdcxx`）、各策略下的 `ParseLegacyFile`（包括 UTF-16 和带字节顺序标记的文件，以及删除 `env-state.json`，其中 `os.getenv` 和 `os.remove` 是模拟的）、有 `node` 遮蔽 vfox 时的 `PreUse`，以及 `lib/util.lua` 里的辅助函数。改动需要的用例就加在那里。
 
 gopher-lua 1.1.1 会丢掉闭包对 `local x = nil` 的赋值：外层作用域读到的仍然是 `nil`。要在 `with_util` 或 `pcall` 内部收集值的测试，必须把值放在表的字段里。
 
@@ -133,7 +136,10 @@ curl -s https://nodejs.org/dist/index.json | jq -r '
 - `PostInstall` 只在 musl 上运行 `node --version`。在 glibc 上，缺少 `libatomic.so.1`（Node.js 25 及以后）要等到 `node` 运行时才会暴露：README 把系统库留给用户自己处理。
 - E2E 的 Alpine 镜像通过依赖 `gcc` 的 `go` 得到 `libatomic`，所以套件没有覆盖不带它的原版 Alpine，钩子测试覆盖了。
 - `.nvmrc` 里的别名（`node`、`stable`、`lts/-1`）、范围和注释都不认识，`lts` 则依据一张手工维护的表，见 [nvmrc.md](nvmrc.md#不认识的写法)。
+- 从带有版本文件的目录 `cd` 到完全没有配置的目录时，不会切换回来。vfox 不跟踪版本文件，并沿用它上一次计算的结果，而没有文件可读的地方不会调用插件，所以 `util.forget_env_state` 只覆盖了进入的方向。修复应当放在 vfox 里：它需要把工作目录加进它保存的内容（`internal/env/state.go`）；等它做到之后，就去掉 `util.forget_env_state`。
+- 在带有版本文件的目录里，每个提示符都会重新计算一次环境，这是 `util.forget_env_state` 造成的。只装了一个 SDK 时，大约多花一毫秒。
 - `latest_available` 在带有兼容版本文件的目录里，每次出现提示符都会下载 `index.json`。
+- UTF-32，以及没有字节顺序标记的 UTF-16，都不会解码。
 - `VFOX_NODEJS_MIRROR` 对非官方站点不起作用。
 - macOS 没有 E2E 作业。
 

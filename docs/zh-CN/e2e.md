@@ -35,7 +35,7 @@ Windows 容器的覆盖（`tests/e2e/windows`）无法在开发容器里运行�
 3. 固定的 Node.js 版本安装时会验证校验和，并且能正常运行（`node --version`、`npm --version`、`process.platform`、`process.arch`），因此 `linux-x64` / `linux-arm64` / `win-x64` / `win-arm64` 的包选择是实际检验过的。在 Windows 上，vfox 挂载之后，Git Bash 还会运行 `node`、`npm.cmd` 和不带扩展名的 `npm`，以覆盖 [issue #293](https://github.com/version-fox/vfox/issues/293)。LTS 版本（`LTS_NODE_VERSION`）也会安装，供下面的代号检查使用。
 4. `nodejs@latest` 通过插件的 `Available` 列表解析（取第一项，也就是最新的一项），并在该平台的二进制已经发布时完成安装。Alpine ARM64 只在上游对应的非官方 musl 构建缺失期间才跳过这项检查。经由镜像运行时，如果镜像的索引里列出了最新版本却没有它的 `SHASUMS256.txt`（插件会以 `get checksum failed: HTTP 404 from ...` 结束），而 nodejs.org 有这个文件，也会跳过这项检查。这两种情况下，固定版本和 LTS 版本仍会验证。
 5. 只写大版本，或只写大版本和小版本的简写，通过 `PreUse` 对照已安装的版本解析。
-6. `.nvmrc` 和 `.node-version` 决定 `vfox env` 选中哪个版本：在默认的 `specified` 策略下，选中文件里固定的那个确切版本；在 `latest_installed` 策略下，LTS 代号（`lts/<codename>`，见 [lts](lts.md)）会解析为对应的 LTS 版本。每项兼容版本文件的检查都在自己的 Shell 里挂载 vfox，这样选择结果是重新计算出来的，而不是由前一次检查留下的 `vfox env` 状态缓存直接给出。
+6. `.nvmrc` 和 `.node-version` 决定 `vfox env` 选中哪个版本：在默认的 `specified` 策略下，选中文件里固定的那个确切版本；在 `latest_installed` 策略下，LTS 代号（`lts/<codename>`，见 [lts](lts.md)）会解析为对应的 LTS 版本。在 Windows 上，固定的版本还会以 UTF-16 和带字节顺序标记的 UTF-8 写入文件检查一遍，这是 Windows PowerShell 5.1 会写出的字节。每项兼容版本文件的检查都在自己的 Shell 里挂载 vfox，这样选择结果是重新计算出来的，而不是由前一次检查留下的 `vfox env` 状态缓存直接给出。插件读取兼容版本文件时会删除那个缓存文件，Windows 上的检查依赖这一点，而不是自己去删除它。
 7. `vfox search nodejs` 列出已安装的版本，给出的 npm 版本与该二进制自带的 npm 版本相同。
 
 默认矩阵是：

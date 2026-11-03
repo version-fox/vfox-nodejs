@@ -113,7 +113,17 @@ check that cannot work never blocks an install. See
 
 ## Legacy files
 
-`ParseLegacyFile` reads the file, removes all whitespace, and gives the text to
+`ParseLegacyFile` first removes `env-state.json` from the session directory
+(`util.forget_env_state`). vfox keeps the result of `vfox env` there and does
+not track version files, so without this a `cd` into a directory that only has
+one is not noticed. vfox calls the hook before it loads that file, which is what
+makes the workaround work, and it is why the hook cannot help on the way out of
+the directory: it is not called where there is nothing to read. See
+[nvmrc.md](nvmrc.md#when-the-file-is-read).
+
+It then reads the file and decodes it (`util.decode_text` turns UTF-16 with a
+byte order mark into UTF-8, and drops the UTF-8 mark, because Windows PowerShell
+5.1 writes both). It removes all whitespace, and gives the text to
 `resolve_version(query, strategy)`: it drops a leading `v`, lowers the case,
 turns `lts-x` into `lts/x`, and maps `lts/<codename>` to a major, `lts` and
 `lts/*` to the highest major in `nodejs_codenames`. Under `latest_available` the
@@ -142,14 +152,17 @@ Each October an even-numbered line gets a codename, see
 
 1. Add `<codename> = <major>` to `nodejs_codenames` in
    `hooks/parse_legacy_file.lua`.
-2. Add a case next to `legacy lts krypton maps to its major` in
-   `tests/hooks_test.lua`.
-3. Add a row to the table in [lts.md](lts.md#what-this-plugin-understands), and
-   change the "24 at the time of writing" sentences in [lts.md](lts.md) and
-   [nvmrc.md](nvmrc.md).
-4. `DefaultLTSVersion` in `tests/e2e/common/common.go` may stay: it only has to
+2. Add a case next to `legacy lts lithium maps to its major` in
+   `tests/hooks_test.lua`, and change the major that `legacy bare lts is the
+   newest line of the table` expects.
+3. Add the codename to `LTSCodenames` in `tests/e2e/common/common.go`, and a
+   case to `TestLTSCodename`.
+4. Add a row to the table in [lts.md](lts.md#what-this-plugin-understands), and
+   change the "26 at the time of writing" sentences in [lts.md](lts.md) and
+   [nvmrc.md](nvmrc.md), and the examples of [lts.md](lts.md#examples).
+5. `DefaultLTSVersion` in `tests/e2e/common/common.go` may stay: it only has to
    stay inside the table.
-5. Release.
+6. Release.
 
 ## Tests
 
@@ -166,8 +179,10 @@ itself (`package.preload`), sets `RUNTIME` per case, and answers requests from
 It covers `Available` and its failures, the package name per platform and the
 errors of a failed checksum request, musl and `PostInstall` (with `util.capture`,
 `util.file_exists` and `util.has_libstdcxx` stubbed through `with_util`),
-`ParseLegacyFile` under each strategy, `PreUse` with the shadowing `node`, and
-the helpers of `lib/util.lua`. Add the case a change needs there.
+`ParseLegacyFile` under each strategy, in UTF-16 and with a byte order mark, and
+with the removal of `env-state.json` (`os.getenv` and `os.remove` stubbed),
+`PreUse` with the shadowing `node`, and the helpers of `lib/util.lua`. Add the
+case a change needs there.
 
 gopher-lua 1.1.1 loses a `local x = nil` that a closure assigns: the outer scope
 still reads `nil`. A test that collects a value from inside `with_util` or
@@ -236,8 +251,18 @@ have no package. For the musl table run the same program against
 - `.nvmrc` aliases (`node`, `stable`, `lts/-1`), ranges and comments are not
   understood, and `lts` follows a hand-made table, see
   [nvmrc.md](nvmrc.md#not-understood).
+- A `cd` out of a directory with a version file into one with no config at all
+  does not switch back. vfox does not track version files and keeps the result
+  of its last calculation, and the plugin is not called where there is no file
+  to read, so `util.forget_env_state` only covers the way in. A fix belongs in
+  vfox, which would have to add the working directory to what it keeps
+  (`internal/env/state.go`); drop `util.forget_env_state` when it does.
+- Every prompt in a directory with a version file calculates the environment
+  again, because of `util.forget_env_state`. It took about a millisecond with
+  one SDK installed.
 - `latest_available` downloads `index.json` at every prompt in a directory with a
   legacy file.
+- UTF-32, and UTF-16 without a byte order mark, are not decoded.
 - The unofficial site is not covered by `VFOX_NODEJS_MIRROR`.
 - macOS has no e2e job.
 

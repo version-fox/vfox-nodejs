@@ -87,11 +87,14 @@ driven from Go through `docker exec`-style calls):
 5. The major and major.minor shorthands resolve through `PreUse` against the
    installed versions.
 6. `.nvmrc` and `.node-version` drive `vfox env` selection: the exact
-   pinned version under the default `specified` strategy, and an LTS
-   codename (`lts/<codename>`, see [lts](lts.md)) resolving to the LTS
-   release under `latest_installed`. Each legacy probe activates
-   inside its own shell so the selection is recomputed rather than answered
-   from the `vfox env` state cache of an earlier probe.
+   pinned version under the default `specified` strategy (on Windows also in
+   UTF-16 and in UTF-8 with a byte order mark, the bytes that Windows
+   PowerShell 5.1 writes), and an LTS codename (`lts/<codename>`, see
+   [lts](lts.md)) resolving to the LTS release under `latest_installed`. Each
+   legacy probe activates inside its own shell so the selection is recomputed
+   rather than answered from the `vfox env` state cache of an earlier probe. The
+   plugin removes that cache file when it reads a legacy file, and the Windows
+   probes rely on that instead of removing it themselves.
 7. `vfox search nodejs` lists the installed release with the same npm
    version the binary bundles.
 
