@@ -13,6 +13,17 @@
 -- limitations under the License.
 
 package.path = "./lib/?.lua;" .. package.path
+-- ParseLegacyFile removes $__VFOX_CURTMPPATH/env-state.json (util.forget_env_state),
+-- and the shell of a developer who runs these tests has that variable set. Hide it,
+-- so that the tests never touch the state of that shell; the tests that look at
+-- the removal set it themselves.
+local real_getenv = os.getenv
+os.getenv = function(key)
+    if key == "__VFOX_CURTMPPATH" then
+        return nil
+    end
+    return real_getenv(key)
+end
 local state = { failed = 0, passed = 0 }
 package.preload.http = function()
     return {
