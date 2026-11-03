@@ -136,7 +136,7 @@ curl -s https://nodejs.org/dist/index.json | jq -r '
 - `PostInstall` 只在 musl 上运行 `node --version`。在 glibc 上，缺少 `libatomic.so.1`（Node.js 25 及以后）要等到 `node` 运行时才会暴露：README 把系统库留给用户自己处理。
 - E2E 的 Alpine 镜像通过依赖 `gcc` 的 `go` 得到 `libatomic`，所以套件没有覆盖不带它的原版 Alpine，钩子测试覆盖了。
 - `.nvmrc` 里的别名（`node`、`stable`、`lts/-1`）、范围和注释都不认识，`lts` 则依据一张手工维护的表，见 [nvmrc.md](nvmrc.md#不认识的写法)。
-- 从带有版本文件的目录 `cd` 到完全没有配置的目录时，不会切换回来。vfox 不跟踪版本文件，并沿用它上一次计算的结果，而没有文件可读的地方不会调用插件，所以 `util.forget_env_state` 只覆盖了进入的方向。修复应当放在 vfox 里：它需要把工作目录加进它保存的内容（`internal/env/state.go`）；等它做到之后，就去掉 `util.forget_env_state`。
+- 从带有版本文件的目录 `cd` 到完全没有配置的目录时，不会切换回来。vfox 不跟踪版本文件，并沿用它上一次计算的结果，而没有文件可读的地方不会调用插件，所以 `util.forget_env_state` 只覆盖了进入的方向。修复应当放在 vfox 里：2026-11-03 用一个把工作目录也保存进 `env-state.json` 的 vfox 1.0.13 构建试过（`internal/env/state.go` 里的 `ConfigState.DirChanged`，由 `envFlag` 使用），两个方向都能切换，配 0.5.3 的插件也一样。等 vfox 这样做之后，就去掉 `util.forget_env_state`。
 - 在带有版本文件的目录里，每个提示符都会重新计算一次环境，这是 `util.forget_env_state` 造成的。只装了一个 SDK 时，大约多花一毫秒。
 - `latest_available` 在带有兼容版本文件的目录里，每次出现提示符都会下载 `index.json`。
 - UTF-32，以及没有字节顺序标记的 UTF-16，都不会解码。

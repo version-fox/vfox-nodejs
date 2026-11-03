@@ -255,8 +255,10 @@ have no package. For the musl table run the same program against
   does not switch back. vfox does not track version files and keeps the result
   of its last calculation, and the plugin is not called where there is no file
   to read, so `util.forget_env_state` only covers the way in. A fix belongs in
-  vfox, which would have to add the working directory to what it keeps
-  (`internal/env/state.go`); drop `util.forget_env_state` when it does.
+  vfox: a build of vfox 1.0.13 that keeps the working directory in
+  `env-state.json` as well (`ConfigState.DirChanged` in `internal/env/state.go`,
+  used by `envFlag`) switched in both directions on 2026-11-03, also with
+  release 0.5.3 of the plugin. Drop `util.forget_env_state` when vfox does it.
 - Every prompt in a directory with a version file calculates the environment
   again, because of `util.forget_env_state`. It took about a millisecond with
   one SDK installed.
