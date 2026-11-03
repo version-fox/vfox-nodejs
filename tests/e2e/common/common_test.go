@@ -188,8 +188,11 @@ func TestLTSCodename(t *testing.T) {
 	if got, ok := LTSCodename("24.21.0"); !ok || got != "krypton" {
 		t.Errorf("LTSCodename(24.21.0) = %q, %v; want krypton", got, ok)
 	}
-	if _, ok := LTSCodename("26.11.1"); ok {
-		t.Error("LTSCodename(26.11.1) succeeded, want unknown")
+	if got, ok := LTSCodename("26.13.0"); !ok || got != "lithium" {
+		t.Errorf("LTSCodename(26.13.0) = %q, %v; want lithium", got, ok)
+	}
+	if _, ok := LTSCodename("25.9.0"); ok {
+		t.Error("LTSCodename(25.9.0) succeeded, want unknown")
 	}
 	if _, ok := LTSCodename("not-semver"); ok {
 		t.Error("LTSCodename(not-semver) succeeded, want unknown")

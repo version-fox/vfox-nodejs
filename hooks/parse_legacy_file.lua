@@ -141,6 +141,7 @@ function resolve_version(query, strategy)
         iron = 20,
         jod = 22,
         krypton = 24,
+        lithium = 26,
     }
 
     for codename, version_number in pairs(nodejs_codenames) do

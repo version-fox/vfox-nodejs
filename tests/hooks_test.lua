@@ -363,6 +363,17 @@ test("legacy lts krypton maps to its major", function()
     os.remove(path)
     assert(result.version == "24", tostring(result.version))
 end)
+-- Node.js 26 entered long-term support on 2026-10-28 as Lithium.
+test("legacy lts lithium maps to its major", function()
+    local path = write_legacy("lts/lithium")
+    local result = PLUGIN:ParseLegacyFile({
+        filepath = path,
+        filename = ".node-version",
+        strategy = "specified",
+    })
+    os.remove(path)
+    assert(result.version == "26", tostring(result.version))
+end)
 test("legacy lts unknown codename resolves dynamically under latest_available", function()
     state.response = { status_code = 200, body = "index" }
     state.decoded = {
@@ -506,6 +517,14 @@ test("legacy latest_available takes the newest matching release", function()
     assert(legacy_version("22.3", "latest_available") == "22.3.0")
     assert(legacy_version("22.x", "latest_available") == "22.23.3")
     assert(legacy_version("18", "latest_available") == "18")
+end)
+-- `lts` and `lts/*` are the highest line of the codename table, offline.
+test("legacy bare lts is the newest line of the table", function()
+    for _, text in ipairs({ "lts", "lts/*", "LTS/*" }) do
+        assert(legacy_version(text, "specified") == "26", text)
+        assert(legacy_version(text, "latest_installed", { "26.12.0", "24.21.0" }) == "26.12.0", text)
+    end
+    assert(state.requests == 0, "the table answers without the index")
 end)
 -- PreUse notes a `node` that vfox keeps ahead of its own paths, such as the
 -- one `pnpm runtime set node -g` writes to $PNPM_HOME/bin.

@@ -42,7 +42,7 @@ const (
 	DefaultNodeVersion = "26.11.1"
 	// DefaultLTSVersion is the LTS release backing the `lts/<codename>`
 	// legacy-file probe. Its major must stay inside the plugin's codename
-	// table (hooks/parse_legacy_file.lua, currently up to krypton/24); see
+	// table (hooks/parse_legacy_file.lua, currently up to lithium/26); see
 	// docs/lts.md.
 	DefaultLTSVersion = "24.21.0"
 	// BogusMirror is the unreachable mirror domain used by the negative probes.
@@ -211,7 +211,7 @@ func ResolveLTSVersion(t *testing.T) string {
 var LTSCodenames = map[string]int{
 	"argon": 4, "boron": 6, "carbon": 8, "dubnium": 10, "erbium": 12,
 	"fermium": 14, "gallium": 16, "hydrogen": 18, "iron": 20, "jod": 22,
-	"krypton": 24,
+	"krypton": 24, "lithium": 26,
 }
 
 // LTSCodename returns the codename for a version's major, if the plugin's
