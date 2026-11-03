@@ -2,7 +2,11 @@
 
 [中文](changes.md) | [English](../changes.md)
 
-按发布版本列出用户能感受到的变化。GitHub 的 [Release 页面](https://github.com/version-fox/vfox-nodejs/releases)列出了对应的 PR。
+按发布版本列出用户能感受到的变化。GitHub 的 [Release 页面](https://github.com/version-fox/vfox-nodejs/releases)列出了对应的 PR。写这篇文档时最新的发布版是 0.5.3，`main` 比它多出“未发布”下面的所有内容。想现在就用上这些变化，见 [source-build.md](source-build.md)。
+
+## 未发布
+
+- `vfox install nodejs@latest` 重新安装最新的版本，`vfox search nodejs` 也不再列出预发布版本。2026-10-29 起，nodejs.org 的索引里最新的一条是 `27.0.0-alpha.0.0.0`。0.5.3 把它排在最前面，所以 `latest` 解析成它，安装以 `version not found for provided version 27.0.0-alpha.0.0.0` 告终。`nodejs@26` 等按编号安装的写法不受影响。现在只列出由三段数字组成的版本。见 [versions.md](versions.md#安装)。
 
 ## 0.5.3（2026-10-20）
 

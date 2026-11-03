@@ -4,7 +4,19 @@
 
 What changed in each release, as a user notices it. GitHub's
 [release pages](https://github.com/version-fox/vfox-nodejs/releases) list the
-pull requests.
+pull requests. The newest release at the time of writing is 0.5.3, and `main` is
+ahead of it by everything under "Unreleased".
+[source-build.md](source-build.md) gets you those changes now.
+
+## Unreleased
+
+- `vfox install nodejs@latest` installs the newest release again, and
+  `vfox search nodejs` no longer lists pre-releases. Since 2026-10-29 the index
+  of nodejs.org has `27.0.0-alpha.0.0.0` as its newest entry. Release 0.5.3
+  lists it first, so `latest` resolves to it and the install ends with
+  `version not found for provided version 27.0.0-alpha.0.0.0`. `nodejs@26` and
+  the other numbers work. Only releases of three numbers are listed now. See
+  [versions.md](versions.md#installing).
 
 ## 0.5.3 (2026-10-20)
 

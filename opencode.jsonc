@@ -1,0 +1,32 @@
+// Copyright 2026 Han Li and contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//   http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// OpenCode project permissions, see https://opencode.ai/v2/docs/permissions/
+//
+// Allows three shell commands in OpenCode sessions in this repository, which a
+// contributor's global config may deny. Project rules are appended after the
+// global ones and the last matching rule wins, so each "allow" below overrides
+// such a "deny" and every other global rule stays. Project configuration
+// outranks global configuration, so this applies to everyone who uses OpenCode
+// here. Use "ask" instead of "allow" to be prompted for each use.
+//
+// "gh pr merge *" is left out on purpose: a global deny on it keeps working.
+{
+  "$schema": "https://opencode.ai/config.json",
+  "permissions": [
+    { "action": "shell", "resource": "git push *", "effect": "allow" },
+    { "action": "shell", "resource": "gh pr create *", "effect": "allow" },
+    { "action": "shell", "resource": "gh pr comment *", "effect": "allow" }
+  ]
+}

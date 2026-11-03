@@ -42,7 +42,9 @@ func installNodeVersion(ctx context.Context, t *testing.T, ctr tc.Container, ver
 // installLatestNode installs the newest published Node.js version. If the
 // latest official release has no unofficial ARM64 musl build yet, that one
 // platform-specific probe is skipped; the other latest probes still cover
-// @latest resolution and installation.
+// @latest resolution and installation. The probe is skipped as well when a
+// mirror lists the newest release but has no SHASUMS256.txt for it, which
+// nodejs.org does serve: that is a gap of the mirror, not of the plugin.
 func installLatestNode(ctx context.Context, t *testing.T, ctr tc.Container) (string, bool) {
 	t.Helper()
 	const label = "vfox install nodejs@latest"
@@ -55,6 +57,10 @@ func installLatestNode(ctx context.Context, t *testing.T, ctr tc.Container) (str
 				t.Logf("SKIP @latest install: unofficial musl ARM64 build %s is not published yet", filename)
 				return "", false
 			}
+		}
+		if mirror, release, lag := common.MirrorLagsBehind(out, common.OfficialChecksumStatus); lag {
+			t.Logf("SKIP @latest install: mirror %s lists %s but has no SHASUMS256.txt for it, nodejs.org does", mirror, release)
+			return "", false
 		}
 		out = common.Retry(ctx, t, label, func() (int, string) {
 			return execRun(ctx, t, ctr, label)

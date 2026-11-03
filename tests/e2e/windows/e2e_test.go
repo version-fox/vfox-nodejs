@@ -217,8 +217,9 @@ func runOne(t *testing.T, ctx context.Context, image, platform, toolsDir string,
 	lts := common.ResolveLTSVersion(t)
 	installNodeVersion(ctx, t, ctr, box, activation, lts)
 
-	latest := installLatestNode(ctx, t, ctr, box)
-	execOK(ctx, t, ctr, activated(activation, "vfox use --global "+pwshQuote("nodejs@"+latest)), box.vars...)
-	verifyToolchain(ctx, t, ctr, box, activation, latest)
+	if latest, ok := installLatestNode(ctx, t, ctr, box); ok {
+		execOK(ctx, t, ctr, activated(activation, "vfox use --global "+pwshQuote("nodejs@"+latest)), box.vars...)
+		verifyToolchain(ctx, t, ctr, box, activation, latest)
+	}
 	verifyLegacyFiles(ctx, t, ctr, box, version, lts)
 }

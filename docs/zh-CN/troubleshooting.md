@@ -10,6 +10,8 @@
 
 `nodejs@` 后面既不是版本号，也不是某个版本号的开头。插件认识 `latest`、`24.21.0`、`24.21` 和 `24`，见 [versions.md](versions.md)。`lts`、`lts/iron`、`stable`、`24.21.0.1` 和 `24.0.0-rc.1` 都会报这个错，`99` 和 `22.99` 也一样：它们的格式没有问题，但没有任何版本以它们开头。要安装某条 LTS 版本线，请按编号安装，见 [lts.md](lts.md#安装一条-lts-版本线)。
 
+未发布：0.5.3 对 `latest` 也会报这个错，即 `version not found for provided version 27.0.0-alpha.0.0.0`，因为 nodejs.org 的索引从 2026-10-29 起把这个预发布版本列为最新的一条。`nodejs@26` 不受影响。
+
 ### `get checksum failed: HTTP 404 from https://nodejs.org/dist/v24.99.0/SHASUMS256.txt`
 
 插件读不到这个版本的 `SHASUMS256.txt`，原因写在冒号后面。`HTTP 404 from <address>` 表示服务器上没有这个文件：要么这个版本不存在（`24.99.0`），要么镜像里没有它。网络错误（`Get "<address>": tls: failed to verify certificate: x509: certificate signed by unknown authority`、`... connection refused`、`... EOF`）表示连不上服务器：镜像不可用、代理有问题，或者 TLS 出了问题。见[网络](#网络)。

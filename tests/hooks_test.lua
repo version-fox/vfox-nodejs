@@ -68,6 +68,34 @@ for _, failure in ipairs({ "timeout", "HTTP 503" }) do
         assert(state.requests == 2, "failed response was cached")
     end)
 end
+-- Since 2026-10-29 nodejs.org lists the pre-release 27.0.0-alpha.0.0.0 at the top
+-- of its index. It sorts first, so `latest` used to resolve to it and PreInstall
+-- ended in `version not found for provided version 27.0.0-alpha.0.0.0`.
+test("pre-releases are not listed and latest is the newest release", function()
+    RUNTIME = { osType = "linux", archType = "amd64", envType = "gnu" }
+    state.decoded = {
+        { version = "v27.0.0-alpha.0.0.0", npm = "11.20.0", lts = false },
+        { version = "v26.13.0", npm = "11.20.0", lts = "Lithium" },
+        { version = "v26.12.1", npm = "11.20.0", lts = false },
+    }
+    local filename = "node-v26.13.0-linux-x64.tar.gz"
+    local hash = string.rep("e", 64)
+    state.responder = function(args)
+        if args.url:find("SHASUMS256.txt", 1, true) then
+            return { status_code = 200, body = hash .. "  " .. filename .. "\n" }
+        end
+        return { status_code = 200, body = "index" }
+    end
+    local versions = {}
+    for _, item in ipairs(PLUGIN:Available({})) do
+        table.insert(versions, item.version)
+    end
+    assert(table.concat(versions, " ") == "26.13.0 26.12.1", table.concat(versions, " "))
+    local result = PLUGIN:PreInstall({ version = "latest" })
+    assert(result.version == "26.13.0", tostring(result.version))
+    assert(result.url:sub(-#filename) == filename, result.url)
+    assert(result.sha256 == hash, "checksum missing")
+end)
 local cases = {
     { "windows", "amd64", "win-x64.zip" },
     { "windows", "386", "win-x86.zip" },

@@ -41,11 +41,21 @@ func installNodeVersion(ctx context.Context, t *testing.T, ctr tc.Container, box
 // installLatestNode installs the newest published Node.js version. `vfox
 // install nodejs@latest` resolves @latest through the plugin's Available
 // (the first, newest entry) and prints the pick; the version is returned so
-// the caller can drive `vfox use` against it.
-func installLatestNode(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox) string {
+// the caller can drive `vfox use` against it. The probe is skipped (false)
+// when a mirror lists the newest release but has no SHASUMS256.txt for it,
+// which nodejs.org does serve: that is a gap of the mirror, not of the plugin.
+func installLatestNode(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox) (string, bool) {
 	t.Helper()
-	out := execRetry(ctx, t, ctr, "vfox install nodejs@latest", "vfox install nodejs@latest", box.vars...)
+	const label = "vfox install nodejs@latest"
+	code, out := execRun(ctx, t, ctr, label, box.vars...)
+	if code != 0 {
+		if mirror, release, lag := common.MirrorLagsBehind(out, common.OfficialChecksumStatus); lag {
+			t.Logf("SKIP @latest install: mirror %s lists %s but has no SHASUMS256.txt for it, nodejs.org does", mirror, release)
+			return "", false
+		}
+		out = execRetry(ctx, t, ctr, label, label, box.vars...)
+	}
 	latest := common.LatestUsed(out)
 	require.NotEmptyf(t, latest, "@latest install did not report the picked version\n--- output ---\n%s", out)
-	return latest
+	return latest, true
 }
