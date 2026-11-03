@@ -199,6 +199,79 @@ function UTIL.capture(command)
     return output, nil
 end
 
+--- A Unicode code point as UTF-8.
+--- @param code number
+--- @return string
+local function utf8_char(code)
+    if code < 0x80 then
+        return string.char(code)
+    elseif code < 0x800 then
+        return string.char(0xC0 + math.floor(code / 0x40), 0x80 + code % 0x40)
+    elseif code < 0x10000 then
+        return string.char(0xE0 + math.floor(code / 0x1000), 0x80 + math.floor(code / 0x40) % 0x40, 0x80 + code % 0x40)
+    end
+    return string.char(
+        0xF0 + math.floor(code / 0x40000),
+        0x80 + math.floor(code / 0x1000) % 0x40,
+        0x80 + math.floor(code / 0x40) % 0x40,
+        0x80 + code % 0x40
+    )
+end
+
+--- The text of a version file as UTF-8 without a byte order mark. Windows
+--- PowerShell 5.1 writes UTF-16 with a mark for `>`, `>>` and `Out-File`, and
+--- UTF-8 with a mark for `-Encoding UTF8`. Read as they are, the mark and the
+--- zero bytes of UTF-16 become part of the text, and no release matches it.
+--- Text that starts with no mark is returned as it is.
+--- @param content string the bytes of the file
+--- @return string
+function UTIL.decode_text(content)
+    if content:sub(1, 3) == "\239\187\191" then
+        return content:sub(4)
+    end
+    local first, second = content:byte(1, 2)
+    local little_endian
+    if first == 0xFF and second == 0xFE then
+        little_endian = true
+    elseif first == 0xFE and second == 0xFF then
+        little_endian = false
+    else
+        return content
+    end
+    --- The 16-bit unit at a position, nil when only one byte is left.
+    local function unit_at(position)
+        local low, high = content:byte(position, position + 1)
+        if high == nil then
+            return nil
+        end
+        if little_endian then
+            return low + high * 256
+        end
+        return low * 256 + high
+    end
+    local chars = {}
+    local position = 3
+    while position < #content do
+        -- Two bytes are there, so the replacement character is never used.
+        local unit = unit_at(position) or 0xFFFD
+        position = position + 2
+        if unit >= 0xD800 and unit <= 0xDBFF then
+            -- A high surrogate needs a low one after it, else it is an error.
+            local low = unit_at(position)
+            if low ~= nil and low >= 0xDC00 and low <= 0xDFFF then
+                unit = 0x10000 + (unit - 0xD800) * 0x400 + (low - 0xDC00)
+                position = position + 2
+            else
+                unit = 0xFFFD
+            end
+        elseif unit >= 0xDC00 and unit <= 0xDFFF then
+            unit = 0xFFFD
+        end
+        table.insert(chars, utf8_char(unit))
+    end
+    return table.concat(chars)
+end
+
 --- Whether a PATH entry belongs to vfox: like vfox's own check, one of its
 --- segments is `.vfox` (or the legacy `.version-fox`).
 local function is_vfox_path(dir)

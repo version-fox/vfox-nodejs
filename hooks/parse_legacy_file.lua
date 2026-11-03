@@ -60,7 +60,8 @@ function PLUGIN:ParseLegacyFile(ctx)
     end
     local content = file:read("*a") or ""
     file:close()
-    content = content:gsub("%s+", "")
+    -- Windows PowerShell 5.1 writes UTF-16, or UTF-8 with a byte order mark.
+    content = util.decode_text(content):gsub("%s+", "")
     if content == "" then
         return {}
     end

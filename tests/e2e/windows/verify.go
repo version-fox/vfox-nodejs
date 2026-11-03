@@ -132,7 +132,10 @@ func verifySearch(ctx context.Context, t *testing.T, ctr tc.Container, box slotB
 //
 //  1. .nvmrc and .node-version holding the exact pinned version (the default
 //     `specified` strategy), with the global set to a different release;
-//  2. .nvmrc holding an LTS codename under the `latest_installed` strategy,
+//  2. .nvmrc holding the pinned version in UTF-16 and in UTF-8 with a byte
+//     order mark, the bytes that Windows PowerShell 5.1 writes for `>` and
+//     for `-Encoding UTF8` (docs/nvmrc.md, "What the file may hold");
+//  3. .nvmrc holding an LTS codename under the `latest_installed` strategy,
 //     which resolves through the plugin's codename table to the LTS release
 //     (see docs/lts.md).
 //
@@ -178,6 +181,20 @@ func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, box 
 	write(`C:\e2e-legacy-node-version`, ".node-version", pinned)
 	assertProbe(run(`C:\e2e-legacy-node-version`), pinned, ".node-version "+pinned)
 
+	// PowerShell 7 writes the same bytes for -Encoding Unicode (UTF-16 with a
+	// byte order mark) and utf8BOM as Windows PowerShell 5.1 does for `>` and
+	// -Encoding UTF8.
+	for _, enc := range []struct{ dir, encoding, what string }{
+		{`C:\e2e-legacy-utf16`, "Unicode", "in UTF-16"},
+		{`C:\e2e-legacy-utf8-bom`, "utf8BOM", "in UTF-8 with a byte order mark"},
+	} {
+		execOK(ctx, t, ctr, fmt.Sprintf(
+			"New-Item -ItemType Directory -Force -Path %s | Out-Null; "+
+				"Set-Content -NoNewline -Path %s -Value %s -Encoding %s",
+			pwshQuote(enc.dir), pwshQuote(enc.dir+`\.nvmrc`), pwshQuote(pinned), enc.encoding), box.vars...)
+		assertProbe(run(enc.dir), pinned, ".nvmrc "+enc.what+" "+pinned)
+	}
+
 	codename, known := common.LTSCodename(lts)
 	if !known {
 		t.Logf("SKIP LTS codename probe: %s is not in the plugin's codename table", lts)
@@ -189,5 +206,5 @@ func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, box 
 	}()
 	write(`C:\e2e-legacy-lts`, ".nvmrc", "lts/"+codename)
 	assertProbe(run(`C:\e2e-legacy-lts`), lts, "lts/"+codename+" under latest_installed")
-	t.Logf("PASS legacy files select %s (.nvmrc, .node-version) and %s (lts/%s)", pinned, lts, codename)
+	t.Logf("PASS legacy files select %s (.nvmrc, .node-version, UTF-16, UTF-8 with a mark) and %s (lts/%s)", pinned, lts, codename)
 }

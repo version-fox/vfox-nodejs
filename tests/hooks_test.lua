@@ -319,7 +319,7 @@ end)
 dofile("hooks/parse_legacy_file.lua")
 local function write_legacy(content)
     local path = os.tmpname()
-    local file = io.open(path, "w")
+    local file = io.open(path, "wb")
     if file == nil then
         error("cannot write " .. path)
     end
@@ -525,6 +525,56 @@ test("legacy bare lts is the newest line of the table", function()
         assert(legacy_version(text, "latest_installed", { "26.12.0", "24.21.0" }) == "26.12.0", text)
     end
     assert(state.requests == 0, "the table answers without the index")
+end)
+-- Windows PowerShell 5.1 writes UTF-16 with a byte order mark for `>`, `>>` and
+-- `Out-File`, and UTF-8 with one for `-Encoding UTF8`.
+local function utf16(text, little_endian)
+    local bytes = { little_endian and "\255\254" or "\254\255" }
+    for i = 1, #text do
+        local char = text:sub(i, i)
+        table.insert(bytes, little_endian and (char .. "\0") or ("\0" .. char))
+    end
+    return table.concat(bytes)
+end
+test("legacy files in UTF-16 or with a byte order mark are read", function()
+    local installed = { "22.23.3" }
+    for _, text in ipairs({ "22.23.3\r\n", "v22.23.3", "22.23.3" }) do
+        local encoded = {
+            ["UTF-8 with a mark"] = "\239\187\191" .. text,
+            ["UTF-16 little endian"] = utf16(text, true),
+            ["UTF-16 big endian"] = utf16(text, false),
+        }
+        for name, content in pairs(encoded) do
+            assert(legacy_version(content, "specified") == "22.23.3", name .. ": " .. text)
+        end
+    end
+    assert(legacy_version(utf16("lts/jod\r\n", true), "latest_installed", installed) == "22.23.3")
+    assert(legacy_version(utf16("22\r\n", false), "latest_installed", installed) == "22.23.3")
+    assert(legacy_version("\239\187\191", "specified") == nil, "a mark alone is an empty file")
+end)
+test("decode_text returns text without a mark as it is", function()
+    for _, text in ipairs({ "", "22.23.3\n", "lts/*", "\255", "\254", "\239\187", "x\255\254y" }) do
+        assert(util.decode_text(text) == text, text)
+    end
+end)
+test("decode_text reads UTF-16 as UTF-8", function()
+    assert(util.decode_text(utf16("22.23.3\r\n", true)) == "22.23.3\r\n")
+    assert(util.decode_text(utf16("22.23.3\r\n", false)) == "22.23.3\r\n")
+    -- U+00E9, U+4E2D and U+1F600 (a surrogate pair), little endian.
+    assert(util.decode_text("\255\254\233\0\45\78\61\216\0\222") == "\195\169\228\184\173\240\159\152\128")
+    -- Big endian.
+    assert(util.decode_text("\254\255\0\233\78\45\216\61\222\0") == "\195\169\228\184\173\240\159\152\128")
+end)
+test("decode_text replaces what UTF-16 cannot say and ignores a half unit", function()
+    local replacement = "\239\191\189"
+    -- A lone high surrogate, a lone low surrogate, and a high one at the end.
+    assert(util.decode_text("\255\254\61\216a\0") == replacement .. "a")
+    assert(util.decode_text("\255\254\0\222a\0") == replacement .. "a")
+    assert(util.decode_text("\255\254a\0\61\216") == "a" .. replacement)
+    -- One byte too many.
+    assert(util.decode_text("\255\2542\0" .. "9") == "2")
+    assert(util.decode_text("\255\254") == "")
+    assert(util.decode_text("\255\254" .. "9") == "")
 end)
 -- PreUse notes a `node` that vfox keeps ahead of its own paths, such as the
 -- one `pnpm runtime set node -g` writes to $PNPM_HOME/bin.
