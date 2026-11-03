@@ -229,6 +229,28 @@ func LTSCodename(version string) (string, bool) {
 	return "", false
 }
 
+// LearnedLTS reads the file in which the plugin keeps what it learned from the
+// version index about LTS lines (.lts-cache next to the plugin, see
+// docs/lts.md): `newest <major>` and `line <codename> <major>`, one per line.
+// Lines that are neither are skipped, newest is 0 when the file has none.
+func LearnedLTS(text string) (lines map[string]int, newest int) {
+	lines = map[string]int{}
+	for _, line := range strings.Split(strings.ReplaceAll(text, "\r", ""), "\n") {
+		fields := strings.Fields(line)
+		switch {
+		case len(fields) == 2 && fields[0] == "newest":
+			if major, err := strconv.Atoi(fields[1]); err == nil {
+				newest = major
+			}
+		case len(fields) == 3 && fields[0] == "line":
+			if major, err := strconv.Atoi(fields[2]); err == nil {
+				lines[fields[1]] = major
+			}
+		}
+	}
+	return lines, newest
+}
+
 // ansiEscape matches the SGR colour sequences pterm emits when it believes
 // it writes to a terminal.
 var ansiEscape = regexp.MustCompile(`\x1b\[[0-9;]*m`)
