@@ -15,6 +15,7 @@
 package common
 
 import (
+	"errors"
 	"testing"
 )
 
@@ -216,6 +217,72 @@ func TestLatestUsed(t *testing.T) {
 	}
 	if got := LatestUsed("Install nodejs@22.23.3 success!"); got != "" {
 		t.Errorf("LatestUsed = %q, want empty", got)
+	}
+}
+
+func TestMirrorWithoutChecksums(t *testing.T) {
+	const message = "get checksum failed: HTTP 404 from https://npmmirror.com/mirrors/node/v26.13.0/SHASUMS256.txt"
+	linuxOut := "Using latest version: \x1b[92m26.13.0\x1b[0m\n" +
+		"plugin [PreInstall] method error: /root/.vfox/plugin/nodejs/hooks/pre_install.lua:109: " + message + "\n" +
+		"failed to install nodejs\n"
+	// Windows puts a backslash path in front of the same message.
+	windowsOut := `plugin [PreInstall] method error: C:\Users\John Doe\.vfox\plugin\nodejs\hooks\pre_install.lua:109: ` + message
+	for name, out := range map[string]string{"linux": linuxOut, "windows": windowsOut} {
+		mirror, version, ok := MirrorWithoutChecksums(out)
+		if !ok || mirror != DefaultMirrorCN || version != "26.13.0" {
+			t.Errorf("%s: MirrorWithoutChecksums = %q, %q, %v; want %s, 26.13.0", name, mirror, version, ok, DefaultMirrorCN)
+		}
+	}
+	for _, other := range []string{
+		"",
+		"get checksum failed: HTTP 503 from https://npmmirror.com/mirrors/node/v26.13.0/SHASUMS256.txt",
+		"get checksum failed: HTTP 404 from https://npmmirror.com/mirrors/node/v26.13.0/node-v26.13.0-linux-x64.tar.gz",
+		"plugin [PreInstall] method error: version not found for provided version 27.0.0-alpha.0.0.0",
+		"Node.js package node-v26.13.0-linux-arm64-musl.tar.gz is not listed in https://x/v26.13.0/SHASUMS256.txt",
+	} {
+		if _, _, ok := MirrorWithoutChecksums(other); ok {
+			t.Errorf("MirrorWithoutChecksums(%q) matched, want no match", other)
+		}
+	}
+}
+
+func TestMirrorLagsBehind(t *testing.T) {
+	const failure = "get checksum failed: HTTP 404 from https://npmmirror.com/mirrors/node/v26.13.0/SHASUMS256.txt"
+	official := func(status int, err error) func(string) (int, error) {
+		return func(version string) (int, error) {
+			if version != "26.13.0" {
+				t.Errorf("nodejs.org was asked about %q, want 26.13.0", version)
+			}
+			return status, err
+		}
+	}
+	// The mirror lacks the file and nodejs.org has it: a gap of the mirror.
+	mirror, version, lag := MirrorLagsBehind(failure, official(200, nil))
+	if !lag || mirror != DefaultMirrorCN || version != "26.13.0" {
+		t.Errorf("got %q, %q, %v; want %s, 26.13.0, true", mirror, version, lag, DefaultMirrorCN)
+	}
+	// Anything less clear stays a failure of the plugin.
+	for name, ask := range map[string]func(string) (int, error){
+		"nodejs.org has no such file either": official(404, nil),
+		"nodejs.org answers with an error":   official(503, nil),
+		"nodejs.org cannot be reached":       official(0, errors.New("timeout")),
+	} {
+		if _, _, lag := MirrorLagsBehind(failure, ask); lag {
+			t.Errorf("%s: reported a lag, want a failure", name)
+		}
+	}
+	// A 404 from nodejs.org itself is no gap of a mirror, whatever it answers now.
+	fromOfficial := "get checksum failed: HTTP 404 from https://nodejs.org/dist/v26.13.0/SHASUMS256.txt"
+	if _, _, lag := MirrorLagsBehind(fromOfficial, official(200, nil)); lag {
+		t.Error("a 404 from nodejs.org itself reported a lag, want a failure")
+	}
+	// Other failures never even reach nodejs.org.
+	never := func(string) (int, error) {
+		t.Error("nodejs.org was asked about a failure that is no missing SHASUMS256.txt")
+		return 200, nil
+	}
+	if _, _, lag := MirrorLagsBehind("version not found for provided version 27.0.0-alpha.0.0.0", never); lag {
+		t.Error("an unrelated failure reported a lag")
 	}
 }
 

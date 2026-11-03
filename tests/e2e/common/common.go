@@ -26,6 +26,7 @@ import (
 	"crypto/rand"
 	"encoding/hex"
 	"fmt"
+	"net/http"
 	"os"
 	"regexp"
 	"runtime"
@@ -248,6 +249,57 @@ func LatestUsed(output string) string {
 		return m[1]
 	}
 	return ""
+}
+
+// OfficialMirror is where nodejs.org serves the releases from, and the
+// address the plugin uses when no mirror is set.
+const OfficialMirror = "https://nodejs.org/dist"
+
+// mirrorWithoutSums matches the failure of an install whose release a mirror
+// lists in its index but has no SHASUMS256.txt for: the plugin reads that file
+// first and ends in `get checksum failed: HTTP 404 from <address of the file>`.
+var mirrorWithoutSums = regexp.MustCompile(`get checksum failed: HTTP 404 from (\S+)/v(\d+\.\d+\.\d+)/SHASUMS256\.txt`)
+
+// MirrorWithoutChecksums recognizes that failure in the output of a failed
+// install and returns the address of the mirror and the release it has no
+// SHASUMS256.txt for.
+func MirrorWithoutChecksums(output string) (mirror, version string, ok bool) {
+	m := mirrorWithoutSums.FindStringSubmatch(StripANSI(output))
+	if m == nil {
+		return "", "", false
+	}
+	return m[1], m[2], true
+}
+
+// OfficialChecksumStatus asks nodejs.org for the SHASUMS256.txt of a release
+// and returns the HTTP status. It is what MirrorLagsBehind is given outside
+// of unit tests.
+func OfficialChecksumStatus(version string) (int, error) {
+	client := &http.Client{Timeout: 30 * time.Second}
+	resp, err := client.Get(fmt.Sprintf("%s/v%s/SHASUMS256.txt", OfficialMirror, version))
+	if err != nil {
+		return 0, err
+	}
+	defer resp.Body.Close()
+	return resp.StatusCode, nil
+}
+
+// MirrorLagsBehind tells a gap of a mirror from a failure of the plugin. It
+// is true only when the install failed on a 404 for the SHASUMS256.txt of a
+// release the mirror's index lists, the mirror is not nodejs.org itself, and
+// nodejs.org does serve that file. Any other failure, and an unclear answer
+// from nodejs.org (a network error or any status but 200), stays a failure.
+// officialStatus is OfficialChecksumStatus, or a stand-in in unit tests.
+func MirrorLagsBehind(output string, officialStatus func(version string) (int, error)) (mirror, version string, lag bool) {
+	mirror, version, ok := MirrorWithoutChecksums(output)
+	if !ok || strings.TrimRight(mirror, "/") == OfficialMirror {
+		return "", "", false
+	}
+	status, err := officialStatus(version)
+	if err != nil || status != http.StatusOK {
+		return "", "", false
+	}
+	return mirror, version, true
 }
 
 // searchNpm matches the "[npm X.Y.Z]" addition `vfox search` prints.

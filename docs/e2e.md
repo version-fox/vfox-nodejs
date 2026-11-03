@@ -80,7 +80,10 @@ driven from Go through `docker exec`-style calls):
 4. `nodejs@latest` resolves through the plugin's `Available` list (the
    first, newest entry) and installs when that platform's binary is published.
    Alpine ARM64 skips this probe only while the matching upstream unofficial
-   musl build is absent; it still verifies the pinned and LTS releases.
+   musl build is absent. A run through a mirror skips it while the mirror
+   lists the newest release but has no `SHASUMS256.txt` for it (the plugin
+   ends in `get checksum failed: HTTP 404 from ...`) and nodejs.org does have
+   the file. Both still verify the pinned and LTS releases.
 5. The major and major.minor shorthands resolve through `PreUse` against the
    installed versions.
 6. `.nvmrc` and `.node-version` drive `vfox env` selection: the exact
