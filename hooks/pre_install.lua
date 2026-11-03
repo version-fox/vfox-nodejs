@@ -114,6 +114,7 @@ function PLUGIN:PreInstall(ctx)
             version = version,
             url = baseUrl .. filename,
             sha256 = checksum,
+            headers = util.download_headers(),
         }
         if musl_note ~= nil then
             result.note = musl_note
@@ -140,6 +141,7 @@ function PLUGIN:PreInstall(ctx)
                     version = version,
                     url = unofficialBase .. filename,
                     sha256 = uchecksum,
+                    headers = util.download_headers(),
                     note = musl_note,
                 }
             end

@@ -48,11 +48,12 @@ $env:VFOX_NODEJS_MIRROR = "https://npmmirror.com/mirrors/node"
 
 - `index.json` 决定了 `vfox search nodejs`、`nodejs@latest`、`nodejs@24` 和 `nodejs@24.21` 能看到哪些版本。更新滞后的镜像列出的版本更少；列出了却没有提供的版本，会在下载时失败。
 - 下载的文件会与镜像自己的 `SHASUMS256.txt` 里的校验和比对。文件与校验和对不上的镜像，最终会报 `checksum error`。
+- 镜像可能在文件还没有备齐时就列出了某个版本。2026-11-03，也就是 Node.js 26.13.0 发布六天之后，npmmirror 和华为云列出了它，也有它的 34 个包，却没有它的 `SHASUMS256.txt`，所以通过其中任何一个执行 `vfox install nodejs@26.13.0`，都会以 `get checksum failed: HTTP 404 from https://npmmirror.com/mirrors/node/v26.13.0/SHASUMS256.txt` 结束。插件只询问一个镜像，所以在第一个镜像追上之前，请把 `VFOX_NODEJS_MIRROR` 指向下面列表里的另一个镜像，或者取消设置，改用 nodejs.org。
 - 会跟随重定向。`https://npmmirror.com/mirrors/node` 对 `index.json` 的请求回应的是重定向，也能正常使用。
 
 ## 可用的镜像
 
-这些镜像在 2026-10-21 检查过：每个镜像提供的 `index.json` 都和 nodejs.org 一样列有 872 个版本，`node-v24.21.0-linux-x64.tar.gz` 的 SHA-256 校验和以及包本身都与 nodejs.org 一致，也都提供了 26.12.0 的 musl 包。这份列表只是记录检查结果，不为任何镜像背书。镜像随时可能变化或消失，插件无从得知。
+这些镜像在 2026-10-21 检查过：每个镜像提供的 `index.json` 都和 nodejs.org 一样列有 872 个版本，`node-v24.21.0-linux-x64.tar.gz` 的 SHA-256 校验和以及包本身都与 nodejs.org 一致，也都提供了 26.12.0 的 musl 包。天翼云是 2026-11-03 用同样的方法检查的。这份列表只是记录检查结果，不为任何镜像背书。镜像随时可能变化或消失，插件无从得知。
 
 | 镜像 | `VFOX_NODEJS_MIRROR` |
 | --- | --- |
@@ -63,7 +64,12 @@ $env:VFOX_NODEJS_MIRROR = "https://npmmirror.com/mirrors/node"
 | 阿里云 | `https://mirrors.aliyun.com/nodejs-release` |
 | 腾讯云 | `https://mirrors.cloud.tencent.com/nodejs-release` |
 | 南京大学 | `https://mirror.nju.edu.cn/nodejs-release` |
-| 北京外国语大学 | `https://mirrors.bfsu.edu.cn/nodejs-release` |
+| 北京外国语大学 | `https://mirrors.bfsu.edu.cn/nodejs-release`（会重定向到 TUNA） |
+| 天翼云 | `https://mirrors.ctyun.cn/nodejs-release` |
+
+2026-11-03，又用 vfox 1.0.13 通过它们各安装了一次 24.21.0（`VFOX_NODEJS_MIRROR=<mirror> vfox install nodejs@24.21.0`），每一个都安装成功并且能运行。未发布：0.5.3 只能从 npmmirror、阿里云、腾讯云和南京大学安装。它把下载交给 vfox，而 vfox 请求时使用的是 Go HTTP 客户端的 `User-Agent`，即 `Go-http-client/1.1`，华为云（HTTP 418）、TUNA 和北外（403）以及 USTC（204，没有内容）对它返回的是错误页面或者空内容，而不是安装包：vfox 把这个回应存成文件，安装以 `checksum error` 结束。插件请求 `index.json` 和 `SHASUMS256.txt` 时用的是 vfox 为它生成的 `User-Agent`，即 `vfox/1.0.13 vfox-nodejs/0.5.3`，这些镜像都正常响应，现在下载时也改用同一个。
+
+只做重定向的地址没有列出：2026-11-03，`mirror.sjtu.edu.cn/nodejs-release` 把请求转到了 nodejs.org，`mirrors.cernet.edu.cn/nodejs-release` 则转到了中科大的一台服务器。
 
 Node.js 的镜像不是 npm 的 registry。`npm install` 获取的包来自 npm 配置里的 registry，例如 `npm config set registry https://registry.npmmirror.com`，见 [npm.md](npm.md)。
 
