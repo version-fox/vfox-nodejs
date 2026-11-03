@@ -118,6 +118,16 @@ well, after `Found nodejs@18.20.8`. A `.vfox.toml` is tracked in both, so
 `vfox use --project nodejs@18.20.8` is the way to get the switching in a
 release. See [scenarios.md](scenarios.md#several-projects-in-one-shell).
 
+A vfox that also keeps the working directory in its state gets the `cd` right
+without the workaround: built from vfox 1.0.13 with
+[a patch of 55 lines](patches/vfox-1.0.13-env-state-working-dir.patch), it
+switched in every step of the shell in
+[Several projects in one shell](scenarios.md#several-projects-in-one-shell), the
+way out included, also with release 0.5.3 of the plugin. It does not notice a
+change of the file in the directory the shell is already in, which only the
+workaround catches. See
+[development.md](development.md#a-vfox-that-notices-a-cd) for how to build it.
+
 ## The strategy decides
 
 What the file's text can name depends on `legacyVersionFile.strategy`, a

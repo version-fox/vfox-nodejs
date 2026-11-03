@@ -237,6 +237,46 @@ have no package. For the musl table run the same program against
 `linux-x64-musl` and `linux-arm64-musl`, and against the official index with
 `linux-x64-musl`. Each answers for one site, so combine the two.
 
+## A vfox that notices a cd
+
+`util.forget_env_state` covers only the way into a directory with a version
+file, see [nvmrc.md](nvmrc.md#when-the-file-is-read). The way out needs a change
+in vfox, which keeps the result of `vfox env` and does not look at version
+files to tell whether it is stale. The change is small: it ties the kept result
+to the working directory it was made for as well.
+[The patch](patches/vfox-1.0.13-env-state-working-dir.patch) adds 55 lines to
+vfox 1.0.13 (`ConfigState.DirChanged` and `SetDir` in `internal/env/state.go`,
+their use in `envFlag`, and a test). To build a vfox with it, in the directory
+that holds this repository, cloned as `vfox-nodejs` (vfox 1.0.13 needs Go 1.24
+or newer):
+
+```bash
+git clone --depth 1 --branch v1.0.13 https://github.com/version-fox/vfox.git
+cd vfox
+git apply ../vfox-nodejs/docs/patches/vfox-1.0.13-env-state-working-dir.patch
+go test ./internal/env/ ./cmd/...
+go build -o vfox .
+```
+
+git warns that the tag is not a commit, and checks out the release commit all
+the same. Put that `vfox` first in `PATH` and open a new shell. On 2026-11-03 a
+build like this switched in every step of the shell in
+[Several projects in one shell](scenarios.md#several-projects-in-one-shell), the
+way out of a directory with a version file included, and it did so with release
+0.5.3 of the plugin as well, which has no workaround. It does not notice a
+change of the file in the directory the shell is already in: with release 0.5.3
+the shell stayed on the old release, and with the unreleased plugin it switched
+at the next prompt, which is `util.forget_env_state` at work.
+
+The patch does not apply to `main` of vfox as it is. On the commit of
+2026-11-02 (cdf0747) `git apply` refuses it for `cmd/commands/env.go` and
+`internal/env/state_test.go`. `patch -p1` skips the hunk of
+`cmd/commands/env.go` that calls `state.SetDir` before `state.Update`, and two
+of the other four hunks apply only with a fuzz of 1. `main` has meanwhile added
+a check of the same kind for the PATH policy (`PathPolicyChanged` and
+`SetPathPolicy`) in the places where the patch inserts its lines, and the two
+calls would go next to those. A build from `main` was not tried.
+
 ## Known gaps
 
 - 32-bit ARM takes the `linux-armv7l` package, up to 23.11.1. The ARMv6 package
@@ -255,10 +295,9 @@ have no package. For the musl table run the same program against
   does not switch back. vfox does not track version files and keeps the result
   of its last calculation, and the plugin is not called where there is no file
   to read, so `util.forget_env_state` only covers the way in. A fix belongs in
-  vfox: a build of vfox 1.0.13 that keeps the working directory in
-  `env-state.json` as well (`ConfigState.DirChanged` in `internal/env/state.go`,
-  used by `envFlag`) switched in both directions on 2026-11-03, also with
-  release 0.5.3 of the plugin. Drop `util.forget_env_state` when vfox does it.
+  vfox, and one has been tried, see
+  [A vfox that notices a cd](#a-vfox-that-notices-a-cd). Drop
+  `util.forget_env_state` when vfox tracks version files.
 - Every prompt in a directory with a version file calculates the environment
   again, because of `util.forget_env_state`. It took about a millisecond with
   one SDK installed.

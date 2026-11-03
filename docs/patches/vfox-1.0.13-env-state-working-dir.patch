@@ -1,0 +1,119 @@
+vfox v1.0.13: keep the working directory in the state of `vfox env`
+
+vfox keeps the result of `vfox env` for a shell in env-state.json and decides
+from the config files it tracks whether that result is stale. A .nvmrc or a
+.node-version is not among them, so after a cd into a directory that has only
+one, and after a cd out of it into a directory with no config at all, vfox goes
+on with the result it made for the other directory. This change ties the kept
+result to the working directory it was made for as well.
+
+Apply it in a checkout of the tag v1.0.13 with `git apply` or `patch -p1`. It
+adds 55 lines: ConfigState.DirChanged and SetDir in internal/env/state.go, their
+use in envFlag (cmd/commands/env.go) and a test. `go test ./internal/env/
+./cmd/...` passes. A build of v1.0.13 with it switched in every step of the
+shell in "Several projects in one shell" of docs/scenarios.md, the way out of
+the directory included, and also with release 0.5.3 of the plugin. It does not
+notice a change of a version file in the directory the shell is already in. On
+vfox main (cdf0747, 2026-11-02) it does not apply as it is: `git apply` refuses
+cmd/commands/env.go and internal/env/state_test.go, and `patch -p1` skips the
+hunk of cmd/commands/env.go that sets the directory before state.Update,
+because main has added a check of the same kind for the PATH policy there
+(PathPolicyChanged, SetPathPolicy). A build from main was not tried. It is kept
+here for reference, see docs/development.md.
+
+diff --git a/cmd/commands/env.go b/cmd/commands/env.go
+--- a/cmd/commands/env.go
++++ b/cmd/commands/env.go
+@@ -188,6 +188,12 @@
+ 		changed = true // Assume changed on error
+ 	}
+ 
++	// Version files such as .nvmrc are read from the working directory and are not
++	// in configPaths: the output made for another directory is stale.
++	if state.DirChanged(runtimeEnvContext.CurrentWorkingDir) {
++		changed = true
++	}
++
+ 	logger.Debugf("Config changed: %v, configPaths: %+v\n", changed, configPaths)
+ 
+ 	// 5. Fast path: return cached output if no changes
+@@ -329,6 +335,7 @@
+ 	exportStr := s.Export(exportEnvs)
+ 
+ 	// 10. Update state with new output
++	state.SetDir(runtimeEnvContext.CurrentWorkingDir)
+ 	if err := state.Update(configPaths, exportStr, shellName); err != nil {
+ 		logger.Debugf("Failed to update state: %v", err)
+ 	}
+diff --git a/internal/env/state.go b/internal/env/state.go
+--- a/internal/env/state.go
++++ b/internal/env/state.go
+@@ -49,6 +49,12 @@
+ 	// Cached env output (shell script)
+ 	CachedOutput string `json:"cached_output,omitempty"`
+ 
++	// Working directory CachedOutput was rendered for. The version files of the
++	// plugins (.nvmrc, .node-version, ...) are read from it, and they are not among
++	// the config files that HasChanged tracks, so the output of another directory
++	// must not be used. Caches without it were rendered before it was kept.
++	CachedDir string `json:"cached_dir,omitempty"`
++
+ 	// State file path
+ 	stateFilePath string
+ }
+@@ -197,6 +203,21 @@
+ 	return s.saveLocked()
+ }
+ 
++// DirChanged reports whether the cached output was rendered for another working
++// directory than dir.
++func (s *ConfigState) DirChanged(dir string) bool {
++	s.mu.RLock()
++	defer s.mu.RUnlock()
++	return s.CachedDir != dir
++}
++
++// SetDir records the working directory that the next Update caches output for.
++func (s *ConfigState) SetDir(dir string) {
++	s.mu.Lock()
++	defer s.mu.Unlock()
++	s.CachedDir = dir
++}
++
+ // GetCachedOutput returns output only for the requested shell. Legacy caches
+ // without a shell must be regenerated.
+ func (s *ConfigState) GetCachedOutput(shellName string) string {
+diff --git a/internal/env/state_test.go b/internal/env/state_test.go
+--- a/internal/env/state_test.go
++++ b/internal/env/state_test.go
+@@ -341,3 +341,30 @@
+ 		t.Error("HasChanged() should return true when PATH has changed")
+ 	}
+ }
++
++func TestConfigStateDirChanged(t *testing.T) {
++	stateFile := filepath.Join(t.TempDir(), "env-state.json")
++	state := NewConfigState(stateFile)
++	if !state.DirChanged("/work/a") {
++		t.Error("a state that has no directory must be regenerated")
++	}
++
++	state.SetDir("/work/a")
++	if err := state.Update(map[UseScope]string{}, "export PATH=x;", "bash"); err != nil {
++		t.Fatalf("Update: %v", err)
++	}
++	if state.DirChanged("/work/a") {
++		t.Error("the directory the output was made for must be a hit")
++	}
++	if !state.DirChanged("/work/b") {
++		t.Error("another directory must not use the output")
++	}
++
++	reloaded := NewConfigState(stateFile)
++	if err := reloaded.Load(); err != nil {
++		t.Fatalf("Load: %v", err)
++	}
++	if reloaded.DirChanged("/work/a") || !reloaded.DirChanged("/work/b") {
++		t.Error("the directory must survive a Save and a Load")
++	}
++}

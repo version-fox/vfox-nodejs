@@ -255,7 +255,9 @@ at each step of one shell, with 18.20.8, 24.22.2 and 26.13.0 installed and
   not switch back, in either: the shell keeps the release it had, as the fourth
   step shows. The plugin is not called in a directory with nothing to read, and
   vfox goes on with the result it kept. A new terminal, or a directory with a
-  `.vfox.toml` or a version file of its own, switches.
+  `.vfox.toml` or a version file of its own, switches. So does a vfox built with
+  [a small patch](patches/vfox-1.0.13-env-state-working-dir.patch), see
+  [development.md](development.md#a-vfox-that-notices-a-cd).
 
 Why is in [nvmrc.md](nvmrc.md#when-the-file-is-read): vfox keeps the result of
 its first calculation for the shell and does not track version files (vfox

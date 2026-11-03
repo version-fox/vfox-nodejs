@@ -34,7 +34,9 @@ ahead of it by everything under "Unreleased".
   shell and does not track version files. The plugin now removes that result
   whenever vfox asks it to read such a file. A `cd` out of the directory into
   one with no config at all does not switch back yet, and a `.vfox.toml` always
-  did. See [nvmrc.md](nvmrc.md#when-the-file-is-read).
+  did. See [nvmrc.md](nvmrc.md#when-the-file-is-read). A vfox built with
+  [a patch](patches/vfox-1.0.13-env-state-working-dir.patch) does switch back,
+  see [development.md](development.md#a-vfox-that-notices-a-cd).
 - The documentation has a page of scenarios: the nvm-sh/nvm commands next to
   vfox's, Windows PowerShell 5.1 from scratch, one Node.js for a whole team,
   several projects in one shell, `vfox exec`, mirrors and editors. See
