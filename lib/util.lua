@@ -272,6 +272,29 @@ function UTIL.decode_text(content)
     return table.concat(chars)
 end
 
+--- Make the `vfox env` that is running work out the environment from nothing.
+---
+--- vfox keeps the result of `vfox env` for a shell in `env-state.json` in the
+--- session directory (`$__VFOX_CURTMPPATH`, which its shell hook exports), and
+--- uses it again while no `.vfox.toml` it tracks changes and `PATH` stays as it
+--- was. A `.nvmrc` or `.node-version` is not tracked (vfox 1.0.13 and `main`
+--- alike), so after a `cd` into a directory that only has one, vfox would go on
+--- with the result it made for the directory before, and ignore the file. vfox
+--- runs ParseLegacyFile before it loads the state, so removing the file here
+--- makes it calculate again. That is a workaround to drop when vfox tracks these
+--- files. It cannot do anything for a `cd` out of such a directory, where this
+--- hook is not called. See docs/nvmrc.md, "When the file is read".
+function UTIL.forget_env_state()
+    local dir = os.getenv("__VFOX_CURTMPPATH")
+    if dir == nil or dir == "" or type(os.remove) ~= "function" then
+        return
+    end
+    local windows = RUNTIME ~= nil and RUNTIME.osType == "windows"
+    local separator = windows and "\\" or "/"
+    -- Nothing to report when the file is not there or cannot be removed.
+    pcall(os.remove, (dir:gsub("[/\\]+$", "")) .. separator .. "env-state.json")
+end
+
 --- Whether a PATH entry belongs to vfox: like vfox's own check, one of its
 --- segments is `.vfox` (or the legacy `.version-fox`).
 local function is_vfox_path(dir)

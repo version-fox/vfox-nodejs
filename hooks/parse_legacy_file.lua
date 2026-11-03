@@ -60,6 +60,9 @@ function PLUGIN:ParseLegacyFile(ctx)
     end
     local content = file:read("*a") or ""
     file:close()
+    -- vfox does not notice this file when it decides whether the result it kept
+    -- for the shell is stale, so make it work out the environment again.
+    util.forget_env_state()
     -- Windows PowerShell 5.1 writes UTF-16, or UTF-8 with a byte order mark.
     content = util.decode_text(content):gsub("%s+", "")
     if content == "" then

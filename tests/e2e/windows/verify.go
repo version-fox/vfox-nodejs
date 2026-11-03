@@ -147,15 +147,16 @@ func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, box 
 	// Each probe activates a new PowerShell process because activation pins
 	// __VFOX_PID, which scopes the `vfox env` state cache. Windows may quickly
 	// reuse a just-exited PID, though, and `.nvmrc` changes are not among the
-	// cache's tracked config files. Remove the cache file explicitly so a prior
-	// legacy probe cannot supply its selected version to the next probe. The
-	// output includes the resolved node path and version to make failures clear.
+	// cache's tracked config files. The plugin removes the cache file itself
+	// whenever vfox asks it to read a legacy file (util.forget_env_state), so a
+	// prior legacy probe cannot supply its selected version to the next probe:
+	// do not remove it here, or this test no longer covers that. The output
+	// includes the resolved node path and version to make failures clear.
 	run := func(dir string) string {
 		t.Helper()
 		script := fmt.Sprintf(
 			"Invoke-Expression -Command (vfox activate pwsh | Out-String); "+
 				"Set-Location -LiteralPath %s; "+
-				"if ($env:__VFOX_CURTMPPATH) { Remove-Item -LiteralPath (Join-Path $env:__VFOX_CURTMPPATH 'env-state.json') -Force -ErrorAction SilentlyContinue }; "+
 				"$__vfoxExport = vfox env -s pwsh | Out-String; "+
 				"if ($__vfoxExport.Trim()) { Invoke-Expression -Command $__vfoxExport }; "+
 				"(Get-Command node -CommandType Application | Select-Object -First 1).Source; "+

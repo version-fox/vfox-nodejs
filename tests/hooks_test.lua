@@ -576,6 +576,76 @@ test("decode_text replaces what UTF-16 cannot say and ignores a half unit", func
     assert(util.decode_text("\255\254") == "")
     assert(util.decode_text("\255\254" .. "9") == "")
 end)
+-- vfox keeps the result of `vfox env` in env-state.json in the session directory
+-- and does not track version files, so ParseLegacyFile removes the file.
+local function removed_state_files(env, osType, fn)
+    local saved_getenv, saved_remove, saved_runtime = os.getenv, os.remove, RUNTIME
+    local removed = {}
+    os.getenv = function(key)
+        if key == "__VFOX_CURTMPPATH" then
+            return env
+        end
+        return saved_getenv(key)
+    end
+    os.remove = function(path)
+        if path:find("env-state.json", 1, true) then
+            table.insert(removed, path)
+            return nil, "no such file"
+        end
+        return saved_remove(path)
+    end
+    RUNTIME = { osType = osType, archType = "amd64" }
+    local ok, err = pcall(fn)
+    os.getenv, os.remove, RUNTIME = saved_getenv, saved_remove, saved_runtime
+    assert(ok, err)
+    return removed
+end
+test("legacy files make vfox work out the environment again", function()
+    local removed = removed_state_files("/home/me/.vfox/tmp/20261103-4242", "linux", function()
+        assert(legacy_version("22.23.3", "specified") == "22.23.3")
+    end)
+    assert(#removed == 1 and removed[1] == "/home/me/.vfox/tmp/20261103-4242/env-state.json", table.concat(removed))
+    removed = removed_state_files("C:\\Users\\me\\.vfox\\tmp\\20261103-4242\\", "windows", function()
+        assert(legacy_version("22.23.3", "specified") == "22.23.3")
+    end)
+    assert(
+        #removed == 1 and removed[1] == "C:\\Users\\me\\.vfox\\tmp\\20261103-4242\\env-state.json",
+        table.concat(removed)
+    )
+end)
+test("an empty version file makes vfox work out the environment again too", function()
+    local removed = removed_state_files("/home/me/.vfox/tmp/20261103-4242", "linux", function()
+        assert(legacy_version("\n", "specified") == nil)
+    end)
+    assert(#removed == 1, "an emptied file must not leave the old result in place")
+end)
+test("no session directory, nothing to remove", function()
+    for _, env in ipairs({ "", false }) do
+        local removed = removed_state_files(env or nil, "linux", function()
+            assert(legacy_version("22.23.3", "specified") == "22.23.3")
+        end)
+        assert(#removed == 0, "removed " .. table.concat(removed))
+    end
+end)
+test("a state file that cannot be removed is no error", function()
+    local saved_getenv, saved_remove = os.getenv, os.remove
+    os.getenv = function(key)
+        if key == "__VFOX_CURTMPPATH" then
+            return "/home/me/.vfox/tmp/20261103-4242"
+        end
+        return saved_getenv(key)
+    end
+    os.remove = function(path)
+        if path:find("env-state.json", 1, true) then
+            error("permission denied")
+        end
+        return saved_remove(path)
+    end
+    local ok, err = pcall(legacy_version, "22.23.3", "specified")
+    os.getenv, os.remove = saved_getenv, saved_remove
+    assert(ok, err)
+    assert(err == "22.23.3", tostring(err))
+end)
 -- PreUse notes a `node` that vfox keeps ahead of its own paths, such as the
 -- one `pnpm runtime set node -g` writes to $PNPM_HOME/bin.
 dofile("hooks/pre_use.lua")
