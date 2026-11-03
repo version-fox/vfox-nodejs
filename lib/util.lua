@@ -31,6 +31,26 @@ function UTIL.getBaseUrl()
     return (mirror:gsub("/+$", ""))
 end
 
+--- Headers that vfox sends with the download of the package. Without them vfox
+--- identifies itself with the User-Agent of Go's HTTP client,
+--- `Go-http-client/1.1`, and Huawei Cloud, TUNA, USTC and BFSU answer that with
+--- an error page, or with nothing, in place of the package: vfox saves the
+--- answer and the install ends in `checksum error`. The requests of the plugin
+--- itself carry the User-Agent that vfox builds for it, `vfox/<vfox version>
+--- vfox-nodejs/<plugin version>`, which all the mirrors of docs/mirror.md
+--- serve, so the download sends the same.
+--- @return table<string, string>
+function UTIL.download_headers()
+    local agent = "vfox-" .. ((PLUGIN ~= nil and PLUGIN.name) or "nodejs")
+    if PLUGIN ~= nil and PLUGIN.version ~= nil then
+        agent = agent .. "/" .. PLUGIN.version
+    end
+    if RUNTIME ~= nil and RUNTIME.version ~= nil and RUNTIME.version ~= "" then
+        agent = "vfox/" .. RUNTIME.version .. " " .. agent
+    end
+    return { ["User-Agent"] = agent }
+end
+
 function UTIL.file_exists(path)
     local f = io.open(path, "rb")
     if f then

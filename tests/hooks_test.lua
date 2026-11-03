@@ -113,6 +113,9 @@ for _, case in ipairs(cases) do
         local result = PLUGIN:PreInstall({ version = "20.16.0" })
         assert(result.url:sub(-#filename) == filename, result.url)
         assert(result.sha256 == hash, "checksum missing")
+        -- vfox downloads with what is in `headers`, or else with Go's User-Agent.
+        assert(result.headers ~= nil and result.headers["User-Agent"] ~= nil, "download without a User-Agent")
+        assert(not result.headers["User-Agent"]:find("Go-http-client", 1, true), result.headers["User-Agent"])
     end)
 end
 test("missing architecture", function()
@@ -159,6 +162,7 @@ test("package linux/arm64 musl falls back to unofficial", function()
     assert(result.url:sub(-#filename) == filename, result.url)
     assert(result.url:find("unofficial-builds.nodejs.org", 1, true), result.url)
     assert(result.sha256 == unofficial_hash, "unofficial checksum missing")
+    assert(result.headers ~= nil and result.headers["User-Agent"] ~= nil, "unofficial download without a User-Agent")
 end)
 test("musl unsupported architecture", function()
     RUNTIME = { osType = "linux", archType = "386", envType = "musl" }
@@ -635,6 +639,44 @@ test("capture runs a command and returns what it printed", function()
     local output, status = util.capture("echo hi")
     assert(output == "hi\n", tostring(output))
     assert(status == 0 or status == nil, tostring(status))
+end)
+-- vfox downloads the package itself and, unless PreInstall says otherwise, with
+-- Go's User-Agent, which Huawei Cloud, TUNA, USTC and BFSU answer with an error
+-- page. The plugin's own requests carry `vfox/<vfox> vfox-nodejs/<plugin>`
+-- (seen on a local server under vfox 1.0.13), and the download sends the same.
+local function with_identity(plugin_name, plugin_version, vfox_version, fn)
+    local saved_name, saved_version, saved_runtime = PLUGIN.name, PLUGIN.version, RUNTIME
+    PLUGIN.name, PLUGIN.version = plugin_name, plugin_version
+    RUNTIME = { osType = "linux", archType = "amd64", envType = "gnu", version = vfox_version }
+    local ok, err = pcall(fn)
+    PLUGIN.name, PLUGIN.version, RUNTIME = saved_name, saved_version, saved_runtime
+    assert(ok, err)
+end
+test("download_headers names vfox and the plugin like the plugin's own requests", function()
+    with_identity("nodejs", "0.5.3", "1.0.13", function()
+        assert(util.download_headers()["User-Agent"] == "vfox/1.0.13 vfox-nodejs/0.5.3")
+    end)
+    -- Whatever vfox leaves out is left out of the name too.
+    with_identity("nodejs", "0.5.3", nil, function()
+        assert(util.download_headers()["User-Agent"] == "vfox-nodejs/0.5.3")
+    end)
+    with_identity("nodejs", "0.5.3", "", function()
+        assert(util.download_headers()["User-Agent"] == "vfox-nodejs/0.5.3")
+    end)
+    with_identity("nodejs", nil, "1.0.13", function()
+        assert(util.download_headers()["User-Agent"] == "vfox/1.0.13 vfox-nodejs")
+    end)
+    with_identity(nil, nil, nil, function()
+        assert(util.download_headers()["User-Agent"] == "vfox-nodejs")
+    end)
+end)
+test("the package is downloaded with the User-Agent of vfox", function()
+    with_identity("nodejs", "0.5.3", "1.0.13", function()
+        local filename = "node-v20.16.0-linux-x64.tar.gz"
+        state.response = { status_code = 200, body = string.rep("a", 64) .. "  " .. filename .. "\n" }
+        local result = PLUGIN:PreInstall({ version = "20.16.0" })
+        assert(result.headers["User-Agent"] == "vfox/1.0.13 vfox-nodejs/0.5.3", result.headers["User-Agent"])
+    end)
 end)
 test("shell_quote quotes one word", function()
     assert(util.shell_quote("a b") == "'a b'")
