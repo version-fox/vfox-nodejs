@@ -12,7 +12,7 @@ hooks/post_install.lua          musl: fail when node cannot run, such as without
 hooks/env_keys.lua              PATH: bin on Linux and macOS, the install directory on Windows
 hooks/pre_use.lua               vfox use: map 24 or 24.21 to an installed release, note a shadowing node
 hooks/parse_legacy_file.lua     .nvmrc and .node-version
-lib/util.lua                    mirror URL, musl detection and missing libraries, running a command, version comparison and matching, shorthands, PATH probe
+lib/util.lua                    mirror URL and download headers, musl detection and missing libraries, running a command, version comparison and matching, shorthands, PATH probe
 tests/hooks_test.lua            offline hook tests
 tests/e2e/                      container tests, see e2e.md
 Injection.lua                   type hints for what vfox injects, never loaded
@@ -39,12 +39,22 @@ loaded with `require("util")`.
 
 A few contracts that cost time to find:
 
-- `PreInstall` returns `version`, `url`, `sha256` and sometimes `note`.
-  `version` is the name of the install, so a start of a release has to be
-  resolved to the full release here. vfox only warns when there is no checksum
-  (`Checksum is not provided`) and goes on to download, so since 0.5.0 the hook
-  fails when the package is not in `SHASUMS256.txt` instead of returning none.
-  Notes that the hook prints with `print` show up in vfox's output.
+- `PreInstall` returns `version`, `url`, `sha256`, `headers` and sometimes
+  `note`. `version` is the name of the install, so a start of a release has to
+  be resolved to the full release here. vfox only warns when there is no
+  checksum (`Checksum is not provided`) and goes on to download, so since 0.5.0
+  the hook fails when the package is not in `SHASUMS256.txt` instead of
+  returning none. Notes that the hook prints with `print` show up in vfox's
+  output.
+- `headers` is what vfox sends with the download of `url`, which vfox makes, not
+  the plugin. Left out, vfox asks with the `User-Agent` of Go's HTTP client,
+  `Go-http-client/1.1`, and Huawei Cloud, TUNA, USTC and BFSU answer that with
+  an error page that vfox saves as the package, so the install ends in
+  `checksum error`. `util.download_headers()` gives the `User-Agent` that vfox
+  builds for the plugin's own requests, `vfox/<RUNTIME.version>
+  vfox-nodejs/<PLUGIN.version>`, which all of them serve. vfox 1.0.13 sends it
+  with the download, as a local server that logged the requests showed. The
+  unofficial site gets it too.
 - `Available` raises on a network error or a status other than 200. Since 0.5.0
   it does not return an empty list, which vfox cached. The result is kept in the
   global `available_result` for the life of the process, and the tests reset it.

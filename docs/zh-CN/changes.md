@@ -7,6 +7,7 @@
 ## 未发布
 
 - `vfox install nodejs@latest` 重新安装最新的版本，`vfox search nodejs` 也不再列出预发布版本。2026-10-29 起，nodejs.org 的索引里最新的一条是 `27.0.0-alpha.0.0.0`。0.5.3 把它排在最前面，所以 `latest` 解析成它，安装以 `version not found for provided version 27.0.0-alpha.0.0.0` 告终。`nodejs@26` 等按编号安装的写法不受影响。现在只列出由三段数字组成的版本。见 [versions.md](versions.md#安装)。
+- 华为云、TUNA、USTC 和北外现在可以用作镜像。0.5.3 把安装包的下载交给 vfox，而 vfox 请求时使用 Go HTTP 客户端的 `User-Agent`，这四个镜像对它返回的是错误页面或者空内容，而不是文件（依次是 HTTP 418、403、204 和 403），安装以 `checksum error` 结束。插件现在让 vfox 下载时使用它自己请求时的 `User-Agent`（vfox 1.0.13 下是 `vfox/1.0.13 vfox-nodejs/0.5.3`），[mirror.md](mirror.md#可用的镜像) 里的所有镜像都能安装 24.21.0。天翼云 `https://mirrors.ctyun.cn/nodejs-release` 也加进了这份列表。
 
 ## 0.5.3（2026-10-20）
 

@@ -12,7 +12,7 @@ hooks/post_install.lua          musl：node 无法运行时报错，比如缺少
 hooks/env_keys.lua              PATH：Linux 和 macOS 上是 bin，Windows 上是安装目录
 hooks/pre_use.lua               vfox use：把 24 或 24.21 映射到已安装的版本，vfox 的 node 被遮蔽时给出提示
 hooks/parse_legacy_file.lua     .nvmrc 和 .node-version
-lib/util.lua                    镜像 URL、musl 检测与缺失的库、运行命令、版本比较与匹配、简写、PATH 探测
+lib/util.lua                    镜像 URL 与下载请求头、musl 检测与缺失的库、运行命令、版本比较与匹配、简写、PATH 探测
 tests/hooks_test.lua            离线的钩子测试
 tests/e2e/                      容器测试，见 e2e.md
 Injection.lua                   vfox 注入对象的类型提示，不会被加载
@@ -34,7 +34,8 @@ vfox 加载 `metadata.lua`，命令需要时调用相应的钩子，并向钩子
 
 几条容易踩坑的约定：
 
-- `PreInstall` 返回 `version`、`url`、`sha256`，有时还有 `note`。`version` 就是安装后的版本名，所以这里必须把版本前缀解析成完整的版本。没有校验和时 vfox 只会警告（`Checksum is not provided`），然后继续下载，所以从 0.5.0 起，包不在 `SHASUMS256.txt` 里时钩子会报错，而不是不返回校验和。钩子用 `print` 打印的 Note 会出现在 vfox 的输出里。
+- `PreInstall` 返回 `version`、`url`、`sha256`、`headers`，有时还有 `note`。`version` 就是安装后的版本名，所以这里必须把版本前缀解析成完整的版本。没有校验和时 vfox 只会警告（`Checksum is not provided`），然后继续下载，所以从 0.5.0 起，包不在 `SHASUMS256.txt` 里时钩子会报错，而不是不返回校验和。钩子用 `print` 打印的 Note 会出现在 vfox 的输出里。
+- `headers` 是 vfox 下载 `url` 时带上的请求头，下载由 vfox 发起，不是插件。不写的话，vfox 请求时使用 Go HTTP 客户端的 `User-Agent`，即 `Go-http-client/1.1`，华为云、TUNA、USTC 和北外对它返回的是错误页面，vfox 把它存成安装包，安装就以 `checksum error` 结束。`util.download_headers()` 给出 vfox 为插件自己的请求生成的 `User-Agent`，即 `vfox/<RUNTIME.version> vfox-nodejs/<PLUGIN.version>`，这些镜像都正常响应。vfox 1.0.13 下载时会带上它，这是用一个记录请求的本地服务器确认的。非官方站点也用它。
 - `Available` 遇到网络错误或 200 以外的状态码时会抛出错误。从 0.5.0 起它不再返回空列表，那样的结果会被 vfox 缓存。结果在进程存活期间保存在全局变量 `available_result` 里，测试会把它重置。vfox 自己还会把搜索结果缓存 12 小时。
 - 对于无法映射的输入，`PreUse` 返回 `{ version = nil }`，vfox 就回答 `is not installed`。它拿到的 `ctx.installedSdks` 是以版本为键的表，而不是数组，所以 `calculate_shorthand` 用 `pairs` 遍历。
 - `ParseLegacyFile` 调用 `ctx.getInstalledVersions()` 时不带参数。vfox 1.x 把它绑定成普通的 Go 函数，会拒绝 `ctx:getInstalledVersions()` 多传的那个参数。策略由 `ctx.strategy` 给出。vfox 把已安装的版本按字符串降序传进来，所以 `22.9.0` 排在 `22.23.3` 前面。测试把它当作普通函数传入，并断言调用时没有带参数。
