@@ -152,7 +152,7 @@ Set-Content -Path .nvmrc -Value '22.23.4' -Encoding ascii
 
 - **`.vfox.toml`** 在每次 `cd` 时都会切换，离开去没有配置的目录时也会切回全局版本。每个版本都是这样。
 - **`.nvmrc` 和 `.node-version`** 在每个提示符出现在它所在的目录里时都会读取（未发布）。从一个这样的目录 `cd` 到另一个会切换，改动文件则在下一个提示符生效。0.5.3 只在 Shell 于该目录里启动时读取，所以上面的 `cd` 步骤一个都没有切换。
-- **离开**带有这类文件的目录、进入完全没有配置的目录时，两边都不会切换回来：Shell 保持它原有的版本，第四步就是这样。在没有东西可读的目录里不会调用插件，vfox 沿用它保存的结果。新开的终端，或者带有 `.vfox.toml` 或它自己的版本文件的目录，会切换。用[一个小补丁](../patches/vfox-1.0.13-env-state-working-dir.patch)构建的 vfox 也会，见 [development.md](development.md#注意到-cd-的-vfox)。
+- **离开**带有这类文件的目录、进入完全没有配置的目录时，两边都不会切换回来：Shell 保持它原有的版本，第四步就是这样。在没有东西可读的目录里不会调用插件，vfox 沿用它保存的结果。新开的终端，或者带有 `.vfox.toml` 或它自己的版本文件的目录，会切换。这是 vfox 缓存的限制，已作为 [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745) 报告，这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪。
 
 原因在 [nvmrc.md](nvmrc.md#什么时候读取这个文件)：vfox 把 Shell 第一次计算的结果保存下来，并不跟踪版本文件（vfox 1.0.13），而插件在每次读取版本文件时都会让 vfox 重新计算。所以：
 

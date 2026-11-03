@@ -69,7 +69,7 @@ Using cached output
 
 0.5.3 在带有 `.nvmrc` 的目录里，在 `Found nodejs@18.20.8` 之后打印的也是第二段。`.vfox.toml` 在两边都是被跟踪的，所以在发布版里想要 `cd` 时自动切换，用 `vfox use --project nodejs@18.20.8`。见 [scenarios.md](scenarios.md#一个-shell-里的多个项目)。
 
-如果 vfox 在它保存的状态里也记下了工作目录，`cd` 就不再需要这个应对办法：用 vfox 1.0.13 加[一个 55 行的补丁](../patches/vfox-1.0.13-env-state-working-dir.patch)构建出来的 vfox，在[一个 Shell 里的多个项目](scenarios.md#一个-shell-里的多个项目)的每一步都切换正确，离开目录那一步也是，配 0.5.3 的插件也一样。它注意不到 Shell 已经所在的目录里文件的改动，这只有应对办法能做到。构建方法见 [development.md](development.md#注意到-cd-的-vfox)。
+这个缓存是 vfox 的，修复也要由 vfox 来做。它已经作为 [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745) 报告，在有发布版带上修复之前，这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪。等 vfox 自己能注意到版本文件之后，这个应对办法就可以去掉。
 
 ## 由策略决定
 

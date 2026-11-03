@@ -130,22 +130,6 @@ curl -s https://nodejs.org/dist/index.json | jq -r '
 
 这里的键是索引对插件所用文件的叫法（`osx-x64-tar` 对应 `darwin-x64.tar.gz`，`win-x64-zip` 对应 `win-x64.zip`）。索引与 `SHASUMS256.txt` 一致（插件读取的是后者），只有两个版本例外：索引在 `linux-x64`、`linux-x86` 和 macOS x64 下列出了 0.11.4 和 0.11.6，但它们没有包。要得到 musl 表，把同一段程序用在 `https://unofficial-builds.nodejs.org/download/release/index.json` 上，键换成 `linux-x64-musl` 和 `linux-arm64-musl`，再用在官方索引上，键换成 `linux-x64-musl`。每次查询只反映一个站点，所以要把两份结果合起来。
 
-## 注意到 cd 的 vfox
-
-`util.forget_env_state` 只覆盖了进入带有版本文件的目录这个方向，见 [nvmrc.md](nvmrc.md#什么时候读取这个文件)。离开的方向需要改动 vfox：它保存着 `vfox env` 的结果，判断这个结果是否过期时却不看版本文件。这个改动很小：让保存的结果同时对应它生成时所在的工作目录。[这个补丁](../patches/vfox-1.0.13-env-state-working-dir.patch)给 vfox 1.0.13 增加 55 行（`internal/env/state.go` 里的 `ConfigState.DirChanged` 和 `SetDir`、`envFlag` 对它们的使用，以及一个测试）。要构建带这个补丁的 vfox，在存放本仓库的那个目录里执行，仓库克隆后的目录名是 `vfox-nodejs`（vfox 1.0.13 需要 Go 1.24 或更新的版本）：
-
-```bash
-git clone --depth 1 --branch v1.0.13 https://github.com/version-fox/vfox.git
-cd vfox
-git apply ../vfox-nodejs/docs/patches/vfox-1.0.13-env-state-working-dir.patch
-go test ./internal/env/ ./cmd/...
-go build -o vfox .
-```
-
-git 会警告这个标签不是一个提交，但仍会检出发布提交。把这个 `vfox` 放到 `PATH` 的最前面，再打开一个新的 Shell。2026-11-03，这样构建出来的 vfox 在[一个 Shell 里的多个项目](scenarios.md#一个-shell-里的多个项目)的每一步都切换正确，离开带有版本文件的目录那一步也是，配没有任何应对的 0.5.3 插件也一样。它注意不到 Shell 已经所在的目录里文件的改动：0.5.3 的 Shell 停在旧版本上，而未发布的插件在下一个提示符就切换了，这是 `util.forget_env_state` 起的作用。
-
-这个补丁不能原样应用到 vfox 的 `main`。在 2026-11-02 的提交（cdf0747）上，`git apply` 会拒绝 `cmd/commands/env.go` 和 `internal/env/state_test.go`；`patch -p1` 会跳过 `cmd/commands/env.go` 里在 `state.Update` 之前调用 `state.SetDir` 的那个补丁块，其余四个补丁块里有两个只有把上下文放宽一行（fuzz 1）才能应用。`main` 在此期间为 PATH 策略加了同类的检查（`PathPolicyChanged` 和 `SetPathPolicy`），就在补丁插入代码的位置，补丁的那两处调用应当放到它们旁边。没有试过用 `main` 构建。
-
 ## 已知限制
 
 - 32 位 ARM 取 `linux-armv7l` 的包，最高到 23.11.1。ARMv6 的包（`linux-armv6l`）从不会被选中，而从 24 起 32 位 ARM 已经没有任何包。
@@ -153,7 +137,7 @@ git 会警告这个标签不是一个提交，但仍会检出发布提交。把�
 - `PostInstall` 只在 musl 上运行 `node --version`。在 glibc 上，缺少 `libatomic.so.1`（Node.js 25 及以后）要等到 `node` 运行时才会暴露：README 把系统库留给用户自己处理。
 - E2E 的 Alpine 镜像通过依赖 `gcc` 的 `go` 得到 `libatomic`，所以套件没有覆盖不带它的原版 Alpine，钩子测试覆盖了。
 - `.nvmrc` 里的别名（`node`、`stable`、`lts/-1`）、范围和注释都不认识，`lts` 则依据一张手工维护的表，见 [nvmrc.md](nvmrc.md#不认识的写法)。
-- 从带有版本文件的目录 `cd` 到完全没有配置的目录时，不会切换回来。vfox 不跟踪版本文件，并沿用它上一次计算的结果，而没有文件可读的地方不会调用插件，所以 `util.forget_env_state` 只覆盖了进入的方向。修复应当放在 vfox 里，而且试过了，见[注意到 cd 的 vfox](#注意到-cd-的-vfox)。等 vfox 跟踪版本文件之后，就去掉 `util.forget_env_state`。
+- 从带有版本文件的目录 `cd` 到完全没有配置的目录时，不会切换回来。vfox 不跟踪版本文件，并沿用它上一次计算的结果，而没有文件可读的地方不会调用插件，所以 `util.forget_env_state` 只覆盖了进入的方向。修复应当放在 vfox 里：[version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745)，这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪。等 vfox 跟踪版本文件之后，就去掉 `util.forget_env_state`。
 - 在带有版本文件的目录里，每个提示符都会重新计算一次环境，这是 `util.forget_env_state` 造成的。只装了一个 SDK 时，大约多花一毫秒。
 - `latest_available` 在带有兼容版本文件的目录里，每次出现提示符都会下载 `index.json`。
 - UTF-32，以及没有字节顺序标记的 UTF-16，都不会解码。

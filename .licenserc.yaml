@@ -51,8 +51,6 @@ header:
     - '**/go.sum'
     - '.tool-versions'
     - 'LICENSE'
-    # A patch for another project has to apply as it is, so it takes no header.
-    - '**/*.patch'
     # Plain-text template for addlicense (no comment markers in it; keep its
     # text in sync with the `content` block above).
     - '.license.tpl'
