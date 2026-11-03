@@ -194,7 +194,11 @@ plugin files to stock servercore. Baking the tools into an image layer
 instead costs minutes of layer commit on the hosted runners (they are tens of
 thousands of files). The servercore pull — five to seven minutes on a fresh
 CI runner — runs in the background while the tools are fetched and the Go
-code is compiled.
+code is compiled. `run.ps1` first waits, for up to five minutes, until the
+Docker engine answers `docker version`. A hosted runner can begin the job before
+its engine listens: on 2026-11-03 the pull failed at once with `failed to
+connect to the docker API at npipe:////./pipe/docker_engine`, and the job ended
+with it, although the two runs before had passed on the same runner image.
 
 The `windows-11-arm` runner has no Windows Hypervisor Platform feature, so
 Hyper-V isolation is unavailable; process isolation needs only the

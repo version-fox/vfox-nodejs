@@ -99,7 +99,7 @@ Windows 容器无法跨架构模拟，所以 ARM64 套件需要 ARM64 宿主（C
 
 这套测试没有开发容器，因为 Dev Containers 规范拒绝 Windows 容器镜像（见[开发容器](#开发容器)），所以它通过 `tests/e2e/windows/run.ps1` 从 Windows 宿主运行。对宿主的要求是 Windows 容器模式的 Docker；除了 Windows 自带的 `curl.exe` 和 `tar.exe`，脚本不需要别的东西。它会把固定版本的 PowerShell、PortableGit（含 Git Bash 的 Git for Windows）和 Go 下载到按架构区分的缓存里（`$env:E2E_CACHE_DIR`，默认是 `%LOCALAPPDATA%\vfox-nodejs-e2e\<arch>`，多次运行之间复用），用这个 Go 构建一次 `vfox@main`，编译套件，然后运行。这些工具都不会被安装，也不会放进用户的 `PATH`，所以不会与 vfox 管理的工具链冲突。
 
-缓存的工具以只读方式 bind mount 到每个组合容器的 `C:\tools`，所以 `tests/e2e/windows/Dockerfile` 只需要在原版 servercore 上加 `PATH` 条目和插件文件。如果改为把工具构建进镜像层，托管的 runner 上仅提交镜像层就要花几分钟（这些工具共有几万个文件）。拉取 servercore 在全新的 CI runner 上要五到七分钟，它在后台进行，同时获取工具、编译 Go 代码。
+缓存的工具以只读方式 bind mount 到每个组合容器的 `C:\tools`，所以 `tests/e2e/windows/Dockerfile` 只需要在原版 servercore 上加 `PATH` 条目和插件文件。如果改为把工具构建进镜像层，托管的 runner 上仅提交镜像层就要花几分钟（这些工具共有几万个文件）。拉取 servercore 在全新的 CI runner 上要五到七分钟，它在后台进行，同时获取工具、编译 Go 代码。`run.ps1` 会先等待 Docker 引擎应答 `docker version`，最多五分钟。托管的 runner 可能在引擎开始监听之前就开始执行作业：2026-11-03 那次拉取立刻失败了，报 `failed to connect to the docker API at npipe:////./pipe/docker_engine`，作业也随之结束，而在同一个 runner 镜像上，之前的两次运行都通过了。
 
 `windows-11-arm` runner 没有 Windows Hypervisor Platform 功能，所以无法使用 Hyper-V 隔离；进程隔离只需要 Containers 功能。
 
