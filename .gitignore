@@ -13,3 +13,7 @@
 # limitations under the License.
 
 .idea
+
+# What the plugin learns about LTS lines, when a checkout is used as the plugin directory
+.lts-cache
+.lts-cache.tmp

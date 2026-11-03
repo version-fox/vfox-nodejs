@@ -36,6 +36,9 @@ function PLUGIN:Available(ctx)
         error("Failed to fetch Node.js versions: HTTP " .. tostring(resp.status_code))
     end
     local body = json.decode(resp.body)
+    -- The index names the LTS lines. Keep what it says for ParseLegacyFile, which
+    -- runs at every prompt and must not fetch it. See docs/lts.md.
+    util.remember_lts(body)
     local result = {}
 
     for _, v in ipairs(body) do
