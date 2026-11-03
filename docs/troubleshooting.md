@@ -17,6 +17,11 @@ knows `latest`, `24.21.0`, `24.21` and `24`, see [versions.md](versions.md).
 and `22.99`, which are well formed but start no release. For an LTS line, install
 the line by number, see [lts.md](lts.md#installing-an-lts-line).
 
+Unreleased: release 0.5.3 ends here for `latest` as well, with `version not
+found for provided version 27.0.0-alpha.0.0.0`, because the index of
+nodejs.org has listed that pre-release as its newest entry since 2026-10-29.
+`nodejs@26` is not affected.
+
 ### `get checksum failed: HTTP 404 from https://nodejs.org/dist/v24.99.0/SHASUMS256.txt`
 
 The plugin could not read the `SHASUMS256.txt` of the release, and says why

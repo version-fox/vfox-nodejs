@@ -38,6 +38,10 @@ node -v
 `vfox search nodejs` lists every release, with the npm that comes with it and a
 mark on the ones of an LTS line. In an interactive terminal it lets you pick one.
 
+Behavior that only exists on `main` and not in the latest release is marked
+"Unreleased" in the pages below. [docs/changes.md](docs/changes.md) lists it, and
+[docs/source-build.md](docs/source-build.md) gets you `main`.
+
 ### Example: Ubuntu 26.04
 
 ```bash

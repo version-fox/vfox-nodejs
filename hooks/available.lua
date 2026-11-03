@@ -39,16 +39,22 @@ function PLUGIN:Available(ctx)
     local result = {}
 
     for _, v in ipairs(body) do
-        table.insert(result, {
-            version = string.gsub(v.version, "^v", ""),
-            note = v.lts and "LTS" or "",
-            addition = {
-                {
-                    name = "npm",
-                    version = v.npm,
+        local version = string.gsub(v.version, "^v", "")
+        -- List only x.y.z releases, the form PreInstall takes as it is. nodejs.org
+        -- has listed a pre-release, 27.0.0-alpha.0.0.0, since 2026-10-29: it sorts
+        -- first, so it became `latest`, and PreInstall cannot install it.
+        if util.is_semver_simple(version) then
+            table.insert(result, {
+                version = version,
+                note = v.lts and "LTS" or "",
+                addition = {
+                    {
+                        name = "npm",
+                        version = v.npm,
+                    },
                 },
-            },
-        })
+            })
+        end
     end
     table.sort(result, util.compare_versions)
     available_result = result
