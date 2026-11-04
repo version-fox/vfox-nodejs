@@ -45,10 +45,6 @@ node -v
 `vfox search nodejs` lists every release, with the npm that comes with it and a
 mark on the ones of an LTS line. In an interactive terminal it lets you pick one.
 
-Behavior that only exists on `main` and not in the latest release is marked
-"Unreleased" in the pages below. [docs/changes.md](docs/changes.md) lists it, and
-[docs/source-build.md](docs/source-build.md) gets you `main`.
-
 ### Example: Ubuntu 26.04
 
 ```bash
@@ -123,13 +119,11 @@ details and for mirrors that were checked.
 
 vfox reads these files at every prompt in a directory that has one, and selects
 the release they name if it is installed, so a `cd` into the directory switches.
-Unreleased: release 0.5.3 reads them when a shell starts in the directory, not
-after a `cd` from a running shell. Neither switches back when you `cd` into a
-directory with no config at all; a `.vfox.toml`, which `vfox use --project`
-writes, does. What a file can say depends on vfox's
-`legacyVersionFile.strategy`: with the default, `specified`, only a full release
-number selects something. A file in UTF-16 or with a byte order mark, which
-Windows PowerShell 5.1 writes, is read too (Unreleased). See
+It does not switch back when you `cd` into a directory with no config at all; a
+`.vfox.toml`, which `vfox use --project` writes, does. What a file can say
+depends on vfox's `legacyVersionFile.strategy`: with the default, `specified`,
+only a full release number selects something. A file in UTF-16 or with a byte
+order mark, which Windows PowerShell 5.1 writes, is read too. See
 [docs/nvmrc.md](docs/nvmrc.md) for details.
 
 ## LTS

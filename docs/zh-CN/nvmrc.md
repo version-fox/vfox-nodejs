@@ -19,7 +19,7 @@ cd my-project                      # 里面有上面那个 .nvmrc
 node -v                            # v22.23.3
 ```
 
-vfox 挂载到 Shell 之后，每个提示符出现在这个目录里时都会读取这个文件，并选中其中指定的版本，所以 `cd` 进这个目录就会切换，改动文件也一样。不需要 `vfox use`。未发布：0.5.3 在 Shell 于这个目录里启动时读取，在已经运行的 Shell 里 `cd` 进来则不读取，上面的示例打印的是全局版本，见[下文](#什么时候读取这个文件)。挂载由 vfox 自己完成，zsh、fish、PowerShell 等其他 Shell 的挂载方式见它的[快速入门](https://vfox.dev/zh-hans/guides/quick-start.html)。
+vfox 挂载到 Shell 之后，每个提示符出现在这个目录里时都会读取这个文件，并选中其中指定的版本，所以 `cd` 进这个目录就会切换，改动文件也一样。不需要 `vfox use`。挂载由 vfox 自己完成，zsh、fish、PowerShell 等其他 Shell 的挂载方式见它的[快速入门](https://vfox.dev/zh-hans/guides/quick-start.html)。
 
 - 只读取当前目录下的文件。进入项目的子目录就找不到它了，所以 `cd packages/app` 之后会回到全局版本。
 - 同一目录里两个文件都有时，`.node-version` 优先。
@@ -33,24 +33,24 @@ vfox 挂载到 Shell 之后，每个提示符出现在这个目录里时都会�
 
 vfox 在 Shell 出现第一个提示符时算出它的环境，并把结果保存在会话目录的 `env-state.json` 里。只有当前目录的 `.vfox.toml` 与上次不是同一个、`PATH` 与上次不同，或者 vfox 的某个配置文件更新了（`vfox use` 就会造成这一点），它才会重新计算。`.nvmrc` 或 `.node-version` 不在其中（vfox 1.0.13，以及 2026-11-03 的 vfox `main`），所以 vfox 注意不到 Shell 进入了带有这类文件的目录。
 
-未发布：插件弥补了这一点。vfox 在查看保存的结果之前，会先运行插件的 `ParseLegacyFile`，插件就在这里删掉 `env-state.json`（`util.forget_env_state`），于是在带有这类文件的目录里，vfox 在每个提示符都会重新算一遍。`cd` 进这个目录会切换，从一个这样的目录 `cd` 到另一个也会，改动文件则在下一个提示符生效。多算这一次，在只装了一个 SDK 时每个提示符大约多花一毫秒，`--debug` 里显示为 `Config changed: true`。这是针对 vfox 的权宜之计，等 vfox 跟踪这些文件之后就该去掉。
+插件弥补了这一点。vfox 在查看保存的结果之前，会先运行插件的 `ParseLegacyFile`，插件就在这里删掉 `env-state.json`（`util.forget_env_state`），于是在带有这类文件的目录里，vfox 在每个提示符都会重新算一遍。`cd` 进这个目录会切换，从一个这样的目录 `cd` 到另一个也会，改动文件则在下一个提示符生效。多算这一次，在只装了一个 SDK 时每个提示符大约多花一毫秒，`--debug` 里显示为 `Config changed: true`。这是针对 vfox 的权宜之计，等 vfox 跟踪这些文件之后就该去掉。
 
 从这个目录 `cd` 到完全没有配置的目录时，它帮不上忙。插件在那里不会被调用，所以 vfox 沿用它为你离开的那个目录算出的结果（`Using cached output`），Shell 也就停在那个版本上。带有 `.vfox.toml` 的目录，或者带有它自己的版本文件的目录，会切换，新开的 Shell 也一样。
 
-0.5.3 不会删除这个文件。它在 Shell 于该目录里启动时读取 `.nvmrc`，执行 `vfox use` 之后会再读一次，而 `cd` 之后不读，进出都一样。下面是在 vfox 1.0.13 里，同一个 Shell 一步一步执行时 `node -v` 打印的结果，全局版本是 26.13.0（bash 5.3，PowerShell 7.6.9 的结果一致）：
+下面是在 vfox 1.0.13 里，同一个 Shell 一步一步执行时 `node -v` 打印的结果，全局版本是 26.13.0（bash 5.3，PowerShell 7.6.9 的结果一致）：
 
-| 步骤 | 0.5.3 | 未发布 |
-| --- | --- | --- |
-| 在 `.nvmrc` 写着 18.20.8 的目录里启动一个 Shell | v18.20.8 | v18.20.8 |
-| 在完全没有配置的目录里启动一个 Shell | v26.13.0 | v26.13.0 |
-| `cd` 进有 18.20.8 那个 `.nvmrc` 的目录 | v26.13.0 | v18.20.8 |
-| `cd` 进 `.node-version` 写着 24.22.2 的目录 | v26.13.0 | v24.22.2 |
-| 把那个 `.node-version` 改成 22.23.4 | v26.13.0 | v22.23.4 |
-| `cd` 进完全没有配置的目录 | v26.13.0 | v22.23.4 |
-| `cd` 进 `.vfox.toml` 写着 18.20.8 的目录 | v18.20.8 | v18.20.8 |
-| `cd` 进完全没有配置的目录 | v26.13.0 | v26.13.0 |
+| 步骤 | `node -v` |
+| --- | --- |
+| 在 `.nvmrc` 写着 18.20.8 的目录里启动一个 Shell | v18.20.8 |
+| 在完全没有配置的目录里启动一个 Shell | v26.13.0 |
+| `cd` 进有 18.20.8 那个 `.nvmrc` 的目录 | v18.20.8 |
+| `cd` 进 `.node-version` 写着 24.22.2 的目录 | v24.22.2 |
+| 把那个 `.node-version` 改成 22.23.4 | v22.23.4 |
+| `cd` 进完全没有配置的目录 | v22.23.4 |
+| `cd` 进 `.vfox.toml` 写着 18.20.8 的目录 | v18.20.8 |
+| `cd` 进完全没有配置的目录 | v26.13.0 |
 
-第一行是单独的一个 Shell，其余七行是在第二个 Shell 里依次执行的。`vfox --debug env -s bash` 能看到“未发布”这一列的两种情形。在带有 `.nvmrc` 的目录里，插件解析了这个文件，vfox 重新计算：
+第一行是单独的一个 Shell，其余七行是在第二个 Shell 里依次执行的。`vfox --debug env -s bash` 能看到这两种情形。在带有 `.nvmrc` 的目录里，插件解析了这个文件，vfox 重新计算：
 
 ```text
 Parsing legacy file /home/me/projects/legacy-api/.nvmrc
@@ -67,7 +67,7 @@ Config changed: false, configPaths: map[global:/home/me/.vfox/.vfox.toml]
 Using cached output
 ```
 
-0.5.3 在带有 `.nvmrc` 的目录里，在 `Found nodejs@18.20.8` 之后打印的也是第二段。`.vfox.toml` 在两边都是被跟踪的，所以在发布版里想要 `cd` 时自动切换，用 `vfox use --project nodejs@18.20.8`。见 [scenarios.md](scenarios.md#一个-shell-里的多个项目)。
+`.vfox.toml` 是 vfox 自己跟踪的，所以它在两个方向上都会切换：`vfox use --project nodejs@18.20.8` 会写出一个。见 [scenarios.md](scenarios.md#一个-shell-里的多个项目)。
 
 这个缓存是 vfox 的，修复也要由 vfox 来做。它已经作为 [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745) 报告，在有发布版带上修复之前，这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪。等 vfox 自己能注意到版本文件之后，这个应对办法就可以去掉。
 
@@ -91,7 +91,7 @@ vfox config legacyVersionFile.strategy latest_installed
 
 插件在处理文本之前，会先对它解码，去掉所有空白，去掉开头的 `v`，把其余部分转成小写，并把 `lts-jod` 改成 `lts/jod`。所以 `v22.23.3`、CRLF 换行的文件，以及版本前后的空白，都没有问题。`lts/jod` 这样的名字，会变成它所在版本线的大版本（22），这是插件从索引里知道的，见 [lts.md](lts.md)；`latest_available` 除外，它会向索引查询带有这个代号的最新版本。版本号末尾可以用 `x`、`X` 或 `*` 代替不作限定的部分：`22.x`、`22.x.x` 和 `22.*` 都表示 22。
 
-解码的意思是，UTF-16 的文件，或者带字节顺序标记的 UTF-8 文件，读起来和纯文本一样。Windows PowerShell 5.1 的 `>`、`Out-File` 和 `-Encoding UTF8` 写出的就是这样的文件，见 [scenarios.md](scenarios.md#在-windows-powershell-51-里写这个文件)。未发布：0.5.3 按原样读取字节，所以标记或者 UTF-16 的零字节会成为文本的一部分，没有任何版本能匹配它，而 vfox 不会有任何提示。
+解码的意思是，UTF-16 的文件，或者带字节顺序标记的 UTF-8 文件，读起来和纯文本一样。Windows PowerShell 5.1 的 `>`、`Out-File` 和 `-Encoding UTF8` 写出的就是这样的文件，见 [scenarios.md](scenarios.md#在-windows-powershell-51-里写这个文件)。
 
 下面是 2026-11-03 在已安装 20.20.2、22.23.4、24.21.0、25.9.0 和 26.13.0 的情况下得到的结果，此时 24.22.2 是最新的 24.x，22.23.4 是最新的 22.x：
 
@@ -108,7 +108,7 @@ vfox config legacyVersionFile.strategy latest_installed
 
 `latest_available` 不会回退到较旧的已安装版本。索引里列出的版本比你已安装的更新时，什么都不会选中。想选中已安装的最新版本，请用 `latest_installed`。
 
-`lts` 和 `lts/*` 指最新的 LTS 版本线。在 `specified` 和 `latest_installed` 下，指的是插件认识的最新的版本线（撰写本文时为 26）；在 `latest_available` 下，指的是索引里带有任意代号的最新版本。插件如何认识版本线，以及 Node.js 把一条新版本线升为 LTS 时会发生什么，见 [lts.md](lts.md)。未发布：0.5.3 只认识一张到 Krypton（24）为止的表，因为它发布时 Node.js 26 还不是 LTS 版本线。在那里，`latest_installed` 下 `lts/lithium` 什么也选不中，`lts` 和 `lts/*` 在上面的表里选中 24.21.0。
+`lts` 和 `lts/*` 指最新的 LTS 版本线。在 `specified` 和 `latest_installed` 下，指的是插件认识的最新的版本线（撰写本文时为 26）；在 `latest_available` 下，指的是索引里带有任意代号的最新版本。插件如何认识版本线，以及 Node.js 把一条新版本线升为 LTS 时会发生什么，见 [lts.md](lts.md)。
 
 ## 不认识的写法
 
@@ -133,14 +133,14 @@ vfox config legacyVersionFile.strategy latest_installed
 版本没有切换时：
 
 - vfox 没有挂载到当前的 Shell。`eval "$(vfox activate bash)"` 要在当前 Shell 里执行过，只在别处执行过不算。
-- 仅限 0.5.3：你 `cd` 进这个目录时，Shell 已经在运行，见[什么时候读取这个文件](#什么时候读取这个文件)。请在那里打开一个新终端，或者安装 `main` 的插件（[source-build.md](source-build.md)）。
+- 仅限 0.5.4 之前：你 `cd` 进这个目录时，Shell 已经在运行，而 vfox 沿用了它为这个 Shell 算出的版本。请在那里打开一个新终端，或者用 `vfox update nodejs` 更新插件。
 - Shell 从带有版本文件的目录进入了完全没有配置的目录，它会保持离开的那个目录的版本。请打开一个新终端。
 - 当前目录是文件所在目录的子目录。
 - 版本没有安装，用 `vfox install nodejs@22.23.3` 安装。
 - 策略是 `specified`，而文件里写的是 `22` 或 `lts/jod`。
 - 在 `latest_available` 下，已经发布了比已安装版本更新的版本。
 - 被 `.vfox.toml` 或 `.tool-versions` 挡住了，或者 `legacyVersionFile.enable` 是 `false`。
-- 文本属于上面列出的不认识的写法，或者里面带有注释，或者文件的编码是插件读不了的（0.5.3：只能读纯 ASCII 文本）。
+- 文本属于上面列出的不认识的写法，或者里面带有注释，或者文件的编码是插件读不了的（0.5.4 之前：只能读纯 ASCII 文本）。
 
 `vfox --debug env -s bash` 会打印插件返回了什么，以及 vfox 怎样处理它：
 

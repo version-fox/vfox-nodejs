@@ -37,11 +37,7 @@ checks it and unpacks it. These are the answers on 2026-10-21:
   prints `nodejs@24.22.0 is already installed` once you have the newest.
 - The plugin lists releases with three numbers, and nothing else: no `-rc`
   builds, alphas, nightlies or four-part numbers. Those end in `version not
-  found for provided version ...`. Unreleased: release 0.5.3 lists whatever
-  the index holds. Since 2026-10-29 that includes the pre-release
-  `27.0.0-alpha.0.0.0`, the newest entry, so `latest` ends in `version not
-  found for provided version 27.0.0-alpha.0.0.0`, while `nodejs@26` installs
-  the newest 26.x.
+  found for provided version ...`.
 - A release number that does not exist (`24.99.0`) ends in `get checksum
   failed: HTTP 404 from ...`, as nodejs.org has no directory for it. A release
   that exists but has no package for your platform ends in `Node.js package ...
@@ -146,7 +142,7 @@ Available versions:
 - The list is the `index.json` of nodejs.org, or of your
   [mirror](mirror.md), without a pre-release if it holds one: 872 releases from
   0.1.14 to 26.12.0 on 2026-10-21. npm is listed from 0.6.3 on and empty before
-  that. Unreleased: release 0.5.3 lists pre-releases too.
+  that.
 - `(LTS)` is the `lts` field of the index, which Node.js sets from the day a
   line enters long-term support. 24.11.0 is the first release of Krypton with
   it, 24.10.0 and the releases before have none. See [lts.md](lts.md).

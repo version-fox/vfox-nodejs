@@ -49,7 +49,8 @@ maintainer has to keep up:
   answer for a while, so not every search does), and when it installs a release
   and the file is missing or a day old. It keeps what it learned in `.lts-cache`
   next to the plugin, where vfox keeps its `.available.cache`. Delete the file
-  to make it forget, and it learns again at the next install.
+  to make it forget, and it learns again at the next install. How it works is in
+  [development.md](development.md#what-the-plugin-learns-about-lts-lines).
 - Before it has learned anything, or where it cannot write the file, it uses
   the table below. The table is a start: a line that is missing from it is
   learned as soon as the plugin has had the index in hand.
@@ -81,7 +82,7 @@ practice:
 
 - Under `latest_available` the plugin finds the new codename in the index the
   day it appears. `lts` and `lts/*` then name the newest release of the new
-  line, and `lts/lithium` worked there at once, with release 0.5.3 as well.
+  line, and `lts/lithium` worked there at once.
 - Under `specified` and `latest_installed` the plugin knows the line from the
   first time it has the index in hand after the promotion: the `vfox search` or
   the install that brings you the new line. `latest_installed` selects nothing
@@ -89,13 +90,6 @@ practice:
   `lts/<new codename>` selects nothing, and `lts` and `lts/*` mean the newest
   line that the plugin knows.
 - `(LTS)` in `vfox search` follows the index, so it changes at once.
-
-Unreleased: release 0.5.3 has the table only, and no file. The table was
-published before Lithium and ends at Krypton, so with 22.23.4, 24.22.2 and
-26.13.0 installed on 2026-11-03 it selected 24.22.2 for `lts/*` and nothing for
-`lts/lithium` under `latest_installed`, and only a release of the plugin adds a
-line there. How the plugin learns is in
-[development.md](development.md#what-the-plugin-learns-about-lts-lines).
 
 ## Examples
 
@@ -115,7 +109,7 @@ v22.23.4
 
 ```sh
 # 2. Bare `lts` (or `lts/*`) means "the newest LTS line that the plugin knows",
-# 26 at the time of writing (Unreleased: 24 in release 0.5.3).
+# 26 at the time of writing.
 $ printf 'lts\n' > .nvmrc
 $ cd <dir-with-.nvmrc> && eval "$(vfox activate bash)" && eval "$(vfox env -s bash)" && node --version
 v26.13.0

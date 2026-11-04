@@ -24,10 +24,7 @@ node -v                            # v22.23.3
 
 vfox's shell hook reads the file at every prompt in the directory and selects
 the release it names, so a `cd` into the directory switches, and so does a
-change of the file. `vfox use` is not needed. Unreleased: release 0.5.3 reads
-the file when a shell starts in the directory, not after a `cd` from a running
-shell, where the example prints the global release. See
-[below](#when-the-file-is-read). The hook is vfox's own, see its
+change of the file. `vfox use` is not needed. The hook is vfox's own, see its
 [quick start](https://vfox.dev/guides/quick-start.html) for zsh, fish,
 PowerShell and the others.
 
@@ -59,15 +56,14 @@ when the `.vfox.toml` of the current directory is another one than before, when
 1.0.13, and `main` of vfox on 2026-11-03), so vfox does not notice that the
 shell is in a directory that has one.
 
-Unreleased: the plugin makes up for that. vfox runs the plugin's
-`ParseLegacyFile` before it looks at the kept result, and the plugin removes
-`env-state.json` there (`util.forget_env_state`), so vfox works the environment
-out again at every prompt in a directory with such a file. A `cd` into the
-directory switches, a `cd` from one such directory to another does, and a
-change of the file does at the next prompt. The extra calculation took about a
-millisecond per prompt with one SDK installed, and `--debug` shows it as
-`Config changed: true`. It is a workaround for vfox, to drop when vfox tracks
-these files.
+The plugin makes up for that. vfox runs the plugin's `ParseLegacyFile` before it
+looks at the kept result, and the plugin removes `env-state.json` there
+(`util.forget_env_state`), so vfox works the environment out again at every
+prompt in a directory with such a file. A `cd` into the directory switches, a
+`cd` from one such directory to another does, and a change of the file does at
+the next prompt. The extra calculation took about a millisecond per prompt with
+one SDK installed, and `--debug` shows it as `Config changed: true`. It is a
+workaround for vfox, to drop when vfox tracks these files.
 
 It does nothing for a `cd` out of the directory into one that has no config at
 all. The plugin is not called there, so vfox goes on with the result it made for
@@ -75,27 +71,23 @@ the directory you left (`Using cached output`), and the shell keeps that
 release. A directory with a `.vfox.toml` or with a version file of its own does
 switch, and so does a new shell.
 
-Release 0.5.3 does not remove the file. It reads a `.nvmrc` when the shell
-starts in the directory, and again after a `vfox use`, and not after a `cd`,
-in either direction. This is what `node -v` printed in one shell, step by step,
-with vfox 1.0.13 and 26.13.0 as the global release (bash 5.3, and PowerShell
-7.6.9 agrees):
+This is what `node -v` printed in one shell, step by step, with vfox 1.0.13 and
+26.13.0 as the global release (bash 5.3, and PowerShell 7.6.9 agrees):
 
-| Step | Release 0.5.3 | Unreleased |
-| --- | --- | --- |
-| A shell that starts in a directory with a `.nvmrc` that names 18.20.8 | v18.20.8 | v18.20.8 |
-| A shell that starts in a directory with no config at all | v26.13.0 | v26.13.0 |
-| `cd` into the directory with the `.nvmrc` for 18.20.8 | v26.13.0 | v18.20.8 |
-| `cd` into a directory with a `.node-version` that names 24.22.2 | v26.13.0 | v24.22.2 |
-| Edit that `.node-version` to name 22.23.4 | v26.13.0 | v22.23.4 |
-| `cd` into a directory with no config at all | v26.13.0 | v22.23.4 |
-| `cd` into a directory with a `.vfox.toml` that names 18.20.8 | v18.20.8 | v18.20.8 |
-| `cd` into a directory with no config at all | v26.13.0 | v26.13.0 |
+| Step | `node -v` |
+| --- | --- |
+| A shell that starts in a directory with a `.nvmrc` that names 18.20.8 | v18.20.8 |
+| A shell that starts in a directory with no config at all | v26.13.0 |
+| `cd` into the directory with the `.nvmrc` for 18.20.8 | v18.20.8 |
+| `cd` into a directory with a `.node-version` that names 24.22.2 | v24.22.2 |
+| Edit that `.node-version` to name 22.23.4 | v22.23.4 |
+| `cd` into a directory with no config at all | v22.23.4 |
+| `cd` into a directory with a `.vfox.toml` that names 18.20.8 | v18.20.8 |
+| `cd` into a directory with no config at all | v26.13.0 |
 
 The first row is a shell of its own, the other seven follow one another in a
-second shell. `vfox --debug env -s bash` shows both sides of the unreleased
-column. In a directory with a `.nvmrc`, the plugin parses the file and vfox
-calculates:
+second shell. `vfox --debug env -s bash` shows both cases. In a directory with a
+`.nvmrc`, the plugin parses the file and vfox calculates:
 
 ```text
 Parsing legacy file /home/me/projects/legacy-api/.nvmrc
@@ -113,10 +105,9 @@ Config changed: false, configPaths: map[global:/home/me/.vfox/.vfox.toml]
 Using cached output
 ```
 
-Release 0.5.3 prints the second block in the directory with the `.nvmrc` as
-well, after `Found nodejs@18.20.8`. A `.vfox.toml` is tracked in both, so
-`vfox use --project nodejs@18.20.8` is the way to get the switching in a
-release. See [scenarios.md](scenarios.md#several-projects-in-one-shell).
+A `.vfox.toml` is tracked by vfox itself, so it switches in both directions:
+`vfox use --project nodejs@18.20.8` writes one. See
+[scenarios.md](scenarios.md#several-projects-in-one-shell).
 
 The cache is vfox's, and so is the fix. It is reported as
 [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745), and
@@ -158,9 +149,6 @@ Decoding means that a file in UTF-16, or in UTF-8 with a byte order mark, reads
 like plain text. Windows PowerShell 5.1 writes such files with `>`, `Out-File`
 and `-Encoding UTF8`, see
 [scenarios.md](scenarios.md#writing-the-file-from-windows-powershell-51).
-Unreleased: release 0.5.3 reads the bytes as they are, so the mark or the zero
-bytes of UTF-16 become part of the text, no release matches it, and vfox says
-nothing.
 
 The results on 2026-11-03 with 20.20.2, 22.23.4, 24.21.0, 25.9.0 and 26.13.0
 installed, when 24.22.2 is the newest 24.x and 22.23.4 the newest 22.x:
@@ -184,10 +172,7 @@ index names a newer release than the one you have, nothing is selected. Use
 `latest_installed` that is the newest line that the plugin knows (26 at the time
 of writing), under `latest_available` the newest release that carries any
 codename in the index. See [lts.md](lts.md) for how the plugin knows lines and
-what happens when Node.js promotes a new one. Unreleased: release 0.5.3 knows
-only a table that ends at Krypton (24), because it was published before Node.js
-26 became an LTS line. There `lts/lithium` selects nothing under
-`latest_installed`, and `lts/*` and `lts` select 24.21.0 in the table above.
+what happens when Node.js promotes a new one.
 
 ## Not understood
 
@@ -224,10 +209,9 @@ If the release does not switch:
 
 - The shell hook is not active. `eval "$(vfox activate bash)"` has to run in
   the shell, not only once somewhere else.
-- Release 0.5.3 only: the shell was already running when you `cd`'d into the
-  directory, see [When the file is read](#when-the-file-is-read). Open a new
-  terminal there, or install the plugin of `main`
-  ([source-build.md](source-build.md)).
+- Before 0.5.4 only: the shell was already running when you `cd`'d into the
+  directory, and vfox went on with the release it had worked out for the shell.
+  Open a new terminal there, or update the plugin with `vfox update nodejs`.
 - The shell came from a directory with a version file and went into one with no
   config at all, and it keeps the release of the directory it left. Open a new
   terminal.
@@ -238,7 +222,7 @@ If the release does not switch:
 - A `.vfox.toml` or `.tool-versions` is in the way, or `legacyVersionFile.enable`
   is `false`.
 - The text is on the list above, or has a comment in it, or the file is in an
-  encoding the plugin does not read (release 0.5.3: anything but plain ASCII
+  encoding the plugin does not read (before 0.5.4: anything but plain ASCII
   text).
 
 `vfox --debug env -s bash` prints what the plugin returned and what vfox did
