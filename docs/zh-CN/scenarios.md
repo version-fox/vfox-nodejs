@@ -4,14 +4,14 @@
 
 这个插件给 vfox 提供的，正是 [nvm-sh/nvm](https://github.com/nvm-sh/nvm) 给 POSIX Shell 提供的东西：多个 Node.js 版本并存，可以为一个 Shell、一个项目选定其中一个，或者设为默认，并且能读取 `.nvmrc` 文件。nvm-sh/nvm 是一组 Shell 函数。它的 README 列出的是 Unix、macOS 和 WSL 上的 sh、dash、ksh、zsh 和 bash，另外在某些情况下也可以用于 Git Bash 和 Cygwin，其他 Windows 用户则被指向别的工具。PowerShell 不在这个列表里。vfox 是一个程序，为每种 Shell 都提供挂载脚本，所以同样的事情既可以在 Windows 10 和 11 自带的 Windows PowerShell 5.1 里做，也可以在 PowerShell 7、bash、zsh 和 fish 里做。
 
-下面每个场景都写明你想做什么、要输入什么、会看到什么。输出取自 2026-11-03 的 Linux x64，使用 vfox 1.0.13 和 `main` 上的本插件，主目录一律写成 `/home/me`。PowerShell 的命令在 Linux 上的 PowerShell 7.6.9 里运行过，只有 Windows 独有的除外：`Set-ExecutionPolicy`，以及写入用户级环境变量的 `[Environment]::SetEnvironmentVariable`。Windows PowerShell 5.1 本身不在测试套件里（见 [platforms.md](platforms.md#ci-覆盖什么)），所以凡是依据 PowerShell 的文档或 vfox 的源码、而没有在那里实际运行过的内容，场景里都会注明。
+下面每个场景都写明你想做什么、要输入什么、会看到什么。输出取自 2026-11-03 的 Linux x64，使用 vfox 1.0.13 和后来成为 0.5.4 的代码，主目录一律写成 `/home/me`。PowerShell 的命令在 Linux 上的 PowerShell 7.6.9 里运行过，只有 Windows 独有的除外：`Set-ExecutionPolicy`，以及写入用户级环境变量的 `[Environment]::SetEnvironmentVariable`。Windows PowerShell 5.1 本身不在测试套件里（见 [platforms.md](platforms.md#ci-覆盖什么)），所以凡是依据 PowerShell 的文档或 vfox 的源码、而没有在那里实际运行过的内容，场景里都会注明。
 
 ## 从 nvm 迁移
 
 | nvm-sh/nvm | vfox | 说明 |
 | --- | --- | --- |
 | `nvm install 22` | `vfox install nodejs@22` | 最新的 22.x，并对照 SHA-256 校验和检查。见 [versions.md](versions.md) |
-| `nvm install node` | `vfox install nodejs@latest` | 未发布：0.5.3 在索引里有预发布版本时会失败，2026-10-29 起就是这样。`nodejs@26` 在哪里都能用 |
+| `nvm install node` | `vfox install nodejs@latest` | 所有版本线中最新的版本，不论是否属于 LTS。见 [versions.md](versions.md#安装) |
 | `nvm install --lts`、`nvm install 'lts/*'` | `vfox install nodejs@26` | 没有 `lts` 这个名字，请写明版本线。2026-11-03 时 26 是最新的 LTS 版本线，`vfox search nodejs \| grep -m1 '(LTS)'` 会显示最新的 LTS 版本。见 [lts.md](lts.md) |
 | `nvm use 22` | `vfox use nodejs@22` | 只对当前 Shell 有效。`22` 是已安装的最新的 22.x |
 | `nvm alias default 22` | `vfox use --global nodejs@22` | 之后的每个新 Shell |
@@ -75,7 +75,7 @@
 
   如果 `vfox use --session` 打印了这一行，说明配置文件没有运行：要么是第 1 步的执行策略，要么是挂载那一行写在了另一个 PowerShell 的配置文件里。
 - 只有 `PATH` 里的第一个 `node` 会运行。nodejs.org 的安装程序、winget 或 Scoop 装的，或者另一个版本管理器的，都可能排在 vfox 前面。这时 `vfox use` 会打印一条提示，指出是哪一个，并说明它排在 vfox 前面，见 [pnpm.md](pnpm.md)。请卸载另一个。
-- Windows PowerShell 5.1 用 `>` 写出的 `.nvmrc` 是 UTF-16。未发布：0.5.3 读不了它，见[下文](#在-windows-powershell-51-里写这个文件)。
+- Windows PowerShell 5.1 用 `>` 写出的 `.nvmrc` 是 UTF-16，插件能读它，见[下文](#在-windows-powershell-51-里写这个文件)。
 
 ## 全团队使用同一个 Node.js
 
@@ -118,19 +118,19 @@ vfox install "nodejs@$((Get-Content .nvmrc -TotalCount 1).Trim())"
 
 `v22.23.4` 可以，因为 vfox 会去掉 `v`；`22` 也可以，它会安装最新的 22.x。`lts/*` 和 `.nvmrc` 里的其他名字则不行：安装会以 `version not found for provided version lts/*` 结束。
 
-每个提示符出现在项目目录里时都会应用 `.nvmrc`，所以 `cd` 进去就会切换。未发布：0.5.3 在 Shell 于该目录里启动时应用它，比如编辑器在这个文件夹里打开的终端；从已经运行的 Shell 里 `cd` 进来则不应用。离开这个目录进入完全没有配置的目录时，两边都不会切换回来，见[一个 Shell 里的多个项目](#一个-shell-里的多个项目)。如果仓库里不该出现 vfox 的文件，`vfox use --project` 仍然可以让你自己得到一个 `.vfox.toml`，它在每个版本里、两个方向上都会切换。把 `.vfox.toml` 和 `.vfox/` 写进 `.git/info/exclude`，再执行 `vfox config gitignore.enable false`（对所有项目生效），这样 vfox 就不会把 `.vfox/` 加进仓库所跟踪的 `.gitignore`。
+每个提示符出现在项目目录里时都会应用 `.nvmrc`，所以 `cd` 进去就会切换。离开这个目录进入完全没有配置的目录时不会切换回来，见[一个 Shell 里的多个项目](#一个-shell-里的多个项目)。如果仓库里不该出现 vfox 的文件，`vfox use --project` 仍然可以让你自己得到一个 `.vfox.toml`，它在两个方向上都会切换。把 `.vfox.toml` 和 `.vfox/` 写进 `.git/info/exclude`，再执行 `vfox config gitignore.enable false`（对所有项目生效），这样 vfox 就不会把 `.vfox/` 加进仓库所跟踪的 `.gitignore`。
 
 ### 在 Windows PowerShell 5.1 里写这个文件
 
-Windows PowerShell 5.1 的 `>`、`>>` 和 `Out-File` 写出 UTF-16，`-Encoding UTF8` 写出带字节顺序标记的 UTF-8，不带 `-Encoding` 的 `Set-Content` 写的是 ANSI 代码页，对版本号来说就是纯文本（[about_Character_Encoding](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_character_encoding)）。插件在读取文本之前，会先对 UTF-16 解码并去掉标记。未发布：0.5.3 按原样读取字节，所以标记或者 UTF-16 的零字节会成为文本的一部分，没有任何版本能匹配它，而 vfox 对此不会有任何提示。下表给出每种文件开头的字节，以及已安装 22.23.4、使用默认策略时，带有该文件的目录选中了什么：
+Windows PowerShell 5.1 的 `>`、`>>` 和 `Out-File` 写出 UTF-16，`-Encoding UTF8` 写出带字节顺序标记的 UTF-8，不带 `-Encoding` 的 `Set-Content` 写的是 ANSI 代码页，对版本号来说就是纯文本（[about_Character_Encoding](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_character_encoding)）。插件在读取文本之前，会先对 UTF-16 解码并去掉标记。下表给出每种文件开头的字节，以及已安装 22.23.4、使用默认策略时，带有该文件的目录选中了什么：
 
-| 文件开头的字节 | Windows PowerShell 5.1 用什么写出 | 0.5.3 | 未发布 |
-| --- | --- | --- | --- |
-| `32 32 2e 32 33 2e 34 0d 0a` | `Set-Content .nvmrc 22.23.4 -Encoding ascii`，或者 `Set-Content .nvmrc 22.23.4` | 22.23.4 | 22.23.4 |
-| `ef bb bf 32 32 2e ...` | `Set-Content .nvmrc 22.23.4 -Encoding UTF8` | 无 | 22.23.4 |
-| `ff fe 32 00 32 00 2e 00 ...` | `'22.23.4' > .nvmrc`、`'22.23.4' \| Out-File .nvmrc` | 无 | 22.23.4 |
+| 文件开头的字节 | Windows PowerShell 5.1 用什么写出 | 选中 |
+| --- | --- | --- |
+| `32 32 2e 32 33 2e 34 0d 0a` | `Set-Content .nvmrc 22.23.4 -Encoding ascii`，或者 `Set-Content .nvmrc 22.23.4` | 22.23.4 |
+| `ef bb bf 32 32 2e ...` | `Set-Content .nvmrc 22.23.4 -Encoding UTF8` | 22.23.4 |
+| `ff fe 32 00 32 00 2e 00 ...` | `'22.23.4' > .nvmrc`、`'22.23.4' \| Out-File .nvmrc` | 22.23.4 |
 
-这些字节是在 Linux 上写出的，两个版本的插件都在那里试过。Windows PowerShell 写出什么，依据的是微软的文档。PowerShell 7 对上面这些写法都写出不带标记的 UTF-8，每个版本都能读。下面这样写在哪里都可以：
+这些字节是在 Linux 上写出的，也是在那里试的。Windows PowerShell 写出什么，依据的是微软的文档。PowerShell 7 对上面这些写法都写出不带标记的 UTF-8，插件把它当作纯文本读取。下面这样写在哪里都可以：
 
 ```powershell
 Set-Content -Path .nvmrc -Value '22.23.4' -Encoding ascii
@@ -140,24 +140,24 @@ Set-Content -Path .nvmrc -Value '22.23.4' -Encoding ascii
 
 一个用 Node.js 18 的旧 API，一个用 24 的 Web 应用，其余的都用全局的 26。在挂载了 vfox 的 Shell 里，在它们之间 `cd`。下面是同一个 Shell 里每一步 `node -v` 的输出，已安装 18.20.8、24.22.2 和 26.13.0，全局版本是 26.13.0（bash 5.3，PowerShell 7.6.9 的结果一致）：
 
-| 步骤 | 0.5.3 | 未发布 |
-| --- | --- | --- |
-| Shell 在完全没有配置的目录里启动 | v26.13.0 | v26.13.0 |
-| `cd` 进 `.nvmrc` 写着 18.20.8 的目录 | v26.13.0 | v18.20.8 |
-| `cd` 进 `.node-version` 写着 24.22.2 的目录 | v26.13.0 | v24.22.2 |
-| `cd` 进完全没有配置的目录 | v26.13.0 | v24.22.2 |
-| `cd` 进 `.vfox.toml` 写着 18.20.8 的目录 | v18.20.8 | v18.20.8 |
-| `cd` 进 `.vfox.toml` 写着 24.22.2 的目录 | v24.22.2 | v24.22.2 |
-| `cd` 进完全没有配置的目录 | v26.13.0 | v26.13.0 |
+| 步骤 | `node -v` |
+| --- | --- |
+| Shell 在完全没有配置的目录里启动 | v26.13.0 |
+| `cd` 进 `.nvmrc` 写着 18.20.8 的目录 | v18.20.8 |
+| `cd` 进 `.node-version` 写着 24.22.2 的目录 | v24.22.2 |
+| `cd` 进完全没有配置的目录 | v24.22.2 |
+| `cd` 进 `.vfox.toml` 写着 18.20.8 的目录 | v18.20.8 |
+| `cd` 进 `.vfox.toml` 写着 24.22.2 的目录 | v24.22.2 |
+| `cd` 进完全没有配置的目录 | v26.13.0 |
 
-- **`.vfox.toml`** 在每次 `cd` 时都会切换，离开去没有配置的目录时也会切回全局版本。每个版本都是这样。
-- **`.nvmrc` 和 `.node-version`** 在每个提示符出现在它所在的目录里时都会读取（未发布）。从一个这样的目录 `cd` 到另一个会切换，改动文件则在下一个提示符生效。0.5.3 只在 Shell 于该目录里启动时读取，所以上面的 `cd` 步骤一个都没有切换。
-- **离开**带有这类文件的目录、进入完全没有配置的目录时，两边都不会切换回来：Shell 保持它原有的版本，第四步就是这样。在没有东西可读的目录里不会调用插件，vfox 沿用它保存的结果。新开的终端，或者带有 `.vfox.toml` 或它自己的版本文件的目录，会切换。这是 vfox 缓存的限制，已作为 [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745) 报告，这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪。
+- **`.vfox.toml`** 在每次 `cd` 时都会切换，离开去没有配置的目录时也会切回全局版本。
+- **`.nvmrc` 和 `.node-version`** 在每个提示符出现在它所在的目录里时都会读取。从一个这样的目录 `cd` 到另一个会切换，改动文件则在下一个提示符生效。
+- **离开**带有这类文件的目录、进入完全没有配置的目录时不会切换回来：Shell 保持它原有的版本，第四步就是这样。在没有东西可读的目录里不会调用插件，vfox 沿用它保存的结果。新开的终端，或者带有 `.vfox.toml` 或它自己的版本文件的目录，会切换。这是 vfox 缓存的限制，已作为 [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745) 报告，这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪。
 
 原因在 [nvmrc.md](nvmrc.md#什么时候读取这个文件)：vfox 把 Shell 第一次计算的结果保存下来，并不跟踪版本文件（vfox 1.0.13），而插件在每次读取版本文件时都会让 vfox 重新计算。所以：
 
-- 对需要在同一个 Shell 里来回切换的项目，`.vfox.toml` 在每个版本里、两个方向上都管用：在每个项目里执行 `vfox use --project nodejs@18.20.8` 这样的命令。
-- 在该目录里启动的东西，`.nvmrc` 就够了：编辑器里的终端、同一文件夹里新开的标签页、脚本。这也是本仓库的 Windows E2E 套件为每个目录都新启动一个 Shell 的原因。
+- 对需要在同一个 Shell 里来回切换的项目，`.vfox.toml` 在两个方向上都管用：在每个项目里执行 `vfox use --project nodejs@18.20.8` 这样的命令。
+- 在该目录里启动的东西，`.nvmrc` 就够了：编辑器里的终端、同一文件夹里新开的标签页、脚本。本仓库的 Windows E2E 套件为每个目录都新启动一个 Shell，所以在已经运行的 Windows Shell 里 `cd` 的情形不在其中。
 
 ## 只在这个窗口里换一个版本
 

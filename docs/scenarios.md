@@ -12,10 +12,10 @@ hook for each shell, so the same work runs in Windows PowerShell 5.1, which
 ships with Windows 10 and 11, as well as in PowerShell 7, bash, zsh and fish.
 
 Each case below says what you want, what to type and what you see. The outputs
-are from 2026-11-03 on Linux x64, with vfox 1.0.13 and this plugin as on `main`,
-and the home directory is shown as `/home/me`. The PowerShell lines were run in
-PowerShell 7.6.9 on Linux, except those that exist only on Windows:
-`Set-ExecutionPolicy` and the user-level
+are from 2026-11-03 on Linux x64, with vfox 1.0.13 and the code that became
+release 0.5.4, and the home directory is shown as `/home/me`. The PowerShell
+lines were run in PowerShell 7.6.9 on Linux, except those that exist only on
+Windows: `Set-ExecutionPolicy` and the user-level
 `[Environment]::SetEnvironmentVariable`. Windows PowerShell 5.1 itself is not
 part of the test suite ([platforms.md](platforms.md#what-ci-covers)), so a case
 marks what rests on the documentation of PowerShell or on vfox's source, not on
@@ -26,7 +26,7 @@ a run there.
 | nvm-sh/nvm | vfox | Notes |
 | --- | --- | --- |
 | `nvm install 22` | `vfox install nodejs@22` | The newest 22.x, checked against its SHA-256 sum. See [versions.md](versions.md) |
-| `nvm install node` | `vfox install nodejs@latest` | Unreleased: release 0.5.3 fails while the index lists a pre-release, as it has since 2026-10-29. `nodejs@26` works everywhere |
+| `nvm install node` | `vfox install nodejs@latest` | The newest release of any line, LTS or not. See [versions.md](versions.md#installing) |
 | `nvm install --lts`, `nvm install 'lts/*'` | `vfox install nodejs@26` | There is no `lts` name, name the line. 26 is the newest LTS line on 2026-11-03, and `vfox search nodejs \| grep -m1 '(LTS)'` shows the newest LTS release. See [lts.md](lts.md) |
 | `nvm use 22` | `vfox use nodejs@22` | This shell only. `22` is the newest installed 22.x |
 | `nvm alias default 22` | `vfox use --global nodejs@22` | Every new shell |
@@ -131,9 +131,8 @@ What is different on Windows:
   from winget or Scoop, or from another version manager can sit in front of
   vfox's. `vfox use` then prints a note that names it and says that it comes
   before vfox in `PATH`, see [pnpm.md](pnpm.md). Uninstall the other one.
-- A `.nvmrc` that Windows PowerShell 5.1 writes with `>` is UTF-16.
-  Unreleased: release 0.5.3 does not read it, see
-  [below](#writing-the-file-from-windows-powershell-51).
+- A `.nvmrc` that Windows PowerShell 5.1 writes with `>` is UTF-16, which the
+  plugin reads, see [below](#writing-the-file-from-windows-powershell-51).
 
 ## The same Node.js for the whole team
 
@@ -189,16 +188,14 @@ newest 22.x. `lts/*` and the other `.nvmrc` names do not: the install ends with
 `version not found for provided version lts/*`.
 
 The `.nvmrc` is applied at every prompt in the project directory, so a `cd` into
-it switches. Unreleased: release 0.5.3 applies it when a shell starts there, for
-instance in the terminal that your editor opens in the folder, and not after a
-`cd` from a running shell. Leaving the directory for one with no config at all
-does not switch back in either, see
+it switches. Leaving the directory for one with no config at all does not
+switch back, see
 [Several projects in one shell](#several-projects-in-one-shell). If the
 repository should not get a vfox file, `vfox use --project` still gives you a
-`.vfox.toml` for yourself, which switches in every release and in both
-directions. Put `.vfox.toml` and `.vfox/` in `.git/info/exclude`, and run `vfox
-config gitignore.enable false` (for all projects) so that vfox does not add
-`.vfox/` to the `.gitignore` that the repository tracks.
+`.vfox.toml` for yourself, which switches in both directions. Put `.vfox.toml`
+and `.vfox/` in `.git/info/exclude`, and run `vfox config gitignore.enable
+false` (for all projects) so that vfox does not add `.vfox/` to the
+`.gitignore` that the repository tracks.
 
 ### Writing the file from Windows PowerShell 5.1
 
@@ -206,22 +203,19 @@ Windows PowerShell 5.1 writes UTF-16 for `>`, `>>` and `Out-File`, UTF-8 with a
 byte order mark for `-Encoding UTF8`, and the ANSI code page for `Set-Content`
 without `-Encoding`, which is plain text for a release number
 ([about_Character_Encoding](https://learn.microsoft.com/powershell/module/microsoft.powershell.core/about/about_character_encoding)).
-The plugin decodes UTF-16 and drops the mark before it reads the text.
-Unreleased: release 0.5.3 reads the bytes as they are, so the mark or the zero
-bytes of UTF-16 become part of the text, no release matches it, and vfox says
-nothing about it. The table gives the first bytes of each file and what a
-directory holding it selected, with 22.23.4 installed and the default strategy:
+The plugin decodes UTF-16 and drops the mark before it reads the text. The table
+gives the first bytes of each file and what a directory holding it selected,
+with 22.23.4 installed and the default strategy:
 
-| The file starts with | Written by Windows PowerShell 5.1 with | Release 0.5.3 | Unreleased |
-| --- | --- | --- | --- |
-| `32 32 2e 32 33 2e 34 0d 0a` | `Set-Content .nvmrc 22.23.4 -Encoding ascii`, or `Set-Content .nvmrc 22.23.4` | 22.23.4 | 22.23.4 |
-| `ef bb bf 32 32 2e ...` | `Set-Content .nvmrc 22.23.4 -Encoding UTF8` | nothing | 22.23.4 |
-| `ff fe 32 00 32 00 2e 00 ...` | `'22.23.4' > .nvmrc`, `'22.23.4' \| Out-File .nvmrc` | nothing | 22.23.4 |
+| The file starts with | Written by Windows PowerShell 5.1 with | Selected |
+| --- | --- | --- |
+| `32 32 2e 32 33 2e 34 0d 0a` | `Set-Content .nvmrc 22.23.4 -Encoding ascii`, or `Set-Content .nvmrc 22.23.4` | 22.23.4 |
+| `ef bb bf 32 32 2e ...` | `Set-Content .nvmrc 22.23.4 -Encoding UTF8` | 22.23.4 |
+| `ff fe 32 00 32 00 2e 00 ...` | `'22.23.4' > .nvmrc`, `'22.23.4' \| Out-File .nvmrc` | 22.23.4 |
 
-The bytes were written on Linux and tried there, with both versions of the
-plugin. What Windows PowerShell writes is from Microsoft's documentation.
-PowerShell 7 writes UTF-8 without a mark for all of these, which every release
-reads. This one works everywhere:
+The bytes were written on Linux and tried there. What Windows PowerShell writes
+is from Microsoft's documentation. PowerShell 7 writes UTF-8 without a mark for
+all of these, which the plugin reads as plain text. This one works everywhere:
 
 ```powershell
 Set-Content -Path .nvmrc -Value '22.23.4' -Encoding ascii
@@ -234,30 +228,27 @@ global 26. In a hooked shell, `cd` between them. This is what `node -v` printed
 at each step of one shell, with 18.20.8, 24.22.2 and 26.13.0 installed and
 26.13.0 as the global release (bash 5.3, and PowerShell 7.6.9 agrees):
 
-| Step | Release 0.5.3 | Unreleased |
-| --- | --- | --- |
-| The shell starts in a directory with no config at all | v26.13.0 | v26.13.0 |
-| `cd` into a directory with a `.nvmrc` that names 18.20.8 | v26.13.0 | v18.20.8 |
-| `cd` into a directory with a `.node-version` that names 24.22.2 | v26.13.0 | v24.22.2 |
-| `cd` into a directory with no config at all | v26.13.0 | v24.22.2 |
-| `cd` into a directory with a `.vfox.toml` that names 18.20.8 | v18.20.8 | v18.20.8 |
-| `cd` into a directory with a `.vfox.toml` that names 24.22.2 | v24.22.2 | v24.22.2 |
-| `cd` into a directory with no config at all | v26.13.0 | v26.13.0 |
+| Step | `node -v` |
+| --- | --- |
+| The shell starts in a directory with no config at all | v26.13.0 |
+| `cd` into a directory with a `.nvmrc` that names 18.20.8 | v18.20.8 |
+| `cd` into a directory with a `.node-version` that names 24.22.2 | v24.22.2 |
+| `cd` into a directory with no config at all | v24.22.2 |
+| `cd` into a directory with a `.vfox.toml` that names 18.20.8 | v18.20.8 |
+| `cd` into a directory with a `.vfox.toml` that names 24.22.2 | v24.22.2 |
+| `cd` into a directory with no config at all | v26.13.0 |
 
 - **`.vfox.toml`** switches on every `cd`, and back to the global release when
-  you leave for a directory with no config. It does in every release.
-- **`.nvmrc` and `.node-version`** are read at every prompt in their directory
-  (Unreleased). A `cd` from one such directory into another switches, and
-  editing the file takes effect at the next prompt. Release 0.5.3 reads them
-  only when the shell starts in the directory, so none of the `cd` steps above
-  switched.
+  you leave for a directory with no config.
+- **`.nvmrc` and `.node-version`** are read at every prompt in their directory.
+  A `cd` from one such directory into another switches, and editing the file
+  takes effect at the next prompt.
 - **Leaving** a directory with such a file for one with no config at all does
-  not switch back, in either: the shell keeps the release it had, as the fourth
-  step shows. The plugin is not called in a directory with nothing to read, and
-  vfox goes on with the result it kept. A new terminal, or a directory with a
-  `.vfox.toml` or a version file of its own, switches. That is a limit of vfox's
-  cache, reported as
-  [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745) and
+  not switch back: the shell keeps the release it had, as the fourth step shows.
+  The plugin is not called in a directory with nothing to read, and vfox goes on
+  with the result it kept. A new terminal, or a directory with a `.vfox.toml` or
+  a version file of its own, switches. That is a limit of vfox's cache, reported
+  as [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745) and
   tracked here as [#46](https://github.com/version-fox/vfox-nodejs/issues/46).
 
 Why is in [nvmrc.md](nvmrc.md#when-the-file-is-read): vfox keeps the result of
@@ -265,11 +256,11 @@ its first calculation for the shell and does not track version files (vfox
 1.0.13), and the plugin makes vfox calculate again whenever it reads one. So:
 
 - For projects that you move between in one shell, `.vfox.toml` is the one that
-  works in every release and in both directions: `vfox use --project
-  nodejs@18.20.8` in each of them.
+  works in both directions: `vfox use --project nodejs@18.20.8` in each of them.
 - A `.nvmrc` is enough where a shell starts in the directory: the terminal of
-  your editor, a new tab in the same folder, a script. This is also why the
-  Windows e2e suite of this repository starts a new shell for each directory.
+  your editor, a new tab in the same folder, a script. The Windows e2e suite of
+  this repository starts a new shell for each directory, so a `cd` in a running
+  Windows shell is not part of it.
 
 ## Another release in this window only
 

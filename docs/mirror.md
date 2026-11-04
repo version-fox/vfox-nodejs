@@ -89,15 +89,14 @@ A mirror can change or go away without the plugin knowing.
 
 On 2026-11-03 each of them was also used to install 24.21.0 with vfox 1.0.13
 (`VFOX_NODEJS_MIRROR=<mirror> vfox install nodejs@24.21.0`), and every one
-installed it and ran. Unreleased: release 0.5.3 only installs from npmmirror,
-Alibaba Cloud, Tencent Cloud and Nanjing University. It leaves the download to
-vfox, which asks with the `User-Agent` of Go's HTTP client,
-`Go-http-client/1.1`, and Huawei Cloud (HTTP 418), TUNA and BFSU (403) and USTC
-(204 with no content) answer that with an error page, or with nothing, in place
-of the package: vfox saves the answer and the install ends in `checksum error`.
+installed it and ran. Before 0.5.4 the install through Huawei Cloud, TUNA, USTC
+and BFSU ended in `checksum error`: vfox downloads the package itself, asking
+with the `User-Agent` of Go's HTTP client, `Go-http-client/1.1`, and Huawei
+Cloud (HTTP 418), TUNA and BFSU (403) and USTC (204 with no content) answer that
+with an error page, or with nothing, in place of the package, which vfox saves.
 The plugin asks for `index.json` and `SHASUMS256.txt` with the `User-Agent`
-that vfox builds for it, `vfox/1.0.13 vfox-nodejs/0.5.3`, which all of them
-serve, and it now has the download send the same one.
+that vfox builds for it, `vfox/1.0.13 vfox-nodejs/0.5.4`, which all of them
+serve, and it has the download send the same one.
 
 Addresses that only redirect are not listed: on 2026-11-03
 `mirror.sjtu.edu.cn/nodejs-release` sent the requests to nodejs.org, and

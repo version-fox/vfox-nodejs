@@ -10,7 +10,7 @@
 
 `nodejs@` 后面既不是版本号，也不是某个版本号的开头。插件认识 `latest`、`24.21.0`、`24.21` 和 `24`，见 [versions.md](versions.md)。`lts`、`lts/iron`、`stable`、`24.21.0.1` 和 `24.0.0-rc.1` 都会报这个错，`99` 和 `22.99` 也一样：它们的格式没有问题，但没有任何版本以它们开头。要安装某条 LTS 版本线，请按编号安装，见 [lts.md](lts.md#安装一条-lts-版本线)。
 
-未发布：0.5.3 对 `latest` 也会报这个错，即 `version not found for provided version 27.0.0-alpha.0.0.0`，因为 nodejs.org 的索引从 2026-10-29 起把这个预发布版本列为最新的一条。`nodejs@26` 不受影响。
+0.5.4 之前，`latest` 也会报这个错，即 `version not found for provided version 27.0.0-alpha.0.0.0`，因为 nodejs.org 的索引从 2026-10-29 起把这个预发布版本列为最新的一条。`nodejs@26` 不受影响。
 
 ### `get checksum failed: HTTP 404 from https://nodejs.org/dist/v24.99.0/SHASUMS256.txt`
 
@@ -46,7 +46,7 @@ vfox 没有告诉插件当前运行在哪种 CPU 上。这是不应该出现的�
 
 vfox 会打印 `Verifying checksum <sum>...`，拿下载的文件和这个校验和比对，不一致就停下来，并指出它丢弃的文件：`Checksum error, file: ~/.vfox/cache/nodejs/node-v24.21.0-linux-x64.tar.gz`。常见的原因是下载被截断，或者镜像上的文件与它自己的 `SHASUMS256.txt` 对不上。不会安装任何东西。请重试，或者换一个[镜像](mirror.md)。
 
-未发布：0.5.3 通过华为云、TUNA、USTC 和北外安装时也会停在这里。vfox 下载时使用 Go HTTP 客户端的 `User-Agent`，这几个镜像对它返回的是错误页面或者空内容，而不是安装包，vfox 再拿这个回应去比对校验和。插件现在让下载使用它自己请求时的 `User-Agent`，见 [mirror.md](mirror.md#可用的镜像)。
+0.5.4 之前，通过华为云、TUNA、USTC 和北外安装时也会停在这里：vfox 下载时使用 Go HTTP 客户端的 `User-Agent`，这几个镜像对它返回的是错误页面或者空内容，而不是安装包，vfox 再拿这个回应去比对校验和。从 0.5.4 起，插件让下载使用它自己请求时的 `User-Agent`，见 [mirror.md](mirror.md#可用的镜像)。
 
 ### `nodejs@24.99 is not installed`
 
@@ -123,7 +123,7 @@ vfox config proxy.url http://127.0.0.1:7890
 - **`vfox current nodejs` 和 `node -v` 的结果不一致。** 原因同上。前者给出的是会话或作用域里的选择，后者是 `PATH` 实际找到的。
 - **`vfox use` 之后，全局安装的 npm 包不见了。** 全局包属于某个版本，见 [npm.md](npm.md#全局包属于某个版本)。
 - **找不到 `corepack`。** Node.js 25 及以后的版本不自带它，见 [npm.md](npm.md#yarnpnpm-与-corepack)。
-- **`.nvmrc` 什么也没选中。** 请检查策略和文件里的内容，以及 Shell 是不是从带有版本文件的目录进入了完全没有配置的目录（它会保持原有的版本）。0.5.3 在已经运行的 Shell 里 `cd` 之后也不会读取这个文件。见 [nvmrc.md](nvmrc.md#没有生效)。
+- **`.nvmrc` 什么也没选中。** 请检查策略和文件里的内容，以及 Shell 是不是从带有版本文件的目录进入了完全没有配置的目录（它会保持原有的版本）。0.5.4 之前，在已经运行的 Shell 里 `cd` 之后也不会读取这个文件。见 [nvmrc.md](nvmrc.md#没有生效)。
 - **`git status` 列出了 `.vfox/`。** vfox 会把这个版本以 `.vfox/sdks/nodejs` 的形式链接到项目里。请在 `.gitignore` 里忽略 `.vfox/`，并保留 `.vfox.toml`。
 - **安装后的版本名里没有 `v`。** 版本的名字形如 `24.21.0`，你输入时带的 `v` 会被去掉。
 

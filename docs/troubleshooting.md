@@ -17,10 +17,9 @@ knows `latest`, `24.21.0`, `24.21` and `24`, see [versions.md](versions.md).
 and `22.99`, which are well formed but start no release. For an LTS line, install
 the line by number, see [lts.md](lts.md#installing-an-lts-line).
 
-Unreleased: release 0.5.3 ends here for `latest` as well, with `version not
-found for provided version 27.0.0-alpha.0.0.0`, because the index of
-nodejs.org has listed that pre-release as its newest entry since 2026-10-29.
-`nodejs@26` is not affected.
+Before 0.5.4 `latest` ended here as well, with `version not found for provided
+version 27.0.0-alpha.0.0.0`, because the index of nodejs.org has listed that
+pre-release as its newest entry since 2026-10-29. `nodejs@26` was not affected.
 
 ### `get checksum failed: HTTP 404 from https://nodejs.org/dist/v24.99.0/SHASUMS256.txt`
 
@@ -92,11 +91,12 @@ stops when they differ. It names the file it dropped: `Checksum error, file:
 cut-off download and a mirror whose files differ from its `SHASUMS256.txt`.
 Nothing is installed. Run it again, or try another [mirror](mirror.md).
 
-Unreleased: release 0.5.3 also ends here through Huawei Cloud, TUNA, USTC and
-BFSU. vfox downloads with the `User-Agent` of Go's HTTP client, which they
+Before 0.5.4 it also ended here through Huawei Cloud, TUNA, USTC and BFSU: vfox
+asked for the package with the `User-Agent` of Go's HTTP client, which they
 answer with an error page, or with nothing, in place of the package, and vfox
-checks that answer against the sum. The plugin now has the download send the
-`User-Agent` of its own requests, see [mirror.md](mirror.md#mirrors-that-work).
+checked that answer against the sum. Since 0.5.4 the plugin has the download
+send the `User-Agent` of its own requests, see
+[mirror.md](mirror.md#mirrors-that-work).
 
 ### `nodejs@24.99 is not installed`
 
@@ -213,8 +213,8 @@ after `get checksum failed:`:
   [npm.md](npm.md#yarn-pnpm-and-corepack).
 - **`.nvmrc` selects nothing.** Check the strategy and what the file holds, and
   that the shell did not come from a directory with a version file into one with
-  none (it keeps the release it had). Release 0.5.3 also does not read the file
-  after a `cd` from a running shell. See [nvmrc.md](nvmrc.md#not-finding-it).
+  none (it keeps the release it had). Before 0.5.4 the file was not read after a
+  `cd` from a running shell either. See [nvmrc.md](nvmrc.md#not-finding-it).
 - **`git status` lists `.vfox/`.** vfox links the release into the project as
   `.vfox/sdks/nodejs`. Ignore `.vfox/` in `.gitignore`, and keep `.vfox.toml`.
 - **The installed name has no `v`.** Releases are named `24.21.0`, and a `v` in

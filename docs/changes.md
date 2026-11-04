@@ -4,11 +4,9 @@
 
 What changed in each release, as a user notices it. GitHub's
 [release pages](https://github.com/version-fox/vfox-nodejs/releases) list the
-pull requests. The newest release at the time of writing is 0.5.3, and `main` is
-ahead of it by everything under "Unreleased".
-[source-build.md](source-build.md) gets you those changes now.
+pull requests.
 
-## Unreleased
+## 0.5.4 (2026-11-04)
 
 - `vfox install nodejs@latest` installs the newest release again, and
   `vfox search nodejs` no longer lists pre-releases. Since 2026-10-29 the index
@@ -16,15 +14,17 @@ ahead of it by everything under "Unreleased".
   lists it first, so `latest` resolves to it and the install ends with
   `version not found for provided version 27.0.0-alpha.0.0.0`. `nodejs@26` and
   the other numbers work. Only releases of three numbers are listed now. See
-  [versions.md](versions.md#installing).
+  [versions.md](versions.md#installing)
+  ([#43](https://github.com/version-fox/vfox-nodejs/pull/43)).
 - Huawei Cloud, TUNA, USTC and BFSU work as mirrors. Release 0.5.3 leaves the
   download of the package to vfox, which asks with the `User-Agent` of Go's HTTP
   client, and these four answer that with an error page, or with nothing, in
   place of the file (HTTP 418, 403, 204 and 403): the install ends in `checksum
   error`. The plugin now has vfox download with the `User-Agent` of its own
-  requests, `vfox/1.0.13 vfox-nodejs/0.5.3` under vfox 1.0.13, and all of the
+  requests, `vfox/1.0.13 vfox-nodejs/0.5.4` under vfox 1.0.13, and all of the
   mirrors of [mirror.md](mirror.md#mirrors-that-work) install 24.21.0. China
-  Telecom Cloud, `https://mirrors.ctyun.cn/nodejs-release`, is in that list now.
+  Telecom Cloud, `https://mirrors.ctyun.cn/nodejs-release`, is in that list now
+  ([#45](https://github.com/version-fox/vfox-nodejs/pull/45)).
 - The plugin learns the LTS lines from the version index, so a line that
   Node.js promotes later needs no release of the plugin. It keeps what it
   learned in `.lts-cache` next to the plugin. It writes the file when
@@ -36,12 +36,14 @@ ahead of it by everything under "Unreleased".
   ends at Lithium (26): Node.js 26 entered long-term support on 2026-10-28.
   Release 0.5.3 has the table only, and it ends at Krypton (24), so there
   `lts/lithium` selects nothing under `latest_installed`, and `lts` and `lts/*`
-  select a 24.x. See [lts.md](lts.md#what-this-plugin-understands).
+  select a 24.x. See [lts.md](lts.md#what-this-plugin-understands)
+  ([#44](https://github.com/version-fox/vfox-nodejs/pull/44)).
 - A `.nvmrc` or `.node-version` in UTF-16, or in UTF-8 with a byte order mark,
   is read. Windows PowerShell 5.1 writes the first with `>` and `Out-File`, and
   the second with `-Encoding UTF8`. Release 0.5.3 reads the bytes as they are,
   so no release matches the text and vfox says nothing. See
-  [nvmrc.md](nvmrc.md#what-the-file-may-hold).
+  [nvmrc.md](nvmrc.md#what-the-file-may-hold)
+  ([#44](https://github.com/version-fox/vfox-nodejs/pull/44)).
 - `.nvmrc` and `.node-version` are read at every prompt in their directory, so a
   `cd` into it switches, and a change of the file takes effect at the next
   prompt. Release 0.5.3 reads them when a shell starts in the directory and not
@@ -49,14 +51,16 @@ ahead of it by everything under "Unreleased".
   shell and does not track version files. The plugin now removes that result
   whenever vfox asks it to read such a file. A `cd` out of the directory into
   one with no config at all does not switch back yet, and a `.vfox.toml` always
-  did. See [nvmrc.md](nvmrc.md#when-the-file-is-read). The cache is vfox's, and
-  vfox has been asked to fix it
+  did. See [nvmrc.md](nvmrc.md#when-the-file-is-read)
+  ([#44](https://github.com/version-fox/vfox-nodejs/pull/44)). The cache is
+  vfox's, and vfox has been asked to fix it
   ([version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745),
   tracked here as [#46](https://github.com/version-fox/vfox-nodejs/issues/46)).
 - The documentation has a page of scenarios: the nvm-sh/nvm commands next to
   vfox's, Windows PowerShell 5.1 from scratch, one Node.js for a whole team,
   several projects in one shell, `vfox exec`, mirrors and editors. See
-  [scenarios.md](scenarios.md).
+  [scenarios.md](scenarios.md)
+  ([#44](https://github.com/version-fox/vfox-nodejs/pull/44)).
 
 ## 0.5.3 (2026-10-20)
 
