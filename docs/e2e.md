@@ -87,13 +87,23 @@ driven from Go through `docker exec`-style calls):
 5. The major and major.minor shorthands resolve through `PreUse` against the
    installed versions.
 6. `.nvmrc` and `.node-version` drive `vfox env` selection: the exact
-   pinned version under the default `specified` strategy, and an LTS
-   codename (`lts/<codename>`, see [lts](lts.md)) resolving to the LTS
-   release under `latest_installed`. Each legacy probe activates
-   inside its own shell so the selection is recomputed rather than answered
-   from the `vfox env` state cache of an earlier probe.
+   pinned version under the default `specified` strategy (on Windows also in
+   UTF-16 and in UTF-8 with a byte order mark, the bytes that Windows
+   PowerShell 5.1 writes), and an LTS codename (`lts/<codename>`, see
+   [lts](lts.md)) resolving to the LTS release under `latest_installed`. Each
+   legacy probe activates inside its own shell so the selection is recomputed
+   rather than answered from the `vfox env` state cache of an earlier probe. The
+   plugin removes that cache file when it reads a legacy file, and the Windows
+   probes rely on that instead of removing it themselves.
 7. `vfox search nodejs` lists the installed release with the same npm
    version the binary bundles.
+8. After the installs and the search, the plugin directory holds `.lts-cache`
+   (see [lts](lts.md#what-this-plugin-understands)) with every codename of the
+   plugin's table at the same major, and a newest LTS major of 26 or more. The
+   index names all of them, so a table that is wrong shows here. The Windows
+   containers keep vfox in `C:\Users\John Doe\.vfox`, so there the file also
+   shows that the plugin finds its directory with a space in the path and
+   writes to it.
 
 The default matrix is:
 
@@ -131,6 +141,11 @@ Scope it down while iterating the same way:
 ```bash
 VFOX_VERSION=latest MIRROR=default E2E_MAX_JOBS=1 go test -v -timeout 55m -run TestE2E ./linux
 ```
+
+Add `-count=1` after you edit `hooks/` or `lib/`. Go replays the result of an
+earlier run when what the test opened looks unchanged, and a second run after a
+change to `lib/util.lua` still printed `ok ... (cached)`, with the output and
+the timings of the first.
 
 On a native host the same command works with two prerequisites — Docker
 Engine (rootful or rootless) and Go 1.27.1 — which is exactly what CI
@@ -186,7 +201,11 @@ plugin files to stock servercore. Baking the tools into an image layer
 instead costs minutes of layer commit on the hosted runners (they are tens of
 thousands of files). The servercore pull — five to seven minutes on a fresh
 CI runner — runs in the background while the tools are fetched and the Go
-code is compiled.
+code is compiled. `run.ps1` first waits, for up to five minutes, until the
+Docker engine answers `docker version`. A hosted runner can begin the job before
+its engine listens: on 2026-11-03 the pull failed at once with `failed to
+connect to the docker API at npipe:////./pipe/docker_engine`, and the job ended
+with it, although the two runs before had passed on the same runner image.
 
 The `windows-11-arm` runner has no Windows Hypervisor Platform feature, so
 Hyper-V isolation is unavailable; process isolation needs only the
@@ -276,8 +295,9 @@ Windows host directly through `wsl.exe` — no containers. It exists to
 reproduce [issue #32](https://github.com/version-fox/vfox-nodejs/issues/32):
 inside WSL, `vfox install` reported success but `node` was missing from
 `PATH`. On top of the shared flow (install with checksum, toolchain,
-shorthands, search, legacy files) it asserts that `command -v node` resolves
-under `VFOX_HOME` and that `vfox env -s bash` exports the SDK bin directory.
+shorthands, search, learned LTS lines, legacy files) it asserts that
+`command -v node` resolves under `VFOX_HOME` and that `vfox env -s bash`
+exports the SDK bin directory.
 
 The pinned release defaults to `20.16.0` (the issue's version); `NODE_VERSION`
 overrides it. The LTS release (`LTS_NODE_VERSION`, default per

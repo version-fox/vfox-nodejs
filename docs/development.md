@@ -12,7 +12,8 @@ hooks/post_install.lua          musl: fail when node cannot run, such as without
 hooks/env_keys.lua              PATH: bin on Linux and macOS, the install directory on Windows
 hooks/pre_use.lua               vfox use: map 24 or 24.21 to an installed release, note a shadowing node
 hooks/parse_legacy_file.lua     .nvmrc and .node-version
-lib/util.lua                    mirror URL and download headers, musl detection and missing libraries, running a command, version comparison and matching, shorthands, PATH probe
+lib/util.lua                    mirror URL and download headers, musl detection and missing libraries, running a command, version comparison and matching, shorthands, PATH probe, the LTS lines the plugin learned
+.lts-cache                      not in the repository: what the plugin learned about LTS lines, written next to it
 tests/hooks_test.lua            offline hook tests
 tests/e2e/                      container tests, see e2e.md
 Injection.lua                   type hints for what vfox injects, never loaded
@@ -123,12 +124,24 @@ check that cannot work never blocks an install. See
 
 ## Legacy files
 
-`ParseLegacyFile` reads the file, removes all whitespace, and gives the text to
+`ParseLegacyFile` first removes `env-state.json` from the session directory
+(`util.forget_env_state`). vfox keeps the result of `vfox env` there and does
+not track version files, so without this a `cd` into a directory that only has
+one is not noticed. vfox calls the hook before it loads that file, which is what
+makes the workaround work, and it is why the hook cannot help on the way out of
+the directory: it is not called where there is nothing to read. See
+[nvmrc.md](nvmrc.md#when-the-file-is-read).
+
+It then reads the file and decodes it (`util.decode_text` turns UTF-16 with a
+byte order mark into UTF-8, and drops the UTF-8 mark, because Windows PowerShell
+5.1 writes both). It removes all whitespace, and gives the text to
 `resolve_version(query, strategy)`: it drops a leading `v`, lowers the case,
 turns `lts-x` into `lts/x`, and maps `lts/<codename>` to a major, `lts` and
-`lts/*` to the highest major in `nodejs_codenames`. Under `latest_available` the
-codename comes from the index first (`discover_lts`), and the table is the
-fallback when that finds nothing or the request fails.
+`lts/*` to the newest major of an LTS line. Under `latest_available` the
+codename comes from the index first (`discover_lts`). Everywhere else, and when
+that finds nothing or the request fails, `util.known_lts_lines` answers without
+a request: what the plugin learned from the index over the built-in
+`util.LtsLines`, see [below](#what-the-plugin-learns-about-lts-lines).
 
 `resolve_legacy_version(strategy, query)` then reads the query with
 `util.version_prefix`: `22` is `{ 22 }`, `22.23` is `{ 22, 23 }`, and `22.x`,
@@ -145,21 +158,64 @@ fallback when that finds nothing or the request fails.
 `vfox` then selects the answer if it is installed. User-facing rules and
 examples are in [nvmrc.md](nvmrc.md) and [lts.md](lts.md).
 
+## What the plugin learns about LTS lines
+
+`ParseLegacyFile` runs at every prompt in a directory with a version file, so it
+cannot fetch `index.json` to find out what `lts/*` is. The plugin learns it when
+it has the index in hand anyway, and keeps it in `.lts-cache`, a text file next
+to the plugin:
+
+```text
+# What vfox-nodejs learned from index.json about LTS lines. Safe to delete.
+updated 1793000000
+newest 26
+line argon 4
+...
+line lithium 26
+```
+
+- `Available` calls `util.remember_lts` with the index it has decoded.
+  `util.lts_summary` finds the major of each named line and the newest major
+  that is LTS at all (a release whose `lts` is `true`, a line without a name,
+  counts for the newest only). It runs when vfox's own cache of the answer has
+  run out.
+- `PreInstall` calls `util.refresh_lts_cache` once the install has its checksum,
+  so an install that fails early, such as the one for an architecture without a
+  package, fetches nothing. vfox installs an exact release without asking
+  `Available`, so this is where such an install learns. It calls `Available`
+  when the file is missing or older than a day, and only if the file can be
+  written, so that a plugin directory that is read-only does not cost an index
+  at every install.
+- `ParseLegacyFile` reads the file through `util.known_lts_lines`, which puts
+  what was learned over the built-in `util.LtsLines` and takes the newest major
+  of the two for `lts` and `lts/*`. It never fetches.
+- vfox gives a plugin no path of its own, so `util.plugin_dir` finds the
+  directory where `package.path` has `hooks/?.lua` and `lib/?.lua`. The new
+  file is written beside the old one and renamed over it. Every failure, no
+  directory, nothing writable, a damaged file, leaves the plugin with the table.
+- In the checkout `package.path` starts with `./lib/?.lua`, so the directory
+  would be the repository. The hook tests point `util.lts_cache_path` at a file
+  of their own.
+
 ## When Node.js promotes a line to LTS
 
 Each October an even-numbered line gets a codename, see
-[lts.md](lts.md#when-nodejs-promotes-a-line). To teach the plugin the new one:
+[lts.md](lts.md#when-nodejs-promotes-a-line). The plugin learns the line from
+the index and needs no release for it. This is housekeeping, so that a plugin
+that has learned nothing yet knows it too, and that the documents are right:
 
-1. Add `<codename> = <major>` to `nodejs_codenames` in
-   `hooks/parse_legacy_file.lua`.
-2. Add a case next to `legacy lts krypton maps to its major` in
-   `tests/hooks_test.lua`.
-3. Add a row to the table in [lts.md](lts.md#what-this-plugin-understands), and
-   change the "24 at the time of writing" sentences in [lts.md](lts.md) and
-   [nvmrc.md](nvmrc.md).
-4. `DefaultLTSVersion` in `tests/e2e/common/common.go` may stay: it only has to
+1. Add `<codename> = <major>` to `UTIL.LtsLines` in `lib/util.lua`.
+2. Add a case next to `legacy lts lithium maps to its major` in
+   `tests/hooks_test.lua`, and change the major that `legacy bare lts is the
+   newest line of the table` expects.
+3. Add the codename to `LTSCodenames` in `tests/e2e/common/common.go`, and a
+   case to `TestLTSCodename`. The e2e suites compare that table with the file
+   the plugin wrote from the live index.
+4. Add a row to the table in [lts.md](lts.md#what-this-plugin-understands), and
+   change the "26 at the time of writing" sentences in [lts.md](lts.md) and
+   [nvmrc.md](nvmrc.md), and the examples of [lts.md](lts.md#examples).
+5. `DefaultLTSVersion` in `tests/e2e/common/common.go` may stay: it only has to
    stay inside the table.
-5. Release.
 
 ## Tests
 
@@ -176,12 +232,18 @@ itself (`package.preload`), sets `RUNTIME` per case, and answers requests from
 It covers `Available` and its failures, the package name per platform and the
 errors of a failed checksum request, musl and `PostInstall` (with `util.capture`,
 `util.file_exists` and `util.has_libstdcxx` stubbed through `with_util`),
-`ParseLegacyFile` under each strategy, `PreUse` with the shadowing `node`, and
-the helpers of `lib/util.lua`. Add the case a change needs there.
+`ParseLegacyFile` under each strategy, in UTF-16 and with a byte order mark, and
+with the removal of `env-state.json` (`os.getenv` and `os.remove` stubbed), what
+the plugin learns about LTS lines (the file is a temporary one, and every case
+starts with a fresh one that knows no line), `PreUse` with the shadowing `node`,
+and the helpers of `lib/util.lua`. Add the case a change needs there.
 
 gopher-lua 1.1.1 loses a `local x = nil` that a closure assigns: the outer scope
 still reads `nil`. A test that collects a value from inside `with_util` or
-`pcall` has to keep it in a table field.
+`pcall` has to keep it in a table field. It also ends in a Go "nil pointer
+dereference" at `if file == nil` after `local file = path ~= nil and
+io.open(path, "r") or nil`: test `path` and open the file in two statements.
+Check new code under `glua`, not only with LuaLS.
 
 To call one hook against the real servers, vfox 1.0.13 and later has
 `vfox plugin run`. It does not register the plugin, `--os` and `--arch` answer
@@ -244,10 +306,23 @@ have no package. For the musl table run the same program against
 - The e2e Alpine image gets `libatomic` through `go`, which depends on `gcc`, so
   the suite does not cover a stock Alpine without it. The hook tests do.
 - `.nvmrc` aliases (`node`, `stable`, `lts/-1`), ranges and comments are not
-  understood, and `lts` follows a hand-made table, see
-  [nvmrc.md](nvmrc.md#not-understood).
+  understood, see [nvmrc.md](nvmrc.md#not-understood).
+- A plugin directory that cannot be written, or a plugin that has not had the
+  index in hand since it was installed, leaves `specified` and
+  `latest_installed` with the built-in table, which ends at Lithium.
+- A `cd` out of a directory with a version file into one with no config at all
+  does not switch back. vfox does not track version files and keeps the result
+  of its last calculation, and the plugin is not called where there is no file
+  to read, so `util.forget_env_state` only covers the way in. A fix belongs in
+  vfox: [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745),
+  tracked here as [#46](https://github.com/version-fox/vfox-nodejs/issues/46).
+  Drop `util.forget_env_state` when vfox tracks version files.
+- Every prompt in a directory with a version file calculates the environment
+  again, because of `util.forget_env_state`. It took about a millisecond with
+  one SDK installed.
 - `latest_available` downloads `index.json` at every prompt in a directory with a
   legacy file.
+- UTF-32, and UTF-16 without a byte order mark, are not decoded.
 - The unofficial site is not covered by `VFOX_NODEJS_MIRROR`.
 - macOS has no e2e job.
 

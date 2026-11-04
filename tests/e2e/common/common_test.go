@@ -188,11 +188,31 @@ func TestLTSCodename(t *testing.T) {
 	if got, ok := LTSCodename("24.21.0"); !ok || got != "krypton" {
 		t.Errorf("LTSCodename(24.21.0) = %q, %v; want krypton", got, ok)
 	}
-	if _, ok := LTSCodename("26.11.1"); ok {
-		t.Error("LTSCodename(26.11.1) succeeded, want unknown")
+	if got, ok := LTSCodename("26.13.0"); !ok || got != "lithium" {
+		t.Errorf("LTSCodename(26.13.0) = %q, %v; want lithium", got, ok)
+	}
+	if _, ok := LTSCodename("25.9.0"); ok {
+		t.Error("LTSCodename(25.9.0) succeeded, want unknown")
 	}
 	if _, ok := LTSCodename("not-semver"); ok {
 		t.Error("LTSCodename(not-semver) succeeded, want unknown")
+	}
+}
+
+func TestLearnedLTS(t *testing.T) {
+	text := "# What vfox-nodejs learned from index.json about LTS lines. Safe to delete.\r\n" +
+		"updated 1793000000\r\nnewest 28\r\nline krypton 24\r\nline mercury 28\r\n" +
+		"line broken\r\nline bad x\r\nnewest many\r\n"
+	lines, newest := LearnedLTS(text)
+	if newest != 28 {
+		t.Errorf("newest = %d, want 28", newest)
+	}
+	if len(lines) != 2 || lines["krypton"] != 24 || lines["mercury"] != 28 {
+		t.Errorf("lines = %v, want krypton 24 and mercury 28", lines)
+	}
+	lines, newest = LearnedLTS("")
+	if len(lines) != 0 || newest != 0 {
+		t.Errorf("an empty file taught %v, %d", lines, newest)
 	}
 }
 

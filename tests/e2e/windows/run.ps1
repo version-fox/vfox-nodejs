@@ -57,6 +57,31 @@ function Invoke-Native {
     if ($code -notin $Ok) { throw "FAIL $What exited with code $code" }
 }
 
+# Waits until the Docker engine answers. A hosted runner can begin the job
+# before its engine listens: on 2026-11-03 the pull below failed at once with
+# "failed to connect to the docker API at npipe:////./pipe/docker_engine" and
+# ended the job, where the runs before it on the same image had passed. The
+# same wait as install-docker-arm64.ps1 has for the engine it starts.
+function Wait-Engine {
+    param(
+        [int] $Attempts = 60,
+        [int] $Seconds = 5
+    )
+    $prev = $PSNativeCommandUseErrorActionPreference
+    $PSNativeCommandUseErrorActionPreference = $false
+    try {
+        for ($attempt = 1; $attempt -le $Attempts; $attempt++) {
+            & docker version *> $null
+            if ($LASTEXITCODE -eq 0) { return }
+            if ($attempt -lt $Attempts) { Start-Sleep -Seconds $Seconds }
+        }
+    }
+    finally {
+        $PSNativeCommandUseErrorActionPreference = $prev
+    }
+    throw "FAIL the docker engine did not answer in $($Attempts * $Seconds) seconds"
+}
+
 $PwshVersion = '7.6.6'
 $GitVersion = '2.55.0.5'
 $GitTag = 'v2.55.0.windows.5'
@@ -74,6 +99,7 @@ $toolsRoot = Join-Path $cacheRoot 'tools'
 $downloads = Join-Path $cacheRoot 'downloads'
 New-Item -ItemType Directory -Force -Path $toolsRoot, $downloads | Out-Null
 
+Wait-Engine
 Write-Output "Pulling $baseImage in the background ..."
 $pull = Start-Process docker -ArgumentList 'pull', '--quiet', $baseImage -NoNewWindow -PassThru
 # Touch the handle now, or ExitCode stays empty once the process is gone.

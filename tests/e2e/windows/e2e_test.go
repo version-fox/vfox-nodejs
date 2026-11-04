@@ -211,6 +211,7 @@ func runOne(t *testing.T, ctx context.Context, image, platform, toolsDir string,
 	verifyGitBashNpm(ctx, t, ctr, box, version)
 	verifyShorthand(ctx, t, ctr, box, activation, version)
 	verifySearch(ctx, t, ctr, box, version, npm)
+	verifyLearnedLTS(ctx, t, ctr, box)
 
 	// The LTS release backs the `lts/<codename>` legacy-file probe, which
 	// needs its major inside the plugin's codename table (see docs/lts.md).

@@ -35,8 +35,9 @@ Windows 容器的覆盖（`tests/e2e/windows`）无法在开发容器里运行�
 3. 固定的 Node.js 版本安装时会验证校验和，并且能正常运行（`node --version`、`npm --version`、`process.platform`、`process.arch`），因此 `linux-x64` / `linux-arm64` / `win-x64` / `win-arm64` 的包选择是实际检验过的。在 Windows 上，vfox 挂载之后，Git Bash 还会运行 `node`、`npm.cmd` 和不带扩展名的 `npm`，以覆盖 [issue #293](https://github.com/version-fox/vfox/issues/293)。LTS 版本（`LTS_NODE_VERSION`）也会安装，供下面的代号检查使用。
 4. `nodejs@latest` 通过插件的 `Available` 列表解析（取第一项，也就是最新的一项），并在该平台的二进制已经发布时完成安装。Alpine ARM64 只在上游对应的非官方 musl 构建缺失期间才跳过这项检查。经由镜像运行时，如果镜像的索引里列出了最新版本却没有它的 `SHASUMS256.txt`（插件会以 `get checksum failed: HTTP 404 from ...` 结束），而 nodejs.org 有这个文件，也会跳过这项检查。这两种情况下，固定版本和 LTS 版本仍会验证。
 5. 只写大版本，或只写大版本和小版本的简写，通过 `PreUse` 对照已安装的版本解析。
-6. `.nvmrc` 和 `.node-version` 决定 `vfox env` 选中哪个版本：在默认的 `specified` 策略下，选中文件里固定的那个确切版本；在 `latest_installed` 策略下，LTS 代号（`lts/<codename>`，见 [lts](lts.md)）会解析为对应的 LTS 版本。每项兼容版本文件的检查都在自己的 Shell 里挂载 vfox，这样选择结果是重新计算出来的，而不是由前一次检查留下的 `vfox env` 状态缓存直接给出。
+6. `.nvmrc` 和 `.node-version` 决定 `vfox env` 选中哪个版本：在默认的 `specified` 策略下，选中文件里固定的那个确切版本；在 `latest_installed` 策略下，LTS 代号（`lts/<codename>`，见 [lts](lts.md)）会解析为对应的 LTS 版本。在 Windows 上，固定的版本还会以 UTF-16 和带字节顺序标记的 UTF-8 写入文件检查一遍，这是 Windows PowerShell 5.1 会写出的字节。每项兼容版本文件的检查都在自己的 Shell 里挂载 vfox，这样选择结果是重新计算出来的，而不是由前一次检查留下的 `vfox env` 状态缓存直接给出。插件读取兼容版本文件时会删除那个缓存文件，Windows 上的检查依赖这一点，而不是自己去删除它。
 7. `vfox search nodejs` 列出已安装的版本，给出的 npm 版本与该二进制自带的 npm 版本相同。
+8. 安装和搜索之后，插件目录里有 `.lts-cache`（见 [lts](lts.md#插件认识哪些代号)），插件那张表里的每个代号都在，大版本也相同，最新的 LTS 大版本不低于 26。索引里有所有这些代号，所以表要是错了，会在这里暴露出来。Windows 容器把 vfox 放在 `C:\Users\John Doe\.vfox` 里，所以在那里，这个文件还说明插件在路径带空格的情况下能找到自己的目录，并且能写入。
 
 默认矩阵是：
 
@@ -74,6 +75,8 @@ go test -v -timeout 55m -run TestE2E ./linux
 VFOX_VERSION=latest MIRROR=default E2E_MAX_JOBS=1 go test -v -timeout 55m -run TestE2E ./linux
 ```
 
+改动 `hooks/` 或 `lib/` 之后要加 `-count=1`。Go 认为测试打开的东西没有变化时，会重放上一次的结果；改过 `lib/util.lua` 之后再跑一次，仍然打印 `ok ... (cached)`，输出和耗时都是第一次的。
+
 在原生宿主上，同一条命令也能用，只需要两个前提：Docker Engine（rootful 或 rootless）和 Go 1.27.1，这正是 CI 准备的环境。使用 rootless Docker 的用户要把 Docker 客户端指向自己的 socket（`export DOCKER_HOST="unix://$XDG_RUNTIME_DIR/docker.sock"`）；开发容器挂载的 socket 已经替你处理了这种情况。ARM64 只运行默认镜像。
 
 ## Alpine（musl）
@@ -97,7 +100,7 @@ Windows 容器无法跨架构模拟，所以 ARM64 套件需要 ARM64 宿主（C
 
 这套测试没有开发容器，因为 Dev Containers 规范拒绝 Windows 容器镜像（见[开发容器](#开发容器)），所以它通过 `tests/e2e/windows/run.ps1` 从 Windows 宿主运行。对宿主的要求是 Windows 容器模式的 Docker；除了 Windows 自带的 `curl.exe` 和 `tar.exe`，脚本不需要别的东西。它会把固定版本的 PowerShell、PortableGit（含 Git Bash 的 Git for Windows）和 Go 下载到按架构区分的缓存里（`$env:E2E_CACHE_DIR`，默认是 `%LOCALAPPDATA%\vfox-nodejs-e2e\<arch>`，多次运行之间复用），用这个 Go 构建一次 `vfox@main`，编译套件，然后运行。这些工具都不会被安装，也不会放进用户的 `PATH`，所以不会与 vfox 管理的工具链冲突。
 
-缓存的工具以只读方式 bind mount 到每个组合容器的 `C:\tools`，所以 `tests/e2e/windows/Dockerfile` 只需要在原版 servercore 上加 `PATH` 条目和插件文件。如果改为把工具构建进镜像层，托管的 runner 上仅提交镜像层就要花几分钟（这些工具共有几万个文件）。拉取 servercore 在全新的 CI runner 上要五到七分钟，它在后台进行，同时获取工具、编译 Go 代码。
+缓存的工具以只读方式 bind mount 到每个组合容器的 `C:\tools`，所以 `tests/e2e/windows/Dockerfile` 只需要在原版 servercore 上加 `PATH` 条目和插件文件。如果改为把工具构建进镜像层，托管的 runner 上仅提交镜像层就要花几分钟（这些工具共有几万个文件）。拉取 servercore 在全新的 CI runner 上要五到七分钟，它在后台进行，同时获取工具、编译 Go 代码。`run.ps1` 会先等待 Docker 引擎应答 `docker version`，最多五分钟。托管的 runner 可能在引擎开始监听之前就开始执行作业：2026-11-03 那次拉取立刻失败了，报 `failed to connect to the docker API at npipe:////./pipe/docker_engine`，作业也随之结束，而在同一个 runner 镜像上，之前的两次运行都通过了。
 
 `windows-11-arm` runner 没有 Windows Hypervisor Platform 功能，所以无法使用 Hyper-V 隔离；进程隔离只需要 Containers 功能。
 
@@ -162,7 +165,7 @@ pwsh -NoProfile -File .\tests\e2e\windows\run.ps1
 
 ## WSL
 
-WSL 套件（`tests/e2e/wsl/`）在 Windows 宿主上通过 `wsl.exe` 直接驱动 Ubuntu 发行版，不使用容器。它是为了复现 [issue #32](https://github.com/version-fox/vfox-nodejs/issues/32) 而存在的：在 WSL 里，`vfox install` 报告成功，`node` 却不在 `PATH` 上。在共用的流程（带校验和验证的安装、工具链、简写、搜索、兼容版本文件）之外，它还断言 `command -v node` 解析到 `VFOX_HOME` 之下，并且 `vfox env -s bash` 导出了 SDK 的 bin 目录。
+WSL 套件（`tests/e2e/wsl/`）在 Windows 宿主上通过 `wsl.exe` 直接驱动 Ubuntu 发行版，不使用容器。它是为了复现 [issue #32](https://github.com/version-fox/vfox-nodejs/issues/32) 而存在的：在 WSL 里，`vfox install` 报告成功，`node` 却不在 `PATH` 上。在共用的流程（带校验和验证的安装、工具链、简写、搜索、学到的 LTS 版本线、兼容版本文件）之外，它还断言 `command -v node` 解析到 `VFOX_HOME` 之下，并且 `vfox env -s bash` 导出了 SDK 的 bin 目录。
 
 固定的版本默认是 `20.16.0`（issue 里的版本）；`NODE_VERSION` 可以覆盖它。LTS 版本（`LTS_NODE_VERSION`，默认值以 `tests/e2e/common` 为准）和其他套件一样，用于 `lts/<codename>` 检查。各组合共用一个发行版并依次运行，每个组合使用各自独立的 `HOME`/`VFOX_HOME`，彼此隔离。`MIRROR` 的默认值照常适用；CI 固定 `MIRROR=default`，使运行只覆盖 `latest`/`main` 这两个 vfox 渠道。
 

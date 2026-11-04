@@ -122,6 +122,24 @@ func verifySearch(ctx context.Context, t *testing.T, s slot, version, npm string
 	t.Logf("PASS vfox search lists nodejs %s with npm %s", version, addition)
 }
 
+// verifyLearnedLTS proves that the plugin keeps what it learned about LTS lines
+// next to itself. Available and the install of a release read the version index
+// anyway, and ParseLegacyFile, which runs at every prompt and must not fetch the
+// index, reads the file (docs/lts.md). The index names every line of the
+// plugin's built-in table, so each of them must be there with the same major.
+// Same as tests/e2e/linux/verify.go, in the slot's VFOX_HOME.
+func verifyLearnedLTS(ctx context.Context, t *testing.T, s slot) {
+	t.Helper()
+	text := execOK(ctx, t, `cat "${VFOX_HOME:-$HOME/.vfox}/plugin/nodejs/.lts-cache"`, s.env()...)
+	lines, newest := common.LearnedLTS(text)
+	for name, major := range common.LTSCodenames {
+		require.Equalf(t, major, lines[name],
+			"the index must name %s as the LTS line of %d\n--- .lts-cache ---\n%s", name, major, text)
+	}
+	require.GreaterOrEqualf(t, newest, 26, "the newest LTS major\n--- .lts-cache ---\n%s", text)
+	t.Logf("PASS the plugin learned %d LTS lines from the index, the newest is %d", len(lines), newest)
+}
+
 // verifyLegacyFiles proves ParseLegacyFile drives selection from the legacy
 // config files vfox searches for, in this order:
 //

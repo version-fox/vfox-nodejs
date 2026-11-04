@@ -219,6 +219,313 @@ function UTIL.capture(command)
     return output, nil
 end
 
+--- A Unicode code point as UTF-8.
+--- @param code number
+--- @return string
+local function utf8_char(code)
+    if code < 0x80 then
+        return string.char(code)
+    elseif code < 0x800 then
+        return string.char(0xC0 + math.floor(code / 0x40), 0x80 + code % 0x40)
+    elseif code < 0x10000 then
+        return string.char(0xE0 + math.floor(code / 0x1000), 0x80 + math.floor(code / 0x40) % 0x40, 0x80 + code % 0x40)
+    end
+    return string.char(
+        0xF0 + math.floor(code / 0x40000),
+        0x80 + math.floor(code / 0x1000) % 0x40,
+        0x80 + math.floor(code / 0x40) % 0x40,
+        0x80 + code % 0x40
+    )
+end
+
+--- The text of a version file as UTF-8 without a byte order mark. Windows
+--- PowerShell 5.1 writes UTF-16 with a mark for `>`, `>>` and `Out-File`, and
+--- UTF-8 with a mark for `-Encoding UTF8`. Read as they are, the mark and the
+--- zero bytes of UTF-16 become part of the text, and no release matches it.
+--- Text that starts with no mark is returned as it is.
+--- @param content string the bytes of the file
+--- @return string
+function UTIL.decode_text(content)
+    if content:sub(1, 3) == "\239\187\191" then
+        return content:sub(4)
+    end
+    local first, second = content:byte(1, 2)
+    local little_endian
+    if first == 0xFF and second == 0xFE then
+        little_endian = true
+    elseif first == 0xFE and second == 0xFF then
+        little_endian = false
+    else
+        return content
+    end
+    --- The 16-bit unit at a position, nil when only one byte is left.
+    local function unit_at(position)
+        local low, high = content:byte(position, position + 1)
+        if high == nil then
+            return nil
+        end
+        if little_endian then
+            return low + high * 256
+        end
+        return low * 256 + high
+    end
+    local chars = {}
+    local position = 3
+    while position < #content do
+        -- Two bytes are there, so the replacement character is never used.
+        local unit = unit_at(position) or 0xFFFD
+        position = position + 2
+        if unit >= 0xD800 and unit <= 0xDBFF then
+            -- A high surrogate needs a low one after it, else it is an error.
+            local low = unit_at(position)
+            if low ~= nil and low >= 0xDC00 and low <= 0xDFFF then
+                unit = 0x10000 + (unit - 0xD800) * 0x400 + (low - 0xDC00)
+                position = position + 2
+            else
+                unit = 0xFFFD
+            end
+        elseif unit >= 0xDC00 and unit <= 0xDFFF then
+            unit = 0xFFFD
+        end
+        table.insert(chars, utf8_char(unit))
+    end
+    return table.concat(chars)
+end
+
+--- Make the `vfox env` that is running work out the environment from nothing.
+---
+--- vfox keeps the result of `vfox env` for a shell in `env-state.json` in the
+--- session directory (`$__VFOX_CURTMPPATH`, which its shell hook exports), and
+--- uses it again while no `.vfox.toml` it tracks changes and `PATH` stays as it
+--- was. A `.nvmrc` or `.node-version` is not tracked (vfox 1.0.13 and `main`
+--- alike), so after a `cd` into a directory that only has one, vfox would go on
+--- with the result it made for the directory before, and ignore the file. vfox
+--- runs ParseLegacyFile before it loads the state, so removing the file here
+--- makes it calculate again. That is a workaround to drop when vfox tracks these
+--- files. It cannot do anything for a `cd` out of such a directory, where this
+--- hook is not called. See docs/nvmrc.md, "When the file is read".
+function UTIL.forget_env_state()
+    local dir = os.getenv("__VFOX_CURTMPPATH")
+    if dir == nil or dir == "" or type(os.remove) ~= "function" then
+        return
+    end
+    local windows = RUNTIME ~= nil and RUNTIME.osType == "windows"
+    local separator = windows and "\\" or "/"
+    -- Nothing to report when the file is not there or cannot be removed.
+    pcall(os.remove, (dir:gsub("[/\\]+$", "")) .. separator .. "env-state.json")
+end
+
+--- The LTS lines that the plugin knows without having seen the index. Node.js
+--- names each line when it enters long-term support. This is the cold-start
+--- fallback of ParseLegacyFile: what the plugin learns from the index (see
+--- UTIL.remember_lts) goes before it, so the next line needs no entry here.
+UTIL.LtsLines = {
+    argon = 4,
+    boron = 6,
+    carbon = 8,
+    dubnium = 10,
+    erbium = 12,
+    fermium = 14,
+    gallium = 16,
+    hydrogen = 18,
+    iron = 20,
+    jod = 22,
+    krypton = 24,
+    lithium = 26,
+}
+
+--- How long what the plugin learned counts as fresh when an install looks at it.
+UTIL.LtsCacheMaxAge = 24 * 60 * 60
+
+--- The directory of this plugin. vfox puts the plugin's `hooks/?.lua` and
+--- `lib/?.lua` into `package.path`, so it is where `lib/util.lua` is found.
+--- @return string|nil dir nil when package.path does not tell
+--- @return string|nil separator the one that package.path uses
+function UTIL.plugin_dir()
+    for template in string.gmatch(package.path or "", "[^;]+") do
+        local candidate = (template:gsub("%?", "util"))
+        local dir = candidate:match("^(.*)[/\\]lib[/\\]util%.lua$")
+        if dir ~= nil and UTIL.file_exists(candidate) then
+            local separator = "/"
+            if candidate:find("\\", 1, true) ~= nil then
+                separator = "\\"
+            end
+            return dir, separator
+        end
+    end
+    return nil, nil
+end
+
+--- The file in which the plugin keeps what it learned about LTS lines, next to
+--- the `.available.cache` that vfox keeps there for the result of Available.
+--- @return string|nil
+function UTIL.lts_cache_path()
+    local dir, separator = UTIL.plugin_dir()
+    if dir == nil then
+        return nil
+    end
+    return dir .. separator .. ".lts-cache"
+end
+
+--- What the version index says about LTS lines: the major of each named line,
+--- and the newest major that is LTS at all. A release whose `lts` is `true`
+--- (an LTS line without a name) counts for the newest only.
+--- @param index any the decoded index.json: a list of releases
+--- @return table { lines = { [codename] = major }, newest = major|nil }
+function UTIL.lts_summary(index)
+    local lines = {}
+    local newest = nil
+    if type(index) ~= "table" then
+        return { lines = lines }
+    end
+    for _, release in ipairs(index) do
+        if type(release) == "table" and release.version ~= nil then
+            local lts = release.lts
+            local name = nil
+            if type(lts) == "string" and lts:match("^[%w%-]+$") ~= nil then
+                name = lts:lower()
+            end
+            local major = tonumber(tostring(release.version):match("^v?(%d+)%."))
+            if major ~= nil and (name ~= nil or lts == true) then
+                if newest == nil or major > newest then
+                    newest = major
+                end
+                if name ~= nil and (lines[name] == nil or major > lines[name]) then
+                    lines[name] = major
+                end
+            end
+        end
+    end
+    return { lines = lines, newest = newest }
+end
+
+--- Write what the plugin learned. The file is plain text, one fact per line:
+--- `updated <time>`, `newest <major>` and `line <codename> <major>`.
+--- Best effort: a directory that cannot be written is no error. The new file
+--- is written beside the old one and renamed over it, so a reader never sees half.
+--- @param summary table from UTIL.lts_summary
+--- @return boolean written
+function UTIL.write_lts_cache(summary)
+    local path = UTIL.lts_cache_path()
+    if path == nil or (summary.newest == nil and next(summary.lines) == nil) then
+        return false
+    end
+    local names = {}
+    for name in pairs(summary.lines) do
+        table.insert(names, name)
+    end
+    table.sort(names)
+    local text =
+        { "# What vfox-nodejs learned from index.json about LTS lines. Safe to delete.", "updated " .. os.time() }
+    if summary.newest ~= nil then
+        table.insert(text, "newest " .. summary.newest)
+    end
+    for _, name in ipairs(names) do
+        table.insert(text, "line " .. name .. " " .. summary.lines[name])
+    end
+    local temporary = path .. ".tmp"
+    local file = io.open(temporary, "w")
+    if file == nil then
+        return false
+    end
+    local wrote = pcall(file.write, file, table.concat(text, "\n") .. "\n")
+    file:close()
+    if not wrote or not os.rename(temporary, path) then
+        pcall(os.remove, temporary)
+        return false
+    end
+    return true
+end
+
+--- Learn from an index that the plugin has fetched anyway. Never fails.
+--- @param index any the decoded index.json
+function UTIL.remember_lts(index)
+    pcall(function()
+        UTIL.write_lts_cache(UTIL.lts_summary(index))
+    end)
+end
+
+--- What the plugin learned, nil when there is no file to read.
+--- @return table|nil { lines = { [codename] = major }, newest = major|nil, updated = time }
+function UTIL.read_lts_cache()
+    local path = UTIL.lts_cache_path()
+    if path == nil then
+        return nil
+    end
+    local file = io.open(path, "r")
+    if file == nil then
+        return nil
+    end
+    local text = file:read("*a") or ""
+    file:close()
+    local learned = { lines = {}, updated = 0 }
+    -- A file this size is not ours. Read nothing of it.
+    if #text > 65536 then
+        return learned
+    end
+    for line in string.gmatch(text, "[^\r\n]+") do
+        local updated = line:match("^updated (%d+)$")
+        local newest = line:match("^newest (%d+)$")
+        local name, major = line:match("^line ([%w%-]+) (%d+)$")
+        if updated ~= nil then
+            learned.updated = tonumber(updated)
+        elseif newest ~= nil then
+            learned.newest = tonumber(newest)
+        elseif name ~= nil then
+            learned.lines[name] = tonumber(major)
+        end
+    end
+    return learned
+end
+
+--- The LTS lines the plugin knows: what it learned, over the built-in table.
+--- @return table lines { [codename] = major }
+--- @return number newest the highest major of an LTS line, 0 when none is known
+function UTIL.known_lts_lines()
+    local lines = {}
+    local newest = 0
+    for name, major in pairs(UTIL.LtsLines) do
+        lines[name] = major
+        newest = math.max(newest, major)
+    end
+    local learned = UTIL.read_lts_cache()
+    if learned ~= nil then
+        for name, major in pairs(learned.lines) do
+            lines[name] = major
+            newest = math.max(newest, major)
+        end
+        newest = math.max(newest, learned.newest or 0)
+    end
+    return lines, newest
+end
+
+--- Learn about LTS lines at an install, which is when a new line is about to
+--- matter, unless that happened less than a day ago or the file could not be
+--- written anyway. An exact release such as `26.13.0` is installed without
+--- Available, so nothing else would refresh the file then. Available fetches the
+--- index and remembers it; a failure is ignored.
+--- @param plugin table PLUGIN
+function UTIL.refresh_lts_cache(plugin)
+    local learned = UTIL.read_lts_cache()
+    if learned ~= nil and learned.updated > 0 then
+        local age = os.time() - learned.updated
+        if age >= 0 and age < UTIL.LtsCacheMaxAge then
+            return
+        end
+    end
+    local path = UTIL.lts_cache_path()
+    if path == nil then
+        return
+    end
+    local probe = io.open(path .. ".tmp", "w")
+    if probe == nil then
+        return
+    end
+    probe:close()
+    pcall(os.remove, path .. ".tmp")
+    pcall(plugin.Available, plugin, {})
+end
+
 --- Whether a PATH entry belongs to vfox: like vfox's own check, one of its
 --- segments is `.vfox` (or the legacy `.version-fox`).
 local function is_vfox_path(dir)

@@ -42,7 +42,7 @@ const (
 	DefaultNodeVersion = "26.11.1"
 	// DefaultLTSVersion is the LTS release backing the `lts/<codename>`
 	// legacy-file probe. Its major must stay inside the plugin's codename
-	// table (hooks/parse_legacy_file.lua, currently up to krypton/24); see
+	// table (hooks/parse_legacy_file.lua, currently up to lithium/26); see
 	// docs/lts.md.
 	DefaultLTSVersion = "24.21.0"
 	// BogusMirror is the unreachable mirror domain used by the negative probes.
@@ -211,7 +211,7 @@ func ResolveLTSVersion(t *testing.T) string {
 var LTSCodenames = map[string]int{
 	"argon": 4, "boron": 6, "carbon": 8, "dubnium": 10, "erbium": 12,
 	"fermium": 14, "gallium": 16, "hydrogen": 18, "iron": 20, "jod": 22,
-	"krypton": 24,
+	"krypton": 24, "lithium": 26,
 }
 
 // LTSCodename returns the codename for a version's major, if the plugin's
@@ -227,6 +227,28 @@ func LTSCodename(version string) (string, bool) {
 		}
 	}
 	return "", false
+}
+
+// LearnedLTS reads the file in which the plugin keeps what it learned from the
+// version index about LTS lines (.lts-cache next to the plugin, see
+// docs/lts.md): `newest <major>` and `line <codename> <major>`, one per line.
+// Lines that are neither are skipped, newest is 0 when the file has none.
+func LearnedLTS(text string) (lines map[string]int, newest int) {
+	lines = map[string]int{}
+	for _, line := range strings.Split(strings.ReplaceAll(text, "\r", ""), "\n") {
+		fields := strings.Fields(line)
+		switch {
+		case len(fields) == 2 && fields[0] == "newest":
+			if major, err := strconv.Atoi(fields[1]); err == nil {
+				newest = major
+			}
+		case len(fields) == 3 && fields[0] == "line":
+			if major, err := strconv.Atoi(fields[2]); err == nil {
+				lines[fields[1]] = major
+			}
+		}
+	}
+	return lines, newest
 }
 
 // ansiEscape matches the SGR colour sequences pterm emits when it believes

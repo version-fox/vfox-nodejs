@@ -17,11 +17,10 @@ local util = require("util")
 --- @class PreInstallContext
 --- @field version string User-input version
 
---- Returns some pre-installed information, such as version number, download address, local files, etc.
---- If checksum is provided, vfox will automatically check it for you.
---- @param ctx PreInstallContext
---- @return table Version information
-function PLUGIN:PreInstall(ctx)
+---@param self table PLUGIN
+---@param ctx PreInstallContext
+---@return table
+local function pre_install(self, ctx)
     local version = ctx.version
 
     if version == "latest" then
@@ -148,4 +147,15 @@ function PLUGIN:PreInstall(ctx)
         end
     end
     error("Node.js package " .. filename .. " is not listed in " .. baseUrl .. "SHASUMS256.txt")
+end
+
+--- Returns some pre-installed information, such as version number, download address, local files, etc.
+--- If checksum is provided, vfox will automatically check it for you.
+--- @param ctx PreInstallContext
+--- @return table Version information
+function PLUGIN:PreInstall(ctx)
+    local result = pre_install(self, ctx)
+    -- The install goes ahead, which is when a new LTS line is about to matter.
+    util.refresh_lts_cache(self)
+    return result
 end

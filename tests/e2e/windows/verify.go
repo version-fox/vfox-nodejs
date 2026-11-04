@@ -127,12 +127,36 @@ func verifySearch(ctx context.Context, t *testing.T, ctr tc.Container, box slotB
 	t.Logf("PASS vfox search lists nodejs %s with npm %s", version, addition)
 }
 
+// verifyLearnedLTS proves that the plugin keeps what it learned about LTS lines
+// next to itself. Available and the install of a release read the version index
+// anyway, and ParseLegacyFile, which runs at every prompt and must not fetch the
+// index, reads the file (docs/lts.md). The index names every line of the
+// plugin's built-in table, so each of them must be there with the same major.
+// The vfox home of these containers is spacedVfoxHome, so the file is also where
+// the plugin shows that it finds its directory on Windows, with a space in the
+// path, and writes to it.
+func verifyLearnedLTS(ctx context.Context, t *testing.T, ctr tc.Container, box slotBox) {
+	t.Helper()
+	text := execOK(ctx, t, ctr,
+		"Get-Content -Raw -LiteralPath "+pwshQuote(spacedVfoxHome+`\plugin\nodejs\.lts-cache`), box.vars...)
+	lines, newest := common.LearnedLTS(text)
+	for name, major := range common.LTSCodenames {
+		require.Equalf(t, major, lines[name],
+			"the index must name %s as the LTS line of %d\n--- .lts-cache ---\n%s", name, major, text)
+	}
+	require.GreaterOrEqualf(t, newest, 26, "the newest LTS major\n--- .lts-cache ---\n%s", text)
+	t.Logf("PASS the plugin learned %d LTS lines from the index, the newest is %d", len(lines), newest)
+}
+
 // verifyLegacyFiles proves ParseLegacyFile drives selection from the legacy
 // config files vfox searches for, in this order:
 //
 //  1. .nvmrc and .node-version holding the exact pinned version (the default
 //     `specified` strategy), with the global set to a different release;
-//  2. .nvmrc holding an LTS codename under the `latest_installed` strategy,
+//  2. .nvmrc holding the pinned version in UTF-16 and in UTF-8 with a byte
+//     order mark, the bytes that Windows PowerShell 5.1 writes for `>` and
+//     for `-Encoding UTF8` (docs/nvmrc.md, "What the file may hold");
+//  3. .nvmrc holding an LTS codename under the `latest_installed` strategy,
 //     which resolves through the plugin's codename table to the LTS release
 //     (see docs/lts.md).
 //
@@ -144,15 +168,16 @@ func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, box 
 	// Each probe activates a new PowerShell process because activation pins
 	// __VFOX_PID, which scopes the `vfox env` state cache. Windows may quickly
 	// reuse a just-exited PID, though, and `.nvmrc` changes are not among the
-	// cache's tracked config files. Remove the cache file explicitly so a prior
-	// legacy probe cannot supply its selected version to the next probe. The
-	// output includes the resolved node path and version to make failures clear.
+	// cache's tracked config files. The plugin removes the cache file itself
+	// whenever vfox asks it to read a legacy file (util.forget_env_state), so a
+	// prior legacy probe cannot supply its selected version to the next probe:
+	// do not remove it here, or this test no longer covers that. The output
+	// includes the resolved node path and version to make failures clear.
 	run := func(dir string) string {
 		t.Helper()
 		script := fmt.Sprintf(
 			"Invoke-Expression -Command (vfox activate pwsh | Out-String); "+
 				"Set-Location -LiteralPath %s; "+
-				"if ($env:__VFOX_CURTMPPATH) { Remove-Item -LiteralPath (Join-Path $env:__VFOX_CURTMPPATH 'env-state.json') -Force -ErrorAction SilentlyContinue }; "+
 				"$__vfoxExport = vfox env -s pwsh | Out-String; "+
 				"if ($__vfoxExport.Trim()) { Invoke-Expression -Command $__vfoxExport }; "+
 				"(Get-Command node -CommandType Application | Select-Object -First 1).Source; "+
@@ -178,6 +203,20 @@ func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, box 
 	write(`C:\e2e-legacy-node-version`, ".node-version", pinned)
 	assertProbe(run(`C:\e2e-legacy-node-version`), pinned, ".node-version "+pinned)
 
+	// PowerShell 7 writes the same bytes for -Encoding Unicode (UTF-16 with a
+	// byte order mark) and utf8BOM as Windows PowerShell 5.1 does for `>` and
+	// -Encoding UTF8.
+	for _, enc := range []struct{ dir, encoding, what string }{
+		{`C:\e2e-legacy-utf16`, "Unicode", "in UTF-16"},
+		{`C:\e2e-legacy-utf8-bom`, "utf8BOM", "in UTF-8 with a byte order mark"},
+	} {
+		execOK(ctx, t, ctr, fmt.Sprintf(
+			"New-Item -ItemType Directory -Force -Path %s | Out-Null; "+
+				"Set-Content -NoNewline -Path %s -Value %s -Encoding %s",
+			pwshQuote(enc.dir), pwshQuote(enc.dir+`\.nvmrc`), pwshQuote(pinned), enc.encoding), box.vars...)
+		assertProbe(run(enc.dir), pinned, ".nvmrc "+enc.what+" "+pinned)
+	}
+
 	codename, known := common.LTSCodename(lts)
 	if !known {
 		t.Logf("SKIP LTS codename probe: %s is not in the plugin's codename table", lts)
@@ -189,5 +228,5 @@ func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, box 
 	}()
 	write(`C:\e2e-legacy-lts`, ".nvmrc", "lts/"+codename)
 	assertProbe(run(`C:\e2e-legacy-lts`), lts, "lts/"+codename+" under latest_installed")
-	t.Logf("PASS legacy files select %s (.nvmrc, .node-version) and %s (lts/%s)", pinned, lts, codename)
+	t.Logf("PASS legacy files select %s (.nvmrc, .node-version, UTF-16, UTF-8 with a mark) and %s (lts/%s)", pinned, lts, codename)
 }

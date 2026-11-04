@@ -18,11 +18,12 @@ local http = require("http")
 local json = require("json")
 local util = require("util")
 
---- Discover LTS codenames from the version index instead of the hardcoded
---- table below. Only used under the `latest_available` strategy, which is
---- network-bound anyway; `specified` and `latest_installed` must keep
---- working offline. Returns nil when the index cannot be fetched, and the
---- caller falls back to the hardcoded table.
+--- Discover LTS codenames from the version index itself, for the newest
+--- release of a line. Only used under the `latest_available` strategy, which
+--- is network-bound anyway; `specified` and `latest_installed` run at every
+--- prompt and must keep working offline, with what the plugin has learned from
+--- the index (UTIL.remember_lts). Returns nil when the index cannot be fetched,
+--- and the caller falls back to that.
 --- @return table|nil { by_codename: map, newest: string|nil }
 local function discover_lts()
     local resp, err = http.get({
@@ -60,7 +61,11 @@ function PLUGIN:ParseLegacyFile(ctx)
     end
     local content = file:read("*a") or ""
     file:close()
-    content = content:gsub("%s+", "")
+    -- vfox does not notice this file when it decides whether the result it kept
+    -- for the shell is stale, so make it work out the environment again.
+    util.forget_env_state()
+    -- Windows PowerShell 5.1 writes UTF-16, or UTF-8 with a byte order mark.
+    content = util.decode_text(content):gsub("%s+", "")
     if content == "" then
         return {}
     end
@@ -125,40 +130,21 @@ function resolve_version(query, strategy)
         end
     end
 
-    -- Offline fallback below: the hardcoded table keeps `specified` and
-    -- `latest_installed` working without network. It also covers
-    -- `latest_available` when discovery finds no match.
-    -- https://nodejs.org/zh-cn/about/previous-releases
-    local nodejs_codenames = {
-        argon = 4,
-        boron = 6,
-        carbon = 8,
-        dubnium = 10,
-        erbium = 12,
-        fermium = 14,
-        gallium = 16,
-        hydrogen = 18,
-        iron = 20,
-        jod = 22,
-        krypton = 24,
-    }
-
-    for codename, version_number in pairs(nodejs_codenames) do
-        if query == "lts/" .. codename then
-            query = tostring(version_number)
-            break
-        end
-    end
-
-    if query == "lts" or query == "lts/*" then
-        -- Find the latest LTS version (highest version number)
-        local latest_version = 0
-        for codename, version_number in pairs(nodejs_codenames) do
-            if version_number > latest_version then
-                latest_version = version_number
+    -- Offline, without fetching anything: `specified` and `latest_installed` run
+    -- at every prompt in a directory with this file. The LTS lines are what the
+    -- plugin learned from the index (UTIL.remember_lts) and, before it learned
+    -- any, the built-in table. This also covers `latest_available` when
+    -- discovery found no match. See docs/lts.md.
+    if lts_name ~= nil or is_bare_lts then
+        local lines, newest = util.known_lts_lines()
+        if is_bare_lts then
+            -- The newest LTS line.
+            if newest > 0 then
+                query = tostring(newest)
             end
+        elseif lines[lts_name] ~= nil then
+            query = tostring(lines[lts_name])
         end
-        query = tostring(latest_version)
     end
 
     return query

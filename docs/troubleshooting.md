@@ -211,8 +211,10 @@ after `get checksum failed:`:
   release, see [npm.md](npm.md#global-packages-belong-to-a-release).
 - **`corepack` is missing.** Node.js 25 and later does not ship it, see
   [npm.md](npm.md#yarn-pnpm-and-corepack).
-- **`.nvmrc` selects nothing.** Check the strategy and what the file holds, see
-  [nvmrc.md](nvmrc.md#not-finding-it).
+- **`.nvmrc` selects nothing.** Check the strategy and what the file holds, and
+  that the shell did not come from a directory with a version file into one with
+  none (it keeps the release it had). Release 0.5.3 also does not read the file
+  after a `cd` from a running shell. See [nvmrc.md](nvmrc.md#not-finding-it).
 - **`git status` lists `.vfox/`.** vfox links the release into the project as
   `.vfox/sdks/nodejs`. Ignore `.vfox/` in `.gitignore`, and keep `.vfox.toml`.
 - **The installed name has no `v`.** Releases are named `24.21.0`, and a `v` in

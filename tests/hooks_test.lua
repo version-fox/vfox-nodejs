@@ -13,6 +13,40 @@
 -- limitations under the License.
 
 package.path = "./lib/?.lua;" .. package.path
+-- ParseLegacyFile removes $__VFOX_CURTMPPATH/env-state.json (util.forget_env_state),
+-- and the shell of a developer who runs these tests has that variable set. Hide it,
+-- so that the tests never touch the state of that shell; the tests that look at
+-- the removal set it themselves.
+local real_getenv = os.getenv
+os.getenv = function(key)
+    if key == "__VFOX_CURTMPPATH" then
+        return nil
+    end
+    return real_getenv(key)
+end
+local util = require("util")
+-- The plugin keeps what it learned about LTS lines in a file next to itself, which
+-- for these tests would be this checkout. They use a file of their own, and every
+-- test starts with a fresh one that knows no line, so that an install does not
+-- look at the index unless the test says the file is old.
+local lts_cache_file = os.tmpname()
+os.remove(lts_cache_file)
+local real_lts_cache_path = util.lts_cache_path
+util.lts_cache_path = function()
+    return lts_cache_file
+end
+--- Write the file of what the plugin learned: `learned` is { [codename] = major }.
+local function set_lts_cache(updated, newest, learned)
+    local file = assert(io.open(lts_cache_file, "w"))
+    file:write("updated " .. updated .. "\n")
+    if newest ~= nil then
+        file:write("newest " .. newest .. "\n")
+    end
+    for name, major in pairs(learned or {}) do
+        file:write("line " .. name .. " " .. major .. "\n")
+    end
+    file:close()
+end
 local state = { failed = 0, passed = 0 }
 package.preload.http = function()
     return {
@@ -38,6 +72,8 @@ dofile("hooks/pre_install.lua")
 local function test(name, fn)
     state.response, state.request_error, state.decoded, state.requests, state.responder = nil, nil, nil, 0, nil
     available_result = nil
+    os.remove(lts_cache_file .. ".tmp")
+    set_lts_cache(os.time(), nil, {})
     local ok, err = pcall(fn)
     if ok then
         state.passed = state.passed + 1
@@ -128,7 +164,6 @@ end)
 -- musl libc (Alpine, OpenWrt/ImmortalWrt): the plugin must select the
 -- *-musl tarball instead of the glibc one.
 -- See https://github.com/version-fox/vfox-nodejs/issues/29
-local util = require("util")
 test("is_musl honors RUNTIME.envType", function()
     RUNTIME = { osType = "linux", archType = "amd64", envType = "musl" }
     assert(util.is_musl() == true)
@@ -323,7 +358,7 @@ end)
 dofile("hooks/parse_legacy_file.lua")
 local function write_legacy(content)
     local path = os.tmpname()
-    local file = io.open(path, "w")
+    local file = io.open(path, "wb")
     if file == nil then
         error("cannot write " .. path)
     end
@@ -366,6 +401,17 @@ test("legacy lts krypton maps to its major", function()
     })
     os.remove(path)
     assert(result.version == "24", tostring(result.version))
+end)
+-- Node.js 26 entered long-term support on 2026-10-28 as Lithium.
+test("legacy lts lithium maps to its major", function()
+    local path = write_legacy("lts/lithium")
+    local result = PLUGIN:ParseLegacyFile({
+        filepath = path,
+        filename = ".node-version",
+        strategy = "specified",
+    })
+    os.remove(path)
+    assert(result.version == "26", tostring(result.version))
 end)
 test("legacy lts unknown codename resolves dynamically under latest_available", function()
     state.response = { status_code = 200, body = "index" }
@@ -510,6 +556,361 @@ test("legacy latest_available takes the newest matching release", function()
     assert(legacy_version("22.3", "latest_available") == "22.3.0")
     assert(legacy_version("22.x", "latest_available") == "22.23.3")
     assert(legacy_version("18", "latest_available") == "18")
+end)
+-- `lts` and `lts/*` are the highest line of the codename table, offline.
+test("legacy bare lts is the newest line of the table", function()
+    for _, text in ipairs({ "lts", "lts/*", "LTS/*" }) do
+        assert(legacy_version(text, "specified") == "26", text)
+        assert(legacy_version(text, "latest_installed", { "26.12.0", "24.21.0" }) == "26.12.0", text)
+    end
+    assert(state.requests == 0, "the table answers without the index")
+end)
+-- Windows PowerShell 5.1 writes UTF-16 with a byte order mark for `>`, `>>` and
+-- `Out-File`, and UTF-8 with one for `-Encoding UTF8`.
+local function utf16(text, little_endian)
+    local bytes = { little_endian and "\255\254" or "\254\255" }
+    for i = 1, #text do
+        local char = text:sub(i, i)
+        table.insert(bytes, little_endian and (char .. "\0") or ("\0" .. char))
+    end
+    return table.concat(bytes)
+end
+test("legacy files in UTF-16 or with a byte order mark are read", function()
+    local installed = { "22.23.3" }
+    for _, text in ipairs({ "22.23.3\r\n", "v22.23.3", "22.23.3" }) do
+        local encoded = {
+            ["UTF-8 with a mark"] = "\239\187\191" .. text,
+            ["UTF-16 little endian"] = utf16(text, true),
+            ["UTF-16 big endian"] = utf16(text, false),
+        }
+        for name, content in pairs(encoded) do
+            assert(legacy_version(content, "specified") == "22.23.3", name .. ": " .. text)
+        end
+    end
+    assert(legacy_version(utf16("lts/jod\r\n", true), "latest_installed", installed) == "22.23.3")
+    assert(legacy_version(utf16("22\r\n", false), "latest_installed", installed) == "22.23.3")
+    assert(legacy_version("\239\187\191", "specified") == nil, "a mark alone is an empty file")
+end)
+test("decode_text returns text without a mark as it is", function()
+    for _, text in ipairs({ "", "22.23.3\n", "lts/*", "\255", "\254", "\239\187", "x\255\254y" }) do
+        assert(util.decode_text(text) == text, text)
+    end
+end)
+test("decode_text reads UTF-16 as UTF-8", function()
+    assert(util.decode_text(utf16("22.23.3\r\n", true)) == "22.23.3\r\n")
+    assert(util.decode_text(utf16("22.23.3\r\n", false)) == "22.23.3\r\n")
+    -- U+00E9, U+4E2D and U+1F600 (a surrogate pair), little endian.
+    assert(util.decode_text("\255\254\233\0\45\78\61\216\0\222") == "\195\169\228\184\173\240\159\152\128")
+    -- Big endian.
+    assert(util.decode_text("\254\255\0\233\78\45\216\61\222\0") == "\195\169\228\184\173\240\159\152\128")
+end)
+test("decode_text replaces what UTF-16 cannot say and ignores a half unit", function()
+    local replacement = "\239\191\189"
+    -- A lone high surrogate, a lone low surrogate, and a high one at the end.
+    assert(util.decode_text("\255\254\61\216a\0") == replacement .. "a")
+    assert(util.decode_text("\255\254\0\222a\0") == replacement .. "a")
+    assert(util.decode_text("\255\254a\0\61\216") == "a" .. replacement)
+    -- One byte too many.
+    assert(util.decode_text("\255\2542\0" .. "9") == "2")
+    assert(util.decode_text("\255\254") == "")
+    assert(util.decode_text("\255\254" .. "9") == "")
+end)
+-- vfox keeps the result of `vfox env` in env-state.json in the session directory
+-- and does not track version files, so ParseLegacyFile removes the file.
+local function removed_state_files(env, osType, fn)
+    local saved_getenv, saved_remove, saved_runtime = os.getenv, os.remove, RUNTIME
+    local removed = {}
+    os.getenv = function(key)
+        if key == "__VFOX_CURTMPPATH" then
+            return env
+        end
+        return saved_getenv(key)
+    end
+    os.remove = function(path)
+        if path:find("env-state.json", 1, true) then
+            table.insert(removed, path)
+            return nil, "no such file"
+        end
+        return saved_remove(path)
+    end
+    RUNTIME = { osType = osType, archType = "amd64" }
+    local ok, err = pcall(fn)
+    os.getenv, os.remove, RUNTIME = saved_getenv, saved_remove, saved_runtime
+    assert(ok, err)
+    return removed
+end
+test("legacy files make vfox work out the environment again", function()
+    local removed = removed_state_files("/home/me/.vfox/tmp/20261103-4242", "linux", function()
+        assert(legacy_version("22.23.3", "specified") == "22.23.3")
+    end)
+    assert(#removed == 1 and removed[1] == "/home/me/.vfox/tmp/20261103-4242/env-state.json", table.concat(removed))
+    removed = removed_state_files("C:\\Users\\me\\.vfox\\tmp\\20261103-4242\\", "windows", function()
+        assert(legacy_version("22.23.3", "specified") == "22.23.3")
+    end)
+    assert(
+        #removed == 1 and removed[1] == "C:\\Users\\me\\.vfox\\tmp\\20261103-4242\\env-state.json",
+        table.concat(removed)
+    )
+end)
+test("an empty version file makes vfox work out the environment again too", function()
+    local removed = removed_state_files("/home/me/.vfox/tmp/20261103-4242", "linux", function()
+        assert(legacy_version("\n", "specified") == nil)
+    end)
+    assert(#removed == 1, "an emptied file must not leave the old result in place")
+end)
+test("no session directory, nothing to remove", function()
+    for _, env in ipairs({ "", false }) do
+        local removed = removed_state_files(env or nil, "linux", function()
+            assert(legacy_version("22.23.3", "specified") == "22.23.3")
+        end)
+        assert(#removed == 0, "removed " .. table.concat(removed))
+    end
+end)
+test("a state file that cannot be removed is no error", function()
+    local saved_getenv, saved_remove = os.getenv, os.remove
+    os.getenv = function(key)
+        if key == "__VFOX_CURTMPPATH" then
+            return "/home/me/.vfox/tmp/20261103-4242"
+        end
+        return saved_getenv(key)
+    end
+    os.remove = function(path)
+        if path:find("env-state.json", 1, true) then
+            error("permission denied")
+        end
+        return saved_remove(path)
+    end
+    local ok, err = pcall(legacy_version, "22.23.3", "specified")
+    os.getenv, os.remove = saved_getenv, saved_remove
+    assert(ok, err)
+    assert(err == "22.23.3", tostring(err))
+end)
+-- LTS lines. The index names them; the plugin keeps what it learned in a file next
+-- to itself (UTIL.remember_lts), and ParseLegacyFile reads that file, because it
+-- runs at every prompt and must not fetch the index. The built-in table is the
+-- fallback for a plugin that has not learned any yet.
+test("lts_summary reads the named lines and the newest LTS line of an index", function()
+    local summary = util.lts_summary({
+        { version = "v27.0.0-alpha.0.0.0", lts = false },
+        { version = "v28.1.0", lts = "Mercury" },
+        { version = "v28.0.0", lts = "Mercury" },
+        { version = "v27.2.0", lts = true },
+        { version = "v26.13.0", lts = "Lithium" },
+        { version = "v26.12.1", lts = false },
+        { version = "v24.22.2", lts = "Krypton" },
+        { version = "22.1.0", lts = "Jod" },
+        { version = "v20.1.0", lts = "not a name" },
+        { lts = "Nameless" },
+        "not a release",
+    })
+    assert(summary.newest == 28, tostring(summary.newest))
+    assert(summary.lines.mercury == 28 and summary.lines.lithium == 26 and summary.lines.krypton == 24)
+    assert(summary.lines.jod == 22, "a version without the leading v counts")
+    local count = 0
+    for _ in pairs(summary.lines) do
+        count = count + 1
+    end
+    assert(count == 4, "only named lines: " .. count)
+    local nothing = util.lts_summary("not an index")
+    assert(nothing.newest == nil and next(nothing.lines) == nil)
+    -- A line without a name counts for the newest only.
+    local unnamed = util.lts_summary({ { version = "v27.2.0", lts = true } })
+    assert(unnamed.newest == 27 and next(unnamed.lines) == nil)
+end)
+test("the plugin directory is where lib/util.lua is found in package.path", function()
+    -- The tests run from the checkout, with ./lib/?.lua first.
+    local dir, separator = util.plugin_dir()
+    assert(dir == "." and separator == "/", tostring(dir))
+    local saved = package.path
+    local ok, err = pcall(function()
+        package.path = "/home/me/.vfox/plugin/nodejs/hooks/?.lua;/home/me/.vfox/plugin/nodejs/lib/?.lua"
+        with_util({
+            file_exists = function(path)
+                return path == "/home/me/.vfox/plugin/nodejs/lib/util.lua"
+            end,
+        }, function()
+            local found, sep = util.plugin_dir()
+            assert(found == "/home/me/.vfox/plugin/nodejs" and sep == "/", tostring(found))
+        end)
+        package.path =
+            "C:\\Users\\me\\.vfox\\plugin\\nodejs\\hooks\\?.lua;C:\\Users\\me\\.vfox\\plugin\\nodejs\\lib\\?.lua"
+        with_util({
+            file_exists = function()
+                return true
+            end,
+            plugin_dir = util.plugin_dir,
+            lts_cache_path = real_lts_cache_path,
+        }, function()
+            local found, sep = util.plugin_dir()
+            assert(found == "C:\\Users\\me\\.vfox\\plugin\\nodejs" and sep == "\\", tostring(found))
+            assert(util.lts_cache_path() == "C:\\Users\\me\\.vfox\\plugin\\nodejs\\.lts-cache", util.lts_cache_path())
+        end)
+        -- Nothing in package.path tells: no directory, so no file.
+        package.path = "./somewhere/?.lua"
+        with_util({ lts_cache_path = real_lts_cache_path }, function()
+            assert(util.plugin_dir() == nil and util.lts_cache_path() == nil)
+        end)
+    end)
+    package.path = saved
+    assert(ok, err)
+end)
+test("what the plugin learned is written whole and read back", function()
+    os.remove(lts_cache_file)
+    assert(util.read_lts_cache() == nil, "no file, nothing learned")
+    local index = { { version = "v28.0.0", lts = "Mercury" }, { version = "v26.13.0", lts = "Lithium" } }
+    assert(util.write_lts_cache(util.lts_summary(index)) == true)
+    local learned = assert(util.read_lts_cache())
+    assert(learned.newest == 28 and learned.lines.mercury == 28 and learned.lines.lithium == 26)
+    assert(math.abs(os.time() - learned.updated) < 10, "the time is kept")
+    assert(io.open(lts_cache_file .. ".tmp", "r") == nil, "the temporary file stays behind")
+    -- An index without LTS lines is not written over what is there.
+    assert(util.write_lts_cache({ lines = {} }) == false)
+    assert(util.read_lts_cache().lines.mercury == 28)
+end)
+test("a damaged file, a directory that cannot be written and an unknown directory do no harm", function()
+    local file = assert(io.open(lts_cache_file, "w"))
+    file:write("garbage\nline x\nline mercury twenty-eight\nnewest many\n" .. string.rep("z", 70000))
+    file:close()
+    local learned = assert(util.read_lts_cache())
+    assert(next(learned.lines) == nil and learned.newest == nil and learned.updated == 0, "a file that big is not read")
+    file = assert(io.open(lts_cache_file, "w"))
+    file:write(
+        "line mercury 28\nline bad name 3\nline x\nline n!trogen 7\nline neon 1.5\nnewest 28\nupdated 7\nnewest many\n"
+    )
+    file:close()
+    learned = assert(util.read_lts_cache())
+    assert(learned.lines.mercury == 28 and learned.newest == 28 and learned.updated == 7)
+    assert(
+        learned.lines.bad == nil and learned.lines["n!trogen"] == nil and learned.lines.neon == nil,
+        "only a name and a whole major"
+    )
+    with_util({
+        lts_cache_path = function()
+            return "/no-such-directory-for-vfox-nodejs/.lts-cache"
+        end,
+    }, function()
+        assert(util.write_lts_cache({ lines = { mercury = 28 }, newest = 28 }) == false)
+        assert(util.read_lts_cache() == nil)
+        util.remember_lts({ { version = "v28.0.0", lts = "Mercury" } })
+    end)
+    with_util({
+        lts_cache_path = function()
+            return nil
+        end,
+    }, function()
+        assert(util.write_lts_cache({ lines = { mercury = 28 }, newest = 28 }) == false)
+        assert(util.read_lts_cache() == nil)
+        local lines, newest = util.known_lts_lines()
+        assert(lines.lithium == 26 and newest == 26, "the built-in table answers")
+    end)
+end)
+test("Available remembers the LTS lines of the index", function()
+    os.remove(lts_cache_file)
+    state.response = { status_code = 200, body = "index" }
+    state.decoded = {
+        { version = "v28.0.0", npm = "12.0.0", lts = "Mercury" },
+        { version = "v27.0.0-alpha.0.0.0", npm = "11.20.0", lts = false },
+        { version = "v26.13.0", npm = "11.20.0", lts = "Lithium" },
+    }
+    assert(PLUGIN:Available({})[1].version == "28.0.0")
+    local learned = assert(util.read_lts_cache())
+    assert(learned.lines.mercury == 28 and learned.lines.lithium == 26 and learned.newest == 28)
+    -- Where nothing can be written, Available still answers.
+    available_result = nil
+    with_util({
+        lts_cache_path = function()
+            return "/no-such-directory-for-vfox-nodejs/.lts-cache"
+        end,
+    }, function()
+        assert(PLUGIN:Available({})[1].version == "28.0.0")
+    end)
+end)
+test("a line that the plugin learned works without the index, before the built-in table", function()
+    local installed = { "28.1.0", "26.11.1" }
+    set_lts_cache(os.time(), 28, { mercury = 28 })
+    assert(legacy_version("lts/mercury", "latest_installed", installed) == "28.1.0")
+    assert(legacy_version("lts-Mercury", "latest_installed", installed) == "28.1.0")
+    assert(legacy_version("lts/*", "latest_installed", installed) == "28.1.0")
+    assert(legacy_version("lts", "latest_installed", installed) == "28.1.0")
+    assert(legacy_version("lts/lithium", "latest_installed", installed) == "26.11.1", "the table still answers")
+    assert(legacy_version("lts/mercury", "specified") == "28")
+    assert(
+        legacy_version("lts/nitrogen", "latest_installed", installed) == "lts/nitrogen",
+        "an unknown line is left alone"
+    )
+    assert(state.requests == 0, "what was learned answers without the index")
+    -- Before the plugin has learned it, the line is unknown, and lts/* is the newest in the table.
+    os.remove(lts_cache_file)
+    assert(legacy_version("lts/mercury", "latest_installed", installed) == "lts/mercury")
+    assert(legacy_version("lts/*", "latest_installed", installed) == "26.11.1")
+    -- What was learned wins over the table for a line in both. The newest of the two is the newest line.
+    set_lts_cache(os.time(), 24, { iron = 21 })
+    assert(legacy_version("lts/iron", "latest_installed", { "21.1.0", "20.9.0" }) == "21.1.0")
+    assert(legacy_version("lts/*", "latest_installed", installed) == "26.11.1", "an older cache does not lower it")
+    assert(state.requests == 0)
+end)
+local function lts_install_fixture()
+    RUNTIME = { osType = "linux", archType = "amd64", envType = "gnu" }
+    local filename = "node-v20.16.0-linux-x64.tar.gz"
+    local hash = string.rep("a", 64)
+    local fixture = { index_requests = 0, hash = hash, index_status = 200 }
+    state.decoded = {
+        { version = "v28.0.0", npm = "12.0.0", lts = "Mercury" },
+        { version = "v20.16.0", npm = "10.8.1", lts = "Iron" },
+    }
+    state.responder = function(args)
+        if args.url:find("SHASUMS256.txt", 1, true) then
+            return { status_code = fixture.sums_status or 200, body = hash .. "  " .. filename .. "\n" }
+        end
+        fixture.index_requests = fixture.index_requests + 1
+        return { status_code = fixture.index_status, body = "index" }
+    end
+    return fixture
+end
+test("an install learns the LTS lines when the file is missing or a day old, and not otherwise", function()
+    local fixture = lts_install_fixture()
+    os.remove(lts_cache_file)
+    local result = PLUGIN:PreInstall({ version = "20.16.0" })
+    assert(result.sha256 == fixture.hash)
+    assert(fixture.index_requests == 1, "no file: the index is fetched, " .. fixture.index_requests)
+    assert(util.read_lts_cache().lines.mercury == 28, "and kept")
+    available_result = nil
+    PLUGIN:PreInstall({ version = "20.16.0" })
+    assert(fixture.index_requests == 1, "a fresh file is enough, " .. fixture.index_requests)
+    available_result = nil
+    set_lts_cache(os.time() - 2 * 24 * 60 * 60, 26, {})
+    PLUGIN:PreInstall({ version = "20.16.0" })
+    assert(fixture.index_requests == 2, "a file from two days ago is refreshed, " .. fixture.index_requests)
+    -- A time in the future is not fresh either.
+    available_result = nil
+    set_lts_cache(os.time() + 5 * 24 * 60 * 60, 26, {})
+    PLUGIN:PreInstall({ version = "20.16.0" })
+    assert(fixture.index_requests == 3, "a file from the future is refreshed, " .. fixture.index_requests)
+end)
+test("an install does not depend on learning, and does not fetch the index for nothing", function()
+    local fixture = lts_install_fixture()
+    os.remove(lts_cache_file)
+    fixture.index_status = 503
+    assert(PLUGIN:PreInstall({ version = "20.16.0" }).sha256 == fixture.hash, "a failing index changes nothing")
+    assert(fixture.index_requests == 1)
+    fixture.index_requests = 0
+    fixture.index_status = 200
+    available_result = nil
+    with_util({
+        lts_cache_path = function()
+            return "/no-such-directory-for-vfox-nodejs/.lts-cache"
+        end,
+    }, function()
+        assert(PLUGIN:PreInstall({ version = "20.16.0" }).sha256 == fixture.hash)
+        assert(fixture.index_requests == 0, "nowhere to keep it, so no index: " .. fixture.index_requests)
+    end)
+    -- An install that fails before it has a checksum has not got as far as learning.
+    os.remove(lts_cache_file)
+    fixture.sums_status = 404
+    expect_error(function()
+        PLUGIN:PreInstall({ version = "20.16.0" })
+    end, "HTTP 404")
+    assert(fixture.index_requests == 0, "a failed install fetches no index")
 end)
 -- PreUse notes a `node` that vfox keeps ahead of its own paths, such as the
 -- one `pnpm runtime set node -g` writes to $PNPM_HOME/bin.
@@ -708,5 +1109,7 @@ test("library hints follow the distribution", function()
         assert(util.install_command("libatomic.so.1") == nil)
     end)
 end)
+os.remove(lts_cache_file)
+os.remove(lts_cache_file .. ".tmp")
 print(state.passed .. " passed, " .. state.failed .. " failed")
 assert(state.failed == 0)

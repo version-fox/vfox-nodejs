@@ -6,6 +6,8 @@
 
 它安装 [nodejs.org](https://nodejs.org/dist/) 或其[镜像](docs/zh-CN/mirror.md)上发布的 Node.js 版本压缩包，并对照一同发布的 SHA-256 校验和检查每次下载。每个版本都自带自己的 npm。在 Alpine、OpenWrt 和其他 musl 系统上，安装的是 musl 构建。vfox 通过它读取 `.nvmrc` 和 `.node-version`。
 
+它为 vfox 做的，正是 [nvm-sh/nvm](https://github.com/nvm-sh/nvm) 为 POSIX Shell 做的事：多个版本并存，可以按 Shell、按项目选定其中一个，或者设为默认，并读取 `.nvmrc`。nvm-sh/nvm 是为 POSIX Shell 写的，不能在 PowerShell 里运行；vfox 可以，所以 Windows PowerShell 5.1 也能做同样的事。[docs/zh-CN/scenarios.md](docs/zh-CN/scenarios.md) 用具体的场景展示这一点，并把两边的命令并排列出。
+
 ## 安装
 
 先安装 [vfox](https://github.com/version-fox/vfox)，然后执行下面的命令安装插件：
@@ -56,6 +58,10 @@ vfox use --global nodejs@24
 
 Node.js 的 musl 构建需要 `libstdc++`，26.8.0 及以后的构建还需要 `libatomic`。原版 Alpine 镜像两者都没有，而插件不会安装系统库。安装会中止，并给出一条提示，写明缺少哪个包以及安装它的命令（`apk add libatomic`；OpenWrt 把 `libstdc++` 称为 `libstdcpp` 包）。musl 构建只提供 x64 和 arm64。musl 的详细情况（OpenWrt、压缩包对照表、镜像回退、哪些版本有构建）见 [docs/zh-CN/musl.md](docs/zh-CN/musl.md)。
 
+## 使用场景
+
+具体的场景见 [docs/zh-CN/scenarios.md](docs/zh-CN/scenarios.md)：nvm-sh/nvm 与 vfox 的命令对照、从零开始使用 Windows PowerShell 5.1、全团队使用同一个 Node.js、一个 Shell 里的多个项目、用指定版本运行一条命令、镜像，以及编辑器。
+
 ## 版本与命名
 
 版本就是版本号：`24.21.0`，也可以只写开头的部分，如 `24.21` 和 `24`，它们安装对应版本线的最新版本。`latest` 是所有版本线中最新的版本，不论是否属于 LTS。这里没有 `lts` 别名，请写明版本线（`nodejs@24`）。安装后的版本名就是版本号 `24.21.0`，`vfox uninstall` 需要写完整。`vfox use` 和 `vfox search` 怎样处理这些写法，详见 [docs/zh-CN/versions.md](docs/zh-CN/versions.md)。
@@ -74,7 +80,7 @@ Node.js 为 Linux（x64、arm64、ppc64le、s390x）、macOS（x64 和 arm64）�
 
 ## `.nvmrc` 和 `.node-version`
 
-进入目录时，vfox 会读取这些文件，并选中其中指定的版本（前提是已经安装）。文件里能写什么取决于 vfox 的 `legacyVersionFile.strategy`：默认值 `specified` 下，只有完整的版本号才能选中某个版本。详见 [docs/zh-CN/nvmrc.md](docs/zh-CN/nvmrc.md)。
+每个提示符出现在带有这些文件的目录里时，vfox 都会读取它们，并选中其中指定的版本（前提是已经安装），所以 `cd` 进这个目录就会切换。未发布：0.5.3 在 Shell 于该目录里启动时读取，已经在运行的 Shell 里 `cd` 进来则不读取。两者在 `cd` 到完全没有配置的目录时都不会切换回来；`vfox use --project` 写出的 `.vfox.toml` 则会。文件里能写什么取决于 vfox 的 `legacyVersionFile.strategy`：默认值 `specified` 下，只有完整的版本号才能选中某个版本。UTF-16 的文件或带字节顺序标记的文件（Windows PowerShell 5.1 会写出这样的文件）也能读取（未发布）。详见 [docs/zh-CN/nvmrc.md](docs/zh-CN/nvmrc.md)。
 
 ## LTS
 

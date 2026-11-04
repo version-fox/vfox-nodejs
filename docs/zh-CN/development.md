@@ -12,7 +12,8 @@ hooks/post_install.lua          musl：node 无法运行时报错，比如缺少
 hooks/env_keys.lua              PATH：Linux 和 macOS 上是 bin，Windows 上是安装目录
 hooks/pre_use.lua               vfox use：把 24 或 24.21 映射到已安装的版本，vfox 的 node 被遮蔽时给出提示
 hooks/parse_legacy_file.lua     .nvmrc 和 .node-version
-lib/util.lua                    镜像 URL 与下载请求头、musl 检测与缺失的库、运行命令、版本比较与匹配、简写、PATH 探测
+lib/util.lua                    镜像 URL 与下载请求头、musl 检测与缺失的库、运行命令、版本比较与匹配、简写、PATH 探测、插件学到的 LTS 版本线
+.lts-cache                      不在仓库里：插件学到的 LTS 版本线，写在插件旁边
 tests/hooks_test.lua            离线的钩子测试
 tests/e2e/                      容器测试，见 e2e.md
 Injection.lua                   vfox 注入对象的类型提示，不会被加载
@@ -63,7 +64,9 @@ vfox 加载 `metadata.lua`，命令需要时调用相应的钩子，并向钩子
 
 ## 兼容版本文件
 
-`ParseLegacyFile` 读取文件，去掉所有空白字符，再把文本交给 `resolve_version(query, strategy)`：它去掉开头的 `v`，转成小写，把 `lts-x` 变成 `lts/x`，把 `lts/<codename>` 映射到一个大版本，把 `lts` 和 `lts/*` 映射到 `nodejs_codenames` 里最高的大版本。在 `latest_available` 策略下，代号先从索引里取（`discover_lts`），索引里没找到或请求失败时，回退到代号表。
+`ParseLegacyFile` 首先从会话目录里删掉 `env-state.json`（`util.forget_env_state`）。vfox 把 `vfox env` 的结果保存在那里，并且不跟踪版本文件，没有这一步的话，`cd` 进只有版本文件的目录就注意不到。vfox 在加载那个文件之前就调用这个钩子，这就是这个权宜之计能起作用的原因，也是它在离开目录时帮不上忙的原因：没有东西可读的地方不会调用它。见 [nvmrc.md](nvmrc.md#什么时候读取这个文件)。
+
+接着它读取文件并解码（`util.decode_text` 把带标记的 UTF-16 变成 UTF-8，并去掉 UTF-8 的标记，因为 Windows PowerShell 5.1 两种都会写出来）。去掉所有空白字符，再把文本交给 `resolve_version(query, strategy)`：它去掉开头的 `v`，转成小写，把 `lts-x` 变成 `lts/x`，把 `lts/<codename>` 映射到一个大版本，把 `lts` 和 `lts/*` 映射到最新的 LTS 版本线的大版本。在 `latest_available` 策略下，代号先从索引里取（`discover_lts`）。其他情况下，以及索引里没找到或请求失败时，由 `util.known_lts_lines` 作答，不发请求：插件从索引里学到的内容，加上内置的 `util.LtsLines`，见[下文](#插件如何学到-lts-版本线)。
 
 接着 `resolve_legacy_version(strategy, query)` 用 `util.version_prefix` 解析查询：`22` 得到 `{ 22 }`，`22.23` 得到 `{ 22, 23 }`，`22.x`、`22.x.x` 和 `22.*` 都得到 `{ 22 }`。不是这类前缀的文本（`node`、`lts/unknown`、`>=20`）原样返回。对于前缀：
 
@@ -73,15 +76,34 @@ vfox 加载 `metadata.lua`，命令需要时调用相应的钩子，并向钩子
 
 `vfox` 随后会选中这个结果，前提是它已安装。面向用户的规则和示例见 [nvmrc.md](nvmrc.md) 和 [lts.md](lts.md)。
 
+## 插件如何学到 LTS 版本线
+
+`ParseLegacyFile` 在带有版本文件的目录里每个提示符都会运行，所以它不能去取 `index.json` 来弄清楚 `lts/*` 是什么。插件在本来就拿到索引的时候学到这些，并把它们放在插件旁边的 `.lts-cache` 里，这是个文本文件：
+
+```text
+# What vfox-nodejs learned from index.json about LTS lines. Safe to delete.
+updated 1793000000
+newest 26
+line argon 4
+...
+line lithium 26
+```
+
+- `Available` 解码出索引之后调用 `util.remember_lts`。`util.lts_summary` 找出每条有名字的版本线的大版本，以及最新的 LTS 大版本（`lts` 为 `true` 的版本，也就是没有名字的版本线，只算进最新的那一项）。它在 vfox 自己对答案的缓存过期时运行。
+- `PreInstall` 在安装拿到校验和之后调用 `util.refresh_lts_cache`，所以像不支持的架构这样提前失败的安装，什么也不会去取。vfox 安装确切的版本时不会去问 `Available`，所以这样的安装靠这里学到。文件不存在或者超过一天，并且文件可以写入时，它才调用 `Available`，这样只读的插件目录就不会让每次安装都白取一次索引。
+- `ParseLegacyFile` 通过 `util.known_lts_lines` 读这个文件，它把学到的内容放在内置的 `util.LtsLines` 之上，`lts` 和 `lts/*` 取两者里最新的大版本。它从不发请求。
+- vfox 没有给插件提供它自己的路径，所以 `util.plugin_dir` 在 `package.path` 里有 `hooks/?.lua` 和 `lib/?.lua` 的地方找到目录。新文件写在旧文件旁边，再重命名覆盖过去。任何失败，无论是没有目录、不可写还是文件损坏，都只会让插件退回那张表。
+- 在仓库里，`package.path` 以 `./lib/?.lua` 开头，所以这个目录会是仓库本身。钩子测试把 `util.lts_cache_path` 指向它们自己的文件。
+
 ## Node.js 把一条版本线升为 LTS 时
 
-每年十月，一条偶数版本线会得到代号，见 [lts.md](lts.md#nodejs-升级版本线时)。要让插件认识新的代号：
+每年十月，一条偶数版本线会得到代号，见 [lts.md](lts.md#nodejs-升级版本线时)。插件从索引里学到这条版本线，不需要为此发布新版本。下面是顺手要做的事，让还没学到任何内容的插件也认识它，也让文档保持正确：
 
-1. 在 `hooks/parse_legacy_file.lua` 的 `nodejs_codenames` 里加上 `<codename> = <major>`。
-2. 在 `tests/hooks_test.lua` 里，挨着 `legacy lts krypton maps to its major` 加一个用例。
-3. 在 [lts.md](lts.md#插件认识哪些代号) 的表里加一行，并修改 [lts.md](lts.md) 和 [nvmrc.md](nvmrc.md) 里写着“撰写本文时是 24”的句子。
-4. `tests/e2e/common/common.go` 里的 `DefaultLTSVersion` 可以不动：它只要仍在表内即可。
-5. 发布。
+1. 在 `lib/util.lua` 的 `UTIL.LtsLines` 里加上 `<codename> = <major>`。
+2. 在 `tests/hooks_test.lua` 里，挨着 `legacy lts lithium maps to its major` 加一个用例，并修改 `legacy bare lts is the newest line of the table` 所期望的大版本。
+3. 把代号加进 `tests/e2e/common/common.go` 的 `LTSCodenames`，并给 `TestLTSCodename` 加一个用例。E2E 套件会拿这张表和插件根据线上索引写出的文件作比较。
+4. 在 [lts.md](lts.md#插件认识哪些代号) 的表里加一行，并修改 [lts.md](lts.md) 和 [nvmrc.md](nvmrc.md) 里写着“撰写本文时为 26”的句子，以及 [lts.md](lts.md#示例) 里的示例。
+5. `tests/e2e/common/common.go` 里的 `DefaultLTSVersion` 可以不动：它只要仍在表内即可。
 
 ## 测试
 
@@ -91,9 +113,9 @@ vfox 加载 `metadata.lua`，命令需要时调用相应的钩子，并向钩子
 go run github.com/yuin/gopher-lua/cmd/glua@v1.1.1 tests/hooks_test.lua
 ```
 
-请在仓库根目录运行。`tests/hooks_test.lua` 自己模拟了 `http` 和 `json`（通过 `package.preload`），为每个用例设置 `RUNTIME`，请求的应答来自 `state.response`、`state.decoded` 和 `state.responder`。一个用例写作 `test("name", function() ... end)`，调用它会重置状态和 `available_result`。测试覆盖 `Available` 及其失败情况、各平台的包名和校验和请求失败时的错误、musl 与 `PostInstall`（通过 `with_util` 模拟了 `util.capture`、`util.file_exists` 和 `util.has_libstdcxx`）、各策略下的 `ParseLegacyFile`、有 `node` 遮蔽 vfox 时的 `PreUse`，以及 `lib/util.lua` 里的辅助函数。改动需要的用例就加在那里。
+请在仓库根目录运行。`tests/hooks_test.lua` 自己模拟了 `http` 和 `json`（通过 `package.preload`），为每个用例设置 `RUNTIME`，请求的应答来自 `state.response`、`state.decoded` 和 `state.responder`。一个用例写作 `test("name", function() ... end)`，调用它会重置状态和 `available_result`。测试覆盖 `Available` 及其失败情况、各平台的包名和校验和请求失败时的错误、musl 与 `PostInstall`（通过 `with_util` 模拟了 `util.capture`、`util.file_exists` 和 `util.has_libstdcxx`）、各策略下的 `ParseLegacyFile`（包括 UTF-16 和带字节顺序标记的文件，以及删除 `env-state.json`，其中 `os.getenv` 和 `os.remove` 是模拟的）、插件如何学到 LTS 版本线（文件是临时的，每个用例开始时都有一个什么版本线也不认识的新文件）、有 `node` 遮蔽 vfox 时的 `PreUse`，以及 `lib/util.lua` 里的辅助函数。改动需要的用例就加在那里。
 
-gopher-lua 1.1.1 会丢掉闭包对 `local x = nil` 的赋值：外层作用域读到的仍然是 `nil`。要在 `with_util` 或 `pcall` 内部收集值的测试，必须把值放在表的字段里。
+gopher-lua 1.1.1 会丢掉闭包对 `local x = nil` 的赋值：外层作用域读到的仍然是 `nil`。要在 `with_util` 或 `pcall` 内部收集值的测试，必须把值放在表的字段里。它还有一个毛病：`local file = path ~= nil and io.open(path, "r") or nil` 之后的 `if file == nil` 会以 Go 的“nil pointer dereference”结束，所以要分成两条语句，先判断 `path`，再打开文件。新代码要用 `glua` 跑一遍，不能只靠 LuaLS。
 
 想对着真实的服务器调用单个钩子，可以用 vfox 1.0.13 及以后版本的 `vfox plugin run`。它不会注册插件，`--os` 和 `--arch` 可以模拟其他平台，`--offline` 会拒绝 HTTP 请求，`VFOX_NODEJS_MIRROR` 同样生效：
 
@@ -133,8 +155,12 @@ curl -s https://nodejs.org/dist/index.json | jq -r '
 - riscv64 和 loong64 只在 Unofficial Builds 上有包，而插件只把它用于 musl。
 - `PostInstall` 只在 musl 上运行 `node --version`。在 glibc 上，缺少 `libatomic.so.1`（Node.js 25 及以后）要等到 `node` 运行时才会暴露：README 把系统库留给用户自己处理。
 - E2E 的 Alpine 镜像通过依赖 `gcc` 的 `go` 得到 `libatomic`，所以套件没有覆盖不带它的原版 Alpine，钩子测试覆盖了。
-- `.nvmrc` 里的别名（`node`、`stable`、`lts/-1`）、范围和注释都不认识，`lts` 则依据一张手工维护的表，见 [nvmrc.md](nvmrc.md#不认识的写法)。
+- `.nvmrc` 里的别名（`node`、`stable`、`lts/-1`）、范围和注释都不认识，见 [nvmrc.md](nvmrc.md#不认识的写法)。
+- 插件目录不可写，或者插件装好之后从没拿到过索引，`specified` 和 `latest_installed` 就只有内置的表，它到 Lithium 为止。
+- 从带有版本文件的目录 `cd` 到完全没有配置的目录时，不会切换回来。vfox 不跟踪版本文件，并沿用它上一次计算的结果，而没有文件可读的地方不会调用插件，所以 `util.forget_env_state` 只覆盖了进入的方向。修复应当放在 vfox 里：[version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745)，这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪。等 vfox 跟踪版本文件之后，就去掉 `util.forget_env_state`。
+- 在带有版本文件的目录里，每个提示符都会重新计算一次环境，这是 `util.forget_env_state` 造成的。只装了一个 SDK 时，大约多花一毫秒。
 - `latest_available` 在带有兼容版本文件的目录里，每次出现提示符都会下载 `index.json`。
+- UTF-32，以及没有字节顺序标记的 UTF-16，都不会解码。
 - `VFOX_NODEJS_MIRROR` 对非官方站点不起作用。
 - macOS 没有 E2E 作业。
 

@@ -8,6 +8,10 @@
 
 - `vfox install nodejs@latest` 重新安装最新的版本，`vfox search nodejs` 也不再列出预发布版本。2026-10-29 起，nodejs.org 的索引里最新的一条是 `27.0.0-alpha.0.0.0`。0.5.3 把它排在最前面，所以 `latest` 解析成它，安装以 `version not found for provided version 27.0.0-alpha.0.0.0` 告终。`nodejs@26` 等按编号安装的写法不受影响。现在只列出由三段数字组成的版本。见 [versions.md](versions.md#安装)。
 - 华为云、TUNA、USTC 和北外现在可以用作镜像。0.5.3 把安装包的下载交给 vfox，而 vfox 请求时使用 Go HTTP 客户端的 `User-Agent`，这四个镜像对它返回的是错误页面或者空内容，而不是文件（依次是 HTTP 418、403、204 和 403），安装以 `checksum error` 结束。插件现在让 vfox 下载时使用它自己请求时的 `User-Agent`（vfox 1.0.13 下是 `vfox/1.0.13 vfox-nodejs/0.5.3`），[mirror.md](mirror.md#可用的镜像) 里的所有镜像都能安装 24.21.0。天翼云 `https://mirrors.ctyun.cn/nodejs-release` 也加进了这份列表。
+- 插件从版本索引里学到 LTS 版本线，所以 Node.js 以后再升的版本线，不需要为插件发布新版本。它把学到的内容放在插件旁边的 `.lts-cache` 里。`vfox search`，或者安装 `latest` 或某个大版本时读到索引，以及安装某个确切版本、而这个文件不存在或者已有一天时，它会写这个文件；在 `specified` 和 `latest_installed` 下，`lts/<codename>`、`lts` 和 `lts/*` 读这个文件，不发任何请求。在学到任何内容之前，或者文件无法写入的地方，它使用一张代号表，这张表现在到 Lithium（26）为止：Node.js 26 在 2026-10-28 进入长期支持。0.5.3 只有这张表，而且到 Krypton（24）为止，所以在那里 `latest_installed` 下 `lts/lithium` 什么也选不中，`lts` 和 `lts/*` 选中某个 24.x。见 [lts.md](lts.md#插件认识哪些代号)。
+- UTF-16 的 `.nvmrc` 或 `.node-version`，以及带字节顺序标记的 UTF-8 文件，现在可以读取了。Windows PowerShell 5.1 用 `>` 和 `Out-File` 写出前者，用 `-Encoding UTF8` 写出后者。0.5.3 按原样读取字节，所以没有任何版本能匹配这段文本，而 vfox 不会有任何提示。见 [nvmrc.md](nvmrc.md#文件里可以写什么)。
+- `.nvmrc` 和 `.node-version` 在每个提示符出现在它们所在的目录里时都会读取，所以 `cd` 进去就会切换，改动文件则在下一个提示符生效。0.5.3 在 Shell 于该目录里启动时读取，`cd` 之后不读取，因为 vfox 1.0.13 会保留它为 Shell 第一次算出的结果，并且不跟踪版本文件。现在，每当 vfox 请插件读取这样的文件时，插件就会删除那个结果。从这个目录 `cd` 到完全没有配置的目录时还不会切换回来，而 `.vfox.toml` 一直都会。见 [nvmrc.md](nvmrc.md#什么时候读取这个文件)。这个缓存是 vfox 的，已经请 vfox 修复（[version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745)，这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪）。
+- 文档新增了一页使用场景：nvm-sh/nvm 与 vfox 的命令对照、从零开始使用 Windows PowerShell 5.1、全团队使用同一个 Node.js、一个 Shell 里的多个项目、`vfox exec`、镜像和编辑器。见 [scenarios.md](scenarios.md)。
 
 ## 0.5.3（2026-10-20）
 
