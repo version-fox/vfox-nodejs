@@ -30,8 +30,8 @@ checks it and unpacks it. These are the answers on 2026-10-21:
 | `latest` | `26.12.0`, the newest release in the index. vfox prints `Using latest version: 26.12.0` first |
 
 - "Newest" is the highest number among the releases that the index lists, LTS
-  or not. A line that is not in long-term support yet, such as 26 today, can be
-  newer than the newest LTS line, so `latest` is not "the LTS".
+  or not. A line that is not in long-term support yet can be newer than the
+  newest LTS line, as 26 was until 2026-10-28, so `latest` is not "the LTS".
 - `24` and `24.21` are looked up in the index, not among what is installed.
   `vfox install nodejs@24` installs a newer 24.x than the one you have, and
   prints `nodejs@24.22.0 is already installed` once you have the newest.
