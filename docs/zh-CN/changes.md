@@ -7,6 +7,7 @@
 ## 未发布
 
 - 在 vfox 1.1.0 及以后的版本里，遮蔽 vfox 的 `node` 由 vfox 自己报告，并附带插件的提示，不再由插件打印 `Note:`。0.5.4 会在所有 vfox 上从 `PreUse` 打印 `Note: <shadowing node> comes before vfox in PATH, ...`，所以在新 vfox 上，同一个遮蔽会同时打印核心警告和插件的提示。插件现在为 pnpm、mise、asdf、nvm、Homebrew 和 winget 声明 `PLUGIN.shadowHints`（各自的交接命令，以及指向 `docs/pnpm.md` 或新建 `docs/managers.md` 的链接），只在 1.1.0 之前的 vfox 上保留自己的 `Note:`，老 vfox 会忽略这个新的元数据字段。见 [pnpm.md](pnpm.md)、[managers.md](managers.md)和 [troubleshooting.md](troubleshooting.md)。
+- `vfox link --detect nodejs` 会把本机已有的 Node.js 链进来，不用再下载一份：装着可用 `node` 的 nvm、mise、asdf 和 Homebrew Cellar 目录，Windows 上还有 winget 目录，每个都用二进制自己报出的纯版本号命名。shim、pnpm 的全局运行时和没有版本化家目录的复制会被跳过。见 [managers.md](managers.md)。
 
 ## 0.5.4（2026-11-04）
 

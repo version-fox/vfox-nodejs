@@ -565,6 +565,184 @@ function UTIL.supports_shadow_hints()
     return true
 end
 
+--- Home directory of the user vfox runs as, nil when it cannot be told.
+--- @return string|nil
+function UTIL.home_dir()
+    local windows = RUNTIME ~= nil and RUNTIME.osType == "windows"
+    if windows then
+        local profile = os.getenv("USERPROFILE")
+        if profile ~= nil and profile ~= "" then
+            return profile
+        end
+        local drive, folder = os.getenv("HOMEDRIVE"), os.getenv("HOMEPATH")
+        if drive ~= nil and drive ~= "" and folder ~= nil and folder ~= "" then
+            return drive .. folder
+        end
+        return nil
+    end
+    local home = os.getenv("HOME")
+    if home == nil or home == "" then
+        return nil
+    end
+    return home
+end
+
+--- Entry names of a directory, without `.` and `..`. A directory that cannot
+--- be read gives nothing, so a manager that is not installed simply
+--- contributes no candidates.
+--- @param dir string|nil
+--- @return string[]
+function UTIL.list_dir(dir)
+    if dir == nil or dir == "" then
+        return {}
+    end
+    local windows = RUNTIME ~= nil and RUNTIME.osType == "windows"
+    local command
+    if windows then
+        command = 'dir /b "' .. dir:gsub('"', '""') .. '"'
+    else
+        command = "ls -1 " .. UTIL.shell_quote(dir)
+    end
+    local output, status = UTIL.capture(command)
+    if output == nil or (status ~= nil and status ~= 0) then
+        return {}
+    end
+    local names = {}
+    for line in string.gmatch(output, "[^\r\n]+") do
+        local name = line:gsub("%s+$", "")
+        if name ~= "" and name ~= "." and name ~= ".." then
+            table.insert(names, name)
+        end
+    end
+    return names
+end
+
+--- Parent directories whose subdirectories are one installed Node.js each,
+--- with the manager each belongs to. Shim directories are never listed: a
+--- shim selects its version per directory, so linking one selects nothing
+--- stable, and pnpm's shim ships no npm at all.
+--- @return table[] { dir: string, source: string }
+function UTIL.detect_roots()
+    local windows = RUNTIME ~= nil and RUNTIME.osType == "windows"
+    local roots = {}
+    local function add(dir, source)
+        if dir ~= nil and dir ~= "" then
+            table.insert(roots, { dir = dir, source = source })
+        end
+    end
+    if windows then
+        local localappdata = os.getenv("LOCALAPPDATA")
+        if localappdata ~= nil and localappdata ~= "" then
+            add(localappdata .. "\\mise\\installs\\node", "mise")
+        end
+        local appdata = os.getenv("APPDATA")
+        if appdata ~= nil and appdata ~= "" then
+            add(appdata .. "\\nvm", "nvm")
+        end
+        local nvm_home = os.getenv("NVM_HOME")
+        if nvm_home ~= nil and nvm_home ~= "" then
+            add(nvm_home, "nvm")
+        end
+    else
+        local home = UTIL.home_dir()
+        if home ~= nil then
+            add(home .. "/.nvm/versions/node", "nvm")
+            local mise_data = os.getenv("MISE_DATA_DIR")
+            if mise_data ~= nil and mise_data ~= "" then
+                add(mise_data .. "/installs/node", "mise")
+            else
+                add(home .. "/.local/share/mise/installs/node", "mise")
+            end
+            local asdf_data = os.getenv("ASDF_DATA_DIR")
+            if asdf_data ~= nil and asdf_data ~= "" then
+                add(asdf_data .. "/installs/nodejs", "asdf")
+            else
+                add(home .. "/.asdf/installs/nodejs", "asdf")
+            end
+        end
+        add("/opt/homebrew/Cellar/node", "homebrew")
+        add("/usr/local/Cellar/node", "homebrew")
+        add("/home/linuxbrew/.linuxbrew/Cellar/node", "homebrew")
+    end
+    return roots
+end
+
+--- Run `<node> --version` and read the release it prints, nil when it is not
+--- a working `node` of one release.
+--- @param node string path of the executable
+--- @return string|nil version like "22.14.0"
+local function node_release(node)
+    local windows = RUNTIME ~= nil and RUNTIME.osType == "windows"
+    local command
+    if windows then
+        command = '"' .. node:gsub('"', '""') .. '" --version'
+    else
+        command = UTIL.shell_quote(node) .. " --version"
+    end
+    local output = UTIL.capture(command)
+    if output == nil then
+        return nil
+    end
+    local version = tostring(output):match("v(%d+%.%d+%.%d+)")
+    if version ~= nil and UTIL.is_semver_simple(version) then
+        return version
+    end
+    return nil
+end
+
+--- Node.js installs on this machine that vfox did not install, one entry per
+--- release: `{ version, path, note }`. `path` is the directory EnvKeys
+--- expects (holding `bin/` on Linux and macOS, `node.exe` on Windows) and
+--- `version` is the plain release number the binary reports, so
+--- `vfox use 22` keeps working and vfox skips what is installed already.
+--- Shims, pnpm's global runtime and copies without a versioned home (such as
+--- a manual `/usr/local/bin/node`) are not reported; link those by hand.
+--- The winget directory reports its version by running it.
+--- See https://github.com/version-fox/vfox/issues/737
+--- @return table[]
+function UTIL.detect_nodejs()
+    local windows = RUNTIME ~= nil and RUNTIME.osType == "windows"
+    local found = {}
+    local seen = {}
+    local function consider(install_dir, source)
+        local path, node
+        if windows then
+            if UTIL.file_exists(install_dir .. "\\node.exe") then
+                path, node = install_dir, install_dir .. "\\node.exe"
+            elseif UTIL.file_exists(install_dir .. "\\bin\\node.exe") then
+                path, node = install_dir .. "\\bin", install_dir .. "\\bin\\node.exe"
+            else
+                return
+            end
+        else
+            if not UTIL.file_exists(install_dir .. "/bin/node") then
+                return
+            end
+            path, node = install_dir, install_dir .. "/bin/node"
+        end
+        local version = node_release(node)
+        if version == nil or seen[version] then
+            return
+        end
+        seen[version] = true
+        table.insert(found, { version = version, path = path, note = source })
+    end
+    for _, root in ipairs(UTIL.detect_roots()) do
+        local sep = windows and "\\" or "/"
+        for _, name in ipairs(UTIL.list_dir(root.dir)) do
+            consider(root.dir .. sep .. name, root.source)
+        end
+    end
+    if windows then
+        local program_files = os.getenv("ProgramFiles")
+        if program_files == nil or program_files == "" then
+            program_files = "C:\\Program Files"
+        end
+        consider(program_files .. "\\nodejs", "winget")
+    end
+    return found
+end
+
 --- Whether a PATH entry belongs to vfox: like vfox's own check, one of its
 --- segments is `.vfox` (or the legacy `.version-fox`).
 local function is_vfox_path(dir)

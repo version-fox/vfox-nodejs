@@ -1054,7 +1054,274 @@ test("metadata declares shadowHints for known managers", function()
     end
     PLUGIN = saved_plugin
 end)
--- lib/util.lua helpers.
+-- Detect lists the installs of nvm, mise, asdf, Homebrew and winget, so
+-- that `vfox link --detect nodejs` can link them. Shims are never listed.
+dofile("hooks/detect.lua")
+--- Run Detect with a stubbed home, directory listings, file checks and
+--- `node --version` answers. `env` maps variable names to values, `false`
+--- unsets one; `listing` maps a parent to its entry names; `existing` maps
+--- a path to true; `outputs` maps a node binary to its `--version` output.
+local function with_detect_fs(env, listing, existing, outputs, fn)
+    local saved_getenv, saved_list, saved_exists, saved_capture =
+        os.getenv, util.list_dir, util.file_exists, util.capture
+    os.getenv = function(key)
+        local value = env[key]
+        if value ~= nil then
+            if value == false then
+                return nil
+            end
+            return value
+        end
+        return saved_getenv(key)
+    end
+    util.list_dir = function(dir)
+        local names = listing[dir]
+        if names == nil then
+            return {}
+        end
+        return names
+    end
+    util.file_exists = function(path)
+        return existing[path] == true
+    end
+    util.capture = function(command)
+        for _, item in ipairs(outputs) do
+            if command:find(item.bin, 1, true) then
+                return item.out, item.status
+            end
+        end
+        return "", 1
+    end
+    local ok, err = pcall(fn)
+    os.getenv, util.list_dir, util.file_exists, util.capture = saved_getenv, saved_list, saved_exists, saved_capture
+    assert(ok, err)
+end
+test("detect finds the installs of nvm, mise, asdf and homebrew", function()
+    RUNTIME = { osType = "linux", archType = "amd64" }
+    local home = "/home/u"
+    local nvm, mise, asdf =
+        home .. "/.nvm/versions/node", home .. "/.local/share/mise/installs/node", home .. "/.asdf/installs/nodejs"
+    local function bin(dir)
+        return dir .. "/bin/node"
+    end
+    local listing = {
+        [nvm] = { "v22.14.0", "lts-iron", "v20.19.0", "broken" },
+        [mise] = { "22.0.0" },
+        [asdf] = { "22.13.0" },
+        ["/opt/homebrew/Cellar/node"] = { "24.5.0", "unreadable" },
+    }
+    local existing = {
+        [bin(nvm .. "/v22.14.0")] = true,
+        [bin(nvm .. "/v20.19.0")] = true,
+        [bin(nvm .. "/broken")] = true,
+        [bin(mise .. "/22.0.0")] = true,
+        [bin(asdf .. "/22.13.0")] = true,
+        [bin("/opt/homebrew/Cellar/node/24.5.0")] = true,
+        [bin("/opt/homebrew/Cellar/node/unreadable")] = true,
+    }
+    local outputs = {
+        { bin = bin(nvm .. "/v22.14.0"), out = "v22.14.0\n", status = 0 },
+        { bin = bin(nvm .. "/v20.19.0"), out = "v20.19.0\n", status = 0 },
+        { bin = bin(nvm .. "/broken"), out = "Segmentation fault\n", status = 139 },
+        { bin = bin(mise .. "/22.0.0"), out = "v22.0.0\n", status = 0 },
+        { bin = bin(asdf .. "/22.13.0"), out = "v22.13.0\n", status = 0 },
+        { bin = bin("/opt/homebrew/Cellar/node/24.5.0"), out = "v24.5.0\n", status = 0 },
+        { bin = bin("/opt/homebrew/Cellar/node/unreadable"), out = "v24\n", status = 0 },
+    }
+    with_detect_fs({ HOME = home }, listing, existing, outputs, function()
+        local found = PLUGIN:Detect({})
+        local want = {
+            { version = "22.14.0", path = nvm .. "/v22.14.0", note = "nvm" },
+            { version = "20.19.0", path = nvm .. "/v20.19.0", note = "nvm" },
+            { version = "22.0.0", path = mise .. "/22.0.0", note = "mise" },
+            { version = "22.13.0", path = asdf .. "/22.13.0", note = "asdf" },
+            { version = "24.5.0", path = "/opt/homebrew/Cellar/node/24.5.0", note = "homebrew" },
+        }
+        assert(#found == #want, "five installs, got " .. #found)
+        for i, item in ipairs(want) do
+            assert(found[i].version == item.version, tostring(found[i].version))
+            assert(found[i].path == item.path, tostring(found[i].path))
+            assert(found[i].note == item.note, tostring(found[i].note))
+        end
+    end)
+end)
+test("detect looks in MISE_DATA_DIR and ASDF_DATA_DIR when set", function()
+    RUNTIME = { osType = "linux", archType = "amd64" }
+    local function bin(dir)
+        return dir .. "/bin/node"
+    end
+    local listing = {
+        ["/data/mise/installs/node"] = { "22.0.0" },
+        ["/data/asdf/installs/nodejs"] = { "22.13.0" },
+    }
+    local existing = {
+        [bin("/data/mise/installs/node/22.0.0")] = true,
+        [bin("/data/asdf/installs/nodejs/22.13.0")] = true,
+    }
+    local outputs = {
+        { bin = bin("/data/mise/installs/node/22.0.0"), out = "v22.0.0\n", status = 0 },
+        { bin = bin("/data/asdf/installs/nodejs/22.13.0"), out = "v22.13.0\n", status = 0 },
+    }
+    local env = { HOME = "/home/u", MISE_DATA_DIR = "/data/mise", ASDF_DATA_DIR = "/data/asdf" }
+    with_detect_fs(env, listing, existing, outputs, function()
+        local found = PLUGIN:Detect({})
+        assert(#found == 2, "two installs, got " .. #found)
+        assert(found[1].path == "/data/mise/installs/node/22.0.0", tostring(found[1].path))
+        assert(found[2].path == "/data/asdf/installs/nodejs/22.13.0", tostring(found[2].path))
+    end)
+end)
+test("detect keeps the first of two installs of one release", function()
+    RUNTIME = { osType = "linux", archType = "amd64" }
+    local home = "/home/u"
+    local nvm = home .. "/.nvm/versions/node"
+    local function bin(dir)
+        return dir .. "/bin/node"
+    end
+    local listing = {
+        [nvm] = { "v22.14.0" },
+        ["/opt/homebrew/Cellar/node"] = { "22.14.0" },
+    }
+    local existing = {
+        [bin(nvm .. "/v22.14.0")] = true,
+        [bin("/opt/homebrew/Cellar/node/22.14.0")] = true,
+    }
+    local outputs = {
+        { bin = bin(nvm .. "/v22.14.0"), out = "v22.14.0\n", status = 0 },
+        { bin = bin("/opt/homebrew/Cellar/node/22.14.0"), out = "v22.14.0\n", status = 0 },
+    }
+    with_detect_fs({ HOME = home }, listing, existing, outputs, function()
+        local found = PLUGIN:Detect({})
+        assert(#found == 1, "one entry, got " .. #found)
+        assert(found[1].version == "22.14.0", tostring(found[1].version))
+        assert(found[1].path == nvm .. "/v22.14.0", tostring(found[1].path))
+        assert(found[1].note == "nvm", tostring(found[1].note))
+    end)
+end)
+test("detect finds mise, nvm and winget installs on windows", function()
+    RUNTIME = { osType = "windows", archType = "amd64" }
+    local localappdata, appdata, program_files =
+        "C:\\Users\\u\\AppData\\Local", "C:\\Users\\u\\AppData\\Roaming", "C:\\Program Files"
+    local listing = {
+        [localappdata .. "\\mise\\installs\\node"] = { "22.0.0", "empty" },
+        [appdata .. "\\nvm"] = { "v20.19.0" },
+    }
+    local existing = {
+        [localappdata .. "\\mise\\installs\\node\\22.0.0\\bin\\node.exe"] = true,
+        [appdata .. "\\nvm\\v20.19.0\\node.exe"] = true,
+        [program_files .. "\\nodejs\\node.exe"] = true,
+    }
+    local outputs = {
+        { bin = localappdata .. "\\mise\\installs\\node\\22.0.0\\bin\\node.exe", out = "v22.0.0\r\n", status = 0 },
+        { bin = appdata .. "\\nvm\\v20.19.0\\node.exe", out = "v20.19.0\r\n", status = 0 },
+        { bin = program_files .. "\\nodejs\\node.exe", out = "v24.5.0\r\n", status = 0 },
+    }
+    local env = { LOCALAPPDATA = localappdata, APPDATA = appdata, ProgramFiles = program_files }
+    with_detect_fs(env, listing, existing, outputs, function()
+        local found = PLUGIN:Detect({})
+        local want = {
+            { version = "22.0.0", path = localappdata .. "\\mise\\installs\\node\\22.0.0\\bin", note = "mise" },
+            { version = "20.19.0", path = appdata .. "\\nvm\\v20.19.0", note = "nvm" },
+            { version = "24.5.0", path = program_files .. "\\nodejs", note = "winget" },
+        }
+        assert(#found == #want, "three installs, got " .. #found)
+        for i, item in ipairs(want) do
+            assert(found[i].version == item.version, tostring(found[i].version))
+            assert(found[i].path == item.path, tostring(found[i].path))
+            assert(found[i].note == item.note, tostring(found[i].note))
+        end
+    end)
+end)
+test("detect finds nothing without installs", function()
+    RUNTIME = { osType = "linux", archType = "amd64" }
+    local env = { HOME = false, MISE_DATA_DIR = false, ASDF_DATA_DIR = false }
+    with_detect_fs(env, {}, {}, {}, function()
+        assert(#PLUGIN:Detect({}) == 0)
+    end)
+    RUNTIME = { osType = "windows", archType = "amd64" }
+    local wenv = { LOCALAPPDATA = false, APPDATA = false, NVM_HOME = false, ProgramFiles = "C:\\None" }
+    with_detect_fs(wenv, {}, {}, {}, function()
+        assert(#PLUGIN:Detect({}) == 0)
+    end)
+end)
+test("list_dir reads ls -1 and dir /b output", function()
+    RUNTIME = { osType = "linux", archType = "amd64" }
+    local result = {}
+    with_util({
+        capture = function(command)
+            result.command = command
+            return "v22.14.0\nv20.19.0\n", 0
+        end,
+    }, function()
+        result.names = util.list_dir("/home/u/.nvm/versions/node")
+    end)
+    assert(result.command == "ls -1 '/home/u/.nvm/versions/node'", tostring(result.command))
+    assert(#result.names == 2 and result.names[2] == "v20.19.0", tostring(result.names[2]))
+    RUNTIME = { osType = "windows", archType = "amd64" }
+    with_util({
+        capture = function(command)
+            result.command = command
+            return "v20.19.0\r\n22.0.0\r\n", 0
+        end,
+    }, function()
+        result.names = util.list_dir("C:\\Users\\u\\AppData\\Roaming\\nvm")
+    end)
+    assert(result.command == 'dir /b "C:\\Users\\u\\AppData\\Roaming\\nvm"', tostring(result.command))
+    assert(#result.names == 2 and result.names[1] == "v20.19.0", tostring(result.names[1]))
+    with_util({
+        capture = function()
+            return nil, nil
+        end,
+    }, function()
+        assert(#util.list_dir("/no-such-dir") == 0)
+    end)
+    with_util({
+        capture = function()
+            return "ls: cannot access '/no-such-dir': No such file\n", 2
+        end,
+    }, function()
+        assert(#util.list_dir("/no-such-dir") == 0)
+    end)
+    assert(#util.list_dir("") == 0 and #util.list_dir(nil) == 0)
+end)
+test("home_dir follows the platform", function()
+    RUNTIME = { osType = "linux", archType = "amd64" }
+    local saved_getenv = os.getenv
+    os.getenv = function(key)
+        if key == "HOME" then
+            return "/home/u"
+        end
+        return saved_getenv(key)
+    end
+    assert(util.home_dir() == "/home/u")
+    os.getenv = function(key)
+        if key == "HOME" then
+            return ""
+        end
+        return saved_getenv(key)
+    end
+    assert(util.home_dir() == nil)
+    RUNTIME = { osType = "windows", archType = "amd64" }
+    os.getenv = function(key)
+        local values = { USERPROFILE = "C:\\Users\\u", HOMEDRIVE = "C:", HOMEPATH = "\\Users\\u" }
+        if values[key] ~= nil then
+            return values[key]
+        end
+        return saved_getenv(key)
+    end
+    assert(util.home_dir() == "C:\\Users\\u")
+    os.getenv = function(key)
+        if key == "USERPROFILE" then
+            return ""
+        end
+        local values = { HOMEDRIVE = "C:", HOMEPATH = "\\Users\\u" }
+        if values[key] ~= nil then
+            return values[key]
+        end
+        return saved_getenv(key)
+    end
+    assert(util.home_dir() == "C:\\Users\\u")
+    os.getenv = saved_getenv
+end)
 test("version_prefix reads what a version file asks for", function()
     local accepted = {
         ["22"] = { 22 },

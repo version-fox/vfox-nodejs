@@ -15,9 +15,27 @@ vfox 旁边常见的其他管理器：mise、asdf、nvm、Homebrew，以及 wing
 `Note:`。未发布：0.5.4 会由插件打印 `Note:`；在 vfox 1.1.0 及以后的
 版本里，这条警告由 vfox 自己打印，并附带插件的提示。
 
-一个 Shell 里最多让一个管理器管 `node`。有两条路。路 A 是下面的默认
-做法，把 `PATH` 交给 vfox：对方的 `node` 不再遮挡，vfox 安装并选用
-自己的版本。路 B 是把对方的真实安装目录原地注册给 vfox：
+一个 Shell 里最多让一个管理器管 `node`。最快的是
+`vfox link --detect nodejs`（要带 `vfox link` 的 vfox 1.1.0 及以后）：
+它直接问插件要本机上真实的安装，选一个链上就行，什么也不会下载或
+复制：
+
+```sh
+vfox link --detect nodejs
+vfox use nodejs@22.14.0
+```
+
+它找的是装着可用 `node` 的 nvm、mise、asdf 和 Homebrew Cellar 目录
+（包括 Intel 的 `/usr/local/Cellar/node`），Windows 上还有 winget
+目录，每个都用二进制自己报出的纯版本号命名，所以 `vfox use 22`
+照常用。同一个版本找到两次只链一次，vfox 装过的会跳过。shim、
+pnpm 的全局运行时和没有版本化家目录的复制（比如手装的
+`/usr/local/bin/node`）一律不报：那些自己手动链，或者按下面的办法
+把 `PATH` 交给 vfox。
+
+每个管理器下面有两条路。路 A 是默认做法，把 `PATH` 交给 vfox：对方
+的 `node` 不再遮挡，vfox 安装并选用自己的版本。路 B 是把对方的真实
+安装目录原地注册给 vfox：
 
 ```sh
 vfox link nodejs@<name> <dir>
@@ -31,10 +49,10 @@ vfox use nodejs@<name>
 版本的代理，pnpm 的 shim 还不带 npm，链过去选不中稳定版本。链过去的
 版本还是人家管的：对方升级或清理会动 vfox 底下的文件（`brew upgrade`
 换掉 Cellar 目录，mise/asdf 清理安装），vfox 只会提示，
-`vfox install --reinstall` 对它无效，`vfox uninstall` 只删链接。
-`<name>` 按写下的用（`24-system`、`brew-24`、`nvm-22`），只能用字母、
-数字、`.`、`_`、`+`、`-`，不能叫 `latest`。nodejs 插件没有 `Detect`
-钩子，`vfox link --detect nodejs` 找不到东西，目录要自己传。
+`vfox install --reinstall` 对它无效，`vfox uninstall` 只删链接。链上
+的版本用二进制报出的纯版本号命名（`22.14.0`），这样 `vfox use 22`
+照常用；vfox 装过的版本就直接 `vfox use` 它，不用再链。名字只能用
+字母、数字、`.`、`_`、`+`、`-`，不能叫 `latest`。
 
 ## mise
 
@@ -54,12 +72,13 @@ mise uninstall --all node
 配置。官方文档：[uninstall](https://mise.jdx.dev/cli/uninstall.html)
 和 [unuse](https://mise.jdx.dev/cli/unuse.html)。
 
-也可以链一个真实安装（路 B），不要链 shim 目录：
+也可以链一个真实安装（路 B），不要链 shim 目录。
+`vfox link --detect nodejs` 自己会找到这些：
 
 ```sh
 mise ls node
-vfox link nodejs@mise-22 ~/.local/share/mise/installs/node/22.0.0
-vfox use nodejs@mise-22
+vfox link nodejs@22.0.0 ~/.local/share/mise/installs/node/22.0.0
+vfox use nodejs@22.0.0
 ```
 
 ## asdf
@@ -81,13 +100,14 @@ asdf uninstall nodejs <version>
 [versions](https://asdf-vm.com/manage/versions.html)（卸载和 shim 在
 同一页）。
 
-也可以链一个真实安装（路 B），不要链 shim 目录：
+也可以链一个真实安装（路 B），不要链 shim 目录。
+`vfox link --detect nodejs` 自己会找到这些：
 
 ```sh
 asdf list nodejs
 asdf where nodejs 22.13.0
-vfox link nodejs@asdf-22 ~/.asdf/installs/nodejs/22.13.0
-vfox use nodejs@asdf-22
+vfox link nodejs@22.13.0 ~/.asdf/installs/nodejs/22.13.0
+vfox use nodejs@22.13.0
 ```
 
 ## nvm
@@ -107,12 +127,13 @@ nvm deactivate
 命令本身一起卸载，交接请用 `deactivate`。官方文档：
 [restoring PATH](https://github.com/nvm-sh/nvm#restoring-path)。
 
-也可以链一个已安装版本（路 B）：
+也可以链一个已安装版本（路 B）。
+`vfox link --detect nodejs` 自己会找到这些：
 
 ```sh
 nvm which 22
-vfox link nodejs@nvm-22 ~/.nvm/versions/node/v22.14.0
-vfox use nodejs@nvm-22
+vfox link nodejs@22.14.0 ~/.nvm/versions/node/v22.14.0
+vfox use nodejs@22.14.0
 ```
 
 ## Homebrew
@@ -134,12 +155,12 @@ brew unlink node
 [manpage](https://docs.brew.sh/Manpage)（`unlink`、`uninstall`）。
 
 也可以链 Cellar 目录（路 B），但 `brew upgrade` 会换掉它，链接可能悬
-空，到时重链：
+空，到时重链。`vfox link --detect nodejs` 自己会找到这些：
 
 ```sh
 ls $(brew --cellar node)
-vfox link nodejs@brew-24 /opt/homebrew/Cellar/node/24.5.0
-vfox use nodejs@brew-24
+vfox link nodejs@24.5.0 /opt/homebrew/Cellar/node/24.5.0
+vfox use nodejs@24.5.0
 ```
 
 ## winget 和官方安装程序
@@ -161,9 +182,11 @@ winget uninstall -e --id OpenJS.NodeJS
 `PATH` 条目才会消失。官方下载页：
 [nodejs.org](https://nodejs.org/en/download)。
 
-也可以链这个目录（路 B），MSI 升级会换掉底下的文件，vfox 只会提示：
+也可以链这个目录（路 B），MSI 升级会换掉底下的文件，vfox 只会提示。
+`vfox link --detect nodejs` 自己会找到它；手动链：
 
 ```powershell
-vfox link nodejs@system "C:\Program Files\nodejs"
-vfox use nodejs@system
+& "C:\Program Files\nodejs\node.exe" --version
+vfox link nodejs@22.14.0 "C:\Program Files\nodejs"
+vfox use nodejs@22.14.0
 ```

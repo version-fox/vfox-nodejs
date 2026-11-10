@@ -12,6 +12,7 @@ hooks/post_install.lua          musl: fail when node cannot run, such as without
 hooks/env_keys.lua              PATH: bin on Linux and macOS, the install directory on Windows
 hooks/pre_use.lua               vfox use: map 24 or 24.21 to an installed release (and, on vfox before 1.1.0, note a shadowing node)
 hooks/parse_legacy_file.lua     .nvmrc and .node-version
+hooks/detect.lua                vfox link --detect: the nvm, mise, asdf, Homebrew and winget installs on this machine
 lib/util.lua                    mirror URL and download headers, musl detection and missing libraries, running a command, version comparison and matching, shorthands, PATH probe, vfox version check, the LTS lines the plugin learned
 .lts-cache                      not in the repository: what the plugin learned about LTS lines, written next to it
 tests/hooks_test.lua            offline hook tests
@@ -37,6 +38,7 @@ loaded with `require("util")`.
 | `vfox use nodejs@24` | `PreUse` returns the installed release to select. `EnvKeys` provides `PATH` |
 | a shell hook, `cd` into a directory with `.nvmrc` | `ParseLegacyFile`, then `EnvKeys` |
 | `vfox uninstall nodejs@24.21.0` | none, the name has to be exact |
+| `vfox link --detect nodejs` | `Detect` |
 
 A few contracts that cost time to find:
 
@@ -237,7 +239,9 @@ with the removal of `env-state.json` (`os.getenv` and `os.remove` stubbed), what
 the plugin learns about LTS lines (the file is a temporary one, and every case
 starts with a fresh one that knows no line), `PreUse` with and without the
 shadowing `node` on old and new vfox (`RUNTIME.version` before and from
-1.1.0), `PLUGIN.shadowHints` in `metadata.lua`, and the helpers of
+1.1.0), `PLUGIN.shadowHints` in `metadata.lua`, `Detect` over stubbed
+install roots, listings and `node --version` outputs (`os.getenv`,
+`list_dir`, `file_exists` and `capture` stubbed), and the helpers of
 `lib/util.lua`. Add the case a change needs there.
 
 gopher-lua 1.1.1 loses a `local x = nil` that a closure assigns: the outer scope
@@ -249,7 +253,8 @@ Check new code under `glua`, not only with LuaLS.
 
 To call one hook against the real servers, vfox 1.0.13 and later has
 `vfox plugin run`. It does not register the plugin, `--os` and `--arch` answer
-for another platform, `--offline` rejects HTTP, and `VFOX_NODEJS_MIRROR` applies:
+for another platform, `--offline` rejects HTTP, and `VFOX_NODEJS_MIRROR` applies
+(`Detect` needs vfox 1.1.0 or later, which knows the hook):
 
 ```bash
 vfox plugin run . Available --json
@@ -257,6 +262,7 @@ vfox plugin run . PreInstall --input '{"version":"24"}' --os windows --arch arm6
 vfox plugin run . PreUse --input '{"version":"22","installedSdks":{"22.23.3":{"version":"22.23.3"}}}' --json
 vfox plugin run . ParseLegacyFile --input '{"filename":".nvmrc","filepath":"/tmp/p/.nvmrc","strategy":"latest_installed","installedVersions":["24.21.0"]}' --json
 vfox plugin run . EnvKeys --input '{"path":"C:\\vfox\\nodejs-24.21.0"}' --os windows --arch amd64 --json
+vfox plugin run . Detect --json
 ```
 
 `vfox --debug <command>` shows what vfox does with a hook, which is how to find

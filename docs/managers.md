@@ -17,11 +17,29 @@ recognizes; on older vfox the plugin prints its own `Note:`. Unreleased:
 release 0.5.4 prints the `Note:`; on vfox 1.1.0 and later the warning
 comes from vfox itself with the plugin's hint.
 
-Pick at most one manager for `node` in a shell. There are two roads.
-Road A, the default below, hands `PATH` to vfox without removing the
-other manager itself: its `node` stops shadowing, and vfox installs and
-selects its own releases. Road B keeps the files where they are and
-registers one of them with vfox:
+Pick at most one manager for `node` in a shell. The fastest way out is
+`vfox link --detect nodejs` (needs vfox 1.1.0 or later, which has
+`vfox link`): it asks the plugin for the real installs on this machine
+and links what you pick. Nothing is downloaded or copied:
+
+```sh
+vfox link --detect nodejs
+vfox use nodejs@22.14.0
+```
+
+It finds the nvm, mise, asdf and Homebrew Cellar directories with a
+working `node` in them (including Intel's `/usr/local/Cellar/node`),
+and the winget directory on Windows, each under the plain release
+number the binary reports, so `vfox use 22` keeps working. A release
+found twice links once, and what vfox installed already is skipped. It
+never reports shims, pnpm's global runtime or copies without a
+versioned home (a manual `/usr/local/bin/node`): link those by hand,
+or hand `PATH` to vfox as below.
+
+There are two roads per manager below. Road A, the default, hands
+`PATH` to vfox without removing the other manager itself: its `node`
+stops shadowing, and vfox installs and selects its own releases. Road B
+keeps the files where they are and registers one of them with vfox:
 
 ```sh
 vfox link nodejs@<name> <dir>
@@ -38,11 +56,11 @@ a linked shim selects nothing stable. A linked version stays its
 owner's: the other manager may upgrade or prune it underneath vfox
 (`brew upgrade` replaces the Cellar directory, mise/asdf prune
 installs), vfox only reports that, `vfox install --reinstall` does not
-apply to it, and `vfox uninstall` removes the link only. The `<name>`
-is used as written (`24-system`, `brew-24`, `nvm-22`); use letters,
-digits, `.`, `_`, `+` and `-`, never `latest`. The nodejs plugin has no
-`Detect` hook, so `vfox link --detect nodejs` finds nothing; pass the
-directory yourself.
+apply to it, and `vfox uninstall` removes the link only. Name a linked
+install after the plain release number the binary reports (`22.14.0`),
+so `vfox use 22` keeps selecting it; if vfox installed that release
+already, just `vfox use` it instead of linking. A name may use letters,
+digits, `.`, `_`, `+` and `-`, and must not be `latest`.
 
 ## mise
 
@@ -64,12 +82,13 @@ instead of the global one. Official reference:
 [uninstall](https://mise.jdx.dev/cli/uninstall.html) and
 [unuse](https://mise.jdx.dev/cli/unuse.html).
 
-Or link one real install (road B); never the shims directory:
+Or link one real install (road B); never the shims directory.
+`vfox link --detect nodejs` finds these itself:
 
 ```sh
 mise ls node
-vfox link nodejs@mise-22 ~/.local/share/mise/installs/node/22.0.0
-vfox use nodejs@mise-22
+vfox link nodejs@22.0.0 ~/.local/share/mise/installs/node/22.0.0
+vfox use nodejs@22.0.0
 ```
 
 ## asdf
@@ -92,13 +111,14 @@ Then delete the `nodejs ...` line from `./.tool-versions` and
 [versions](https://asdf-vm.com/manage/versions.html) (uninstall and
 shims on one page).
 
-Or link one real install (road B); never the shims directory:
+Or link one real install (road B); never the shims directory.
+`vfox link --detect nodejs` finds these itself:
 
 ```sh
 asdf list nodejs
 asdf where nodejs 22.13.0
-vfox link nodejs@asdf-22 ~/.asdf/installs/nodejs/22.13.0
-vfox use nodejs@asdf-22
+vfox link nodejs@22.13.0 ~/.asdf/installs/nodejs/22.13.0
+vfox use nodejs@22.13.0
 ```
 
 ## nvm
@@ -119,12 +139,13 @@ also unloads the `nvm` function itself, so prefer `deactivate` for a
 handoff. Official reference:
 [restoring PATH](https://github.com/nvm-sh/nvm#restoring-path).
 
-Or link one installed version (road B):
+Or link one installed version (road B).
+`vfox link --detect nodejs` finds these itself:
 
 ```sh
 nvm which 22
-vfox link nodejs@nvm-22 ~/.nvm/versions/node/v22.14.0
-vfox use nodejs@nvm-22
+vfox link nodejs@22.14.0 ~/.nvm/versions/node/v22.14.0
+vfox use nodejs@22.14.0
 ```
 
 ## Homebrew
@@ -147,12 +168,13 @@ the same. Official reference:
 [manpage](https://docs.brew.sh/Manpage) (`unlink`, `uninstall`).
 
 Or link the Cellar directory (road B); a later `brew upgrade` replaces
-it, so the link can dangle and need relinking:
+it, so the link can dangle and need relinking.
+`vfox link --detect nodejs` finds these itself:
 
 ```sh
 ls $(brew --cellar node)
-vfox link nodejs@brew-24 /opt/homebrew/Cellar/node/24.5.0
-vfox use nodejs@brew-24
+vfox link nodejs@24.5.0 /opt/homebrew/Cellar/node/24.5.0
+vfox use nodejs@24.5.0
 ```
 
 ## winget and the official installer
@@ -176,9 +198,11 @@ entry is gone. Official download page:
 [nodejs.org](https://nodejs.org/en/download).
 
 Or link the directory (road B); an MSI upgrade replaces the files
-underneath, which vfox only reports:
+underneath, which vfox only reports.
+`vfox link --detect nodejs` finds it itself; by hand:
 
 ```powershell
-vfox link nodejs@system "C:\Program Files\nodejs"
-vfox use nodejs@system
+& "C:\Program Files\nodejs\node.exe" --version
+vfox link nodejs@22.14.0 "C:\Program Files\nodejs"
+vfox use nodejs@22.14.0
 ```

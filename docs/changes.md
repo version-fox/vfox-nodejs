@@ -21,6 +21,12 @@ ahead of it by everything under "Unreleased".
   only, which ignores the new metadata field. See [pnpm.md](pnpm.md),
   [managers.md](managers.md) and
   [troubleshooting.md](troubleshooting.md).
+- `vfox link --detect nodejs` links the Node.js already on the machine
+  instead of downloading another copy: the nvm, mise, asdf and Homebrew
+  Cellar directories with a working `node` in them, and the winget
+  directory on Windows, each under the plain release number the binary
+  reports. Shims, pnpm's global runtime and copies without a versioned
+  home are skipped. See [managers.md](managers.md).
 
 ## 0.5.4 (2026-11-04)
 
