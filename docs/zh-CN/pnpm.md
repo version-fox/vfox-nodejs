@@ -19,11 +19,23 @@ pnpm 作为包管理器使用（比如通过 `npm install -g pnpm` 安装）时�
 2. 每次出现提示符时，`vfox env` 都会把 `PATH` 里排在它自己的第一个路径之前的条目，保留在所有 SDK 路径的前面，这样已经激活的 Python 虚拟环境才能保持优先。`$PNPM_HOME/bin` 正是这样一个条目。
 3. 那个 `node` 是 pnpm 的 shim：它运行 pnpm 的全局 Node.js，或者当前项目通过 `devEngines.runtime`、`engines.runtime`、`.node-version` 或 `.nvmrc` 固定的版本（见[项目感知的全局 bin](https://pnpm.io/global-packages#project-aware-global-bins)）。pnpm 的 `globalShims` 设置和 `PNPM_SHIM_BYPASS=1` 只能关掉按项目查找；`node` 运行的仍然是 pnpm 的全局 Node.js，而不是 vfox 的。
 
-不管是哪个工具放的，只要有 `node` 排在 vfox 前面，`vfox use nodejs@<version>` 就会打印一条提示：
+不管是哪个工具放的，只要有 `node` 排在 vfox 前面，`vfox use nodejs@<version>` 就会给出警告。未发布：0.5.4 会由插件打印下面的 `Note:`；在 vfox 1.1.0 及以后的版本里，这条警告由 vfox 自己打印，并附带插件的提示。
+
+在 vfox 1.1.0 及以后的版本里：
+
+```text
+node runs /home/user/.local/share/pnpm/bin/node instead of nodejs@24.21.0: its directory comes before vfox in PATH.
+pnpm installed its own node. Run `pnpm remove -g node` so vfox's node runs. See https://github.com/version-fox/vfox-nodejs/blob/main/docs/pnpm.md
+```
+
+在更早的 vfox 里，插件会打印：
 
 ```text
 Note: /home/user/.local/share/pnpm/bin/node comes before vfox in PATH, so `node` will not run nodejs@24.21.0. See https://github.com/version-fox/vfox-nodejs/blob/main/docs/pnpm.md
 ```
+
+同样的问题如果来自 mise、asdf、nvm、Homebrew 或 winget，见
+[managers.md](managers.md)。
 
 ## 让 vfox 继续管理 `node`
 

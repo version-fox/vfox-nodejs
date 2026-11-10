@@ -4,7 +4,29 @@
 
 What changed in each release, as a user notices it. GitHub's
 [release pages](https://github.com/version-fox/vfox-nodejs/releases) list the
-pull requests.
+pull requests. The newest release at the time of writing is 0.5.4, and `main` is
+ahead of it by everything under "Unreleased".
+[source-build.md](source-build.md) gets you those changes now.
+
+## Unreleased
+
+- On vfox 1.1.0 and later a `node` that shadows vfox's is reported by vfox
+  itself with the plugin's hint, instead of the plugin's `Note:`. Release
+  0.5.4 prints `Note: <shadowing node> comes before vfox in PATH, ...` from
+  `PreUse` on every vfox, so with the new vfox the same shadowing prints
+  both the core warning and the plugin note. The plugin now declares
+  `PLUGIN.shadowHints` for pnpm, mise, asdf, nvm, Homebrew and winget (each
+  with its handoff command and a link to `docs/pnpm.md` or the new
+  `docs/managers.md`) and keeps its own `Note:` for vfox before 1.1.0
+  only, which ignores the new metadata field. See [pnpm.md](pnpm.md),
+  [managers.md](managers.md) and
+  [troubleshooting.md](troubleshooting.md).
+- `vfox link --detect nodejs` links the Node.js already on the machine
+  instead of downloading another copy: the nvm, mise, asdf and Homebrew
+  Cellar directories with a working `node` in them, and the winget
+  directory on Windows, each under the plain release number the binary
+  reports. Shims, pnpm's global runtime and copies without a versioned
+  home are skipped. See [managers.md](managers.md).
 
 ## 0.5.4 (2026-11-04)
 

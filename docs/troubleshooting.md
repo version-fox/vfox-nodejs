@@ -132,7 +132,16 @@ These are not errors.
 | `Note: Node.js versions below 16 do not support Apple Silicon (arm64), using x64 architecture with Rosetta 2` | macOS arm64 and a release before 16.0.0, see [platforms.md](platforms.md#macos) |
 | `Note: musl libc detected, installed node-v22.23.3-linux-x64-musl.tar.gz. See ...` | the plugin took the musl package, see [musl.md](musl.md) |
 | `Note: node-v18.20.8-linux-x64-musl.tar.gz is not listed in https://nodejs.org/dist/v18.20.8/, using unofficial musl build` | nodejs.org has no such musl package and the plugin takes it from unofficial-builds.nodejs.org |
-| ``Note: /home/me/.local/share/pnpm/bin/node comes before vfox in PATH, so `node` will not run nodejs@24.21.0. See ...`` | another `node` shadows vfox's, see [pnpm.md](pnpm.md) |
+| ``Note: /home/me/.local/share/pnpm/bin/node comes before vfox in PATH, so `node` will not run nodejs@24.21.0. See ...`` | another `node` shadows vfox's on vfox before 1.1.0, see [pnpm.md](pnpm.md) for pnpm and [managers.md](managers.md) for mise, asdf, nvm, Homebrew and winget. Unreleased: release 0.5.4 prints this; on vfox 1.1.0 and later vfox warns itself (`node runs ... instead of nodejs@...`) and appends the plugin's hint |
+
+### Warnings from vfox itself
+
+Unreleased: vfox 1.1.0 and later reports a shadowing `node` with the
+plugin's hint; release 0.5.4 prints the `Note:` above from the plugin.
+
+| Warning | Meaning |
+| --- | --- |
+| ``node runs /home/me/.local/share/pnpm/bin/node instead of nodejs@24.21.0: its directory comes before vfox in PATH. pnpm installed its own node. Run `pnpm remove -g node` so vfox's node runs. See ...`` | another `node` shadows vfox's, see [pnpm.md](pnpm.md) for pnpm and [managers.md](managers.md) for mise, asdf, nvm, Homebrew and winget |
 
 ### Errors from Node.js itself
 

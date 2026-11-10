@@ -39,12 +39,26 @@ Observed with pnpm 12.14.0 and vfox 1.0.12 in bash on Ubuntu.
    pnpm's `globalShims` setting and `PNPM_SHIM_BYPASS=1` only turn off the
    project lookup; `node` still runs pnpm's global Node.js, not vfox's.
 
-`vfox use nodejs@<version>` prints a note when a `node` sits ahead of vfox
-this way, whichever tool put it there:
+`vfox use nodejs@<version>` warns when a `node` sits ahead of vfox
+this way, whichever tool put it there. Unreleased: release 0.5.4 prints
+the `Note:` below from the plugin; on vfox 1.1.0 and later the warning
+comes from vfox itself with the plugin's hint.
+
+On vfox 1.1.0 and later:
+
+```text
+node runs /home/user/.local/share/pnpm/bin/node instead of nodejs@24.21.0: its directory comes before vfox in PATH.
+pnpm installed its own node. Run `pnpm remove -g node` so vfox's node runs. See https://github.com/version-fox/vfox-nodejs/blob/main/docs/pnpm.md
+```
+
+On older vfox, the plugin prints:
 
 ```text
 Note: /home/user/.local/share/pnpm/bin/node comes before vfox in PATH, so `node` will not run nodejs@24.21.0. See https://github.com/version-fox/vfox-nodejs/blob/main/docs/pnpm.md
 ```
+
+For the same problem from mise, asdf, nvm, Homebrew or winget, see
+[managers.md](managers.md).
 
 ## Keeping vfox in charge of `node`
 

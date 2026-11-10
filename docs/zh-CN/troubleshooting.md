@@ -73,7 +73,15 @@ vfox 会打印 `Verifying checksum <sum>...`，拿下载的文件和这个校验
 | `Note: Node.js versions below 16 do not support Apple Silicon (arm64), using x64 architecture with Rosetta 2` | 在 macOS arm64 上安装早于 16.0.0 的版本，见 [platforms.md](platforms.md#macos) |
 | `Note: musl libc detected, installed node-v22.23.3-linux-x64-musl.tar.gz. See ...` | 插件安装的是 musl 包，见 [musl.md](musl.md) |
 | `Note: node-v18.20.8-linux-x64-musl.tar.gz is not listed in https://nodejs.org/dist/v18.20.8/, using unofficial musl build` | nodejs.org 没有这个 musl 包，插件改从 unofficial-builds.nodejs.org 获取 |
-| ``Note: /home/me/.local/share/pnpm/bin/node comes before vfox in PATH, so `node` will not run nodejs@24.21.0. See ...`` | 另一个 `node` 遮蔽了 vfox 的，见 [pnpm.md](pnpm.md) |
+| ``Note: /home/me/.local/share/pnpm/bin/node comes before vfox in PATH, so `node` will not run nodejs@24.21.0. See ...`` | 在 vfox 1.1.0 之前的版本里，另一个 `node` 遮蔽了 vfox 的，pnpm 见 [pnpm.md](pnpm.md)，mise、asdf、nvm、Homebrew 和 winget 见 [managers.md](managers.md)。未发布：0.5.4 会打印这条；在 vfox 1.1.0 及以后的版本里，vfox 自己给出警告（`node runs ... instead of nodejs@...`），并附带插件的提示 |
+
+### vfox 自己给出的警告
+
+未发布：在 vfox 1.1.0 及以后的版本里，遮蔽 vfox 的 `node` 由 vfox 报告，并附带插件的提示；0.5.4 会由插件打印上面的 `Note:`。
+
+| 警告 | 含义 |
+| --- | --- |
+| ``node runs /home/me/.local/share/pnpm/bin/node instead of nodejs@24.21.0: its directory comes before vfox in PATH. pnpm installed its own node. Run `pnpm remove -g node` so vfox's node runs. See ...`` | 另一个 `node` 遮蔽了 vfox 的，pnpm 见 [pnpm.md](pnpm.md)，mise、asdf、nvm、Homebrew 和 winget 见 [managers.md](managers.md) |
 
 ### Node.js 自己报的错
 
