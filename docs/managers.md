@@ -13,9 +13,7 @@ The symptom is always the same: `vfox use nodejs@<version>` prints
 the other manager's version, because its `node` comes before vfox's in
 `PATH` (`type -a node` lists it first). On vfox 1.1.0 and later vfox
 warns itself and appends the plugin's hint for the manager it
-recognizes; on older vfox the plugin prints its own `Note:`. Unreleased:
-release 0.5.4 prints the `Note:`; on vfox 1.1.0 and later the warning
-comes from vfox itself with the plugin's hint.
+recognizes; on older vfox the plugin prints its own `Note:`.
 
 Pick at most one manager for `node` in a shell. The fastest way out is
 `vfox link --detect nodejs` (needs vfox 1.1.0 or later, which has

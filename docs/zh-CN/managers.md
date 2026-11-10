@@ -12,8 +12,7 @@ vfox 旁边常见的其他管理器：mise、asdf、nvm、Homebrew，以及 wing
 的版本，因为它的 `node` 排在 `PATH` 里 vfox 的前面（`type -a node`
 把它列在最前）。在 vfox 1.1.0 及以后的版本里，vfox 自己给出警告，并
 附带插件能认出来的那个管理器的提示；在更早的 vfox 里，插件打印自己的
-`Note:`。未发布：0.5.4 会由插件打印 `Note:`；在 vfox 1.1.0 及以后的
-版本里，这条警告由 vfox 自己打印，并附带插件的提示。
+`Note:`。
 
 一个 Shell 里最多让一个管理器管 `node`。最快的是
 `vfox link --detect nodejs`（要带 `vfox link` 的 vfox 1.1.0 及以后）：
