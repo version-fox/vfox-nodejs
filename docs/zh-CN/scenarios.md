@@ -4,7 +4,7 @@
 
 这个插件给 vfox 提供的，正是 [nvm-sh/nvm](https://github.com/nvm-sh/nvm) 给 POSIX Shell 提供的东西：多个 Node.js 版本并存，可以为一个 Shell、一个项目选定其中一个，或者设为默认，并且能读取 `.nvmrc` 文件。nvm-sh/nvm 是一组 Shell 函数。它的 README 列出的是 Unix、macOS 和 WSL 上的 sh、dash、ksh、zsh 和 bash，另外在某些情况下也可以用于 Git Bash 和 Cygwin，其他 Windows 用户则被指向别的工具。PowerShell 不在这个列表里。vfox 是一个程序，为每种 Shell 都提供挂载脚本，所以同样的事情既可以在 Windows 10 和 11 自带的 Windows PowerShell 5.1 里做，也可以在 PowerShell 7、bash、zsh 和 fish 里做。
 
-下面每个场景都写明你想做什么、要输入什么、会看到什么。输出取自 2026-11-03 的 Linux x64，使用 vfox 1.0.13 和后来成为 0.5.5 的代码，主目录一律写成 `/home/me`。PowerShell 的命令在 Linux 上的 PowerShell 7.6.9 里运行过，只有 Windows 独有的除外：`Set-ExecutionPolicy`，以及写入用户级环境变量的 `[Environment]::SetEnvironmentVariable`。Windows PowerShell 5.1 本身不在测试套件里（见 [platforms.md](platforms.md#ci-覆盖什么)），所以凡是依据 PowerShell 的文档或 vfox 的源码、而没有在那里实际运行过的内容，场景里都会注明。
+下面每个场景都写明你想做什么、要输入什么、会看到什么。输出取自 2026-11-03 的 Linux x64，使用 vfox 1.0.13 和后来成为 0.5.5 的代码，只有一个例外：[一个 Shell 里的多个项目](#一个-shell-里的多个项目)里的表格，是 2026-11-10 用 vfox 1.1.0 和尚未发布的插件重新跑过的。主目录一律写成 `/home/me`。PowerShell 的命令在 Linux 上的 PowerShell 7.6.9 里运行过，只有 Windows 独有的除外：`Set-ExecutionPolicy`，以及写入用户级环境变量的 `[Environment]::SetEnvironmentVariable`。Windows PowerShell 5.1 本身不在测试套件里（见 [platforms.md](platforms.md#ci-覆盖什么)），所以凡是依据 PowerShell 的文档或 vfox 的源码、而没有在那里实际运行过的内容，场景里都会注明。
 
 ## 从 nvm 迁移
 
@@ -118,7 +118,7 @@ vfox install "nodejs@$((Get-Content .nvmrc -TotalCount 1).Trim())"
 
 `v22.23.4` 可以，因为 vfox 会去掉 `v`；`22` 也可以，它会安装最新的 22.x。`lts/*` 和 `.nvmrc` 里的其他名字则不行：安装会以 `version not found for provided version lts/*` 结束。
 
-每个提示符出现在项目目录里时都会应用 `.nvmrc`，所以 `cd` 进去就会切换。离开这个目录进入完全没有配置的目录时不会切换回来，见[一个 Shell 里的多个项目](#一个-shell-里的多个项目)。如果仓库里不该出现 vfox 的文件，`vfox use --project` 仍然可以让你自己得到一个 `.vfox.toml`，它在两个方向上都会切换。把 `.vfox.toml` 和 `.vfox/` 写进 `.git/info/exclude`，再执行 `vfox config gitignore.enable false`（对所有项目生效），这样 vfox 就不会把 `.vfox/` 加进仓库所跟踪的 `.gitignore`。
+每个提示符出现在项目目录里时都会应用 `.nvmrc`，所以 `cd` 进去就会切换；离开这个目录进入完全没有配置的目录时，在 vfox 1.1.0 及以后的版本里会切换回来（更早的 vfox 不会），见[一个 Shell 里的多个项目](#一个-shell-里的多个项目)。如果仓库里不该出现 vfox 的文件，`vfox use --project` 仍然可以让你自己得到一个 `.vfox.toml`，它在两个方向上都会切换。把 `.vfox.toml` 和 `.vfox/` 写进 `.git/info/exclude`，再执行 `vfox config gitignore.enable false`（对所有项目生效），这样 vfox 就不会把 `.vfox/` 加进仓库所跟踪的 `.gitignore`。
 
 ### 在 Windows PowerShell 5.1 里写这个文件
 
@@ -138,25 +138,27 @@ Set-Content -Path .nvmrc -Value '22.23.4' -Encoding ascii
 
 ## 一个 Shell 里的多个项目
 
-一个用 Node.js 18 的旧 API，一个用 24 的 Web 应用，其余的都用全局的 26。在挂载了 vfox 的 Shell 里，在它们之间 `cd`。下面是同一个 Shell 里每一步 `node -v` 的输出，已安装 18.20.8、24.22.2 和 26.13.0，全局版本是 26.13.0（bash 5.3，PowerShell 7.6.9 的结果一致）：
+一个用 Node.js 18 的旧 API，一个用 24 的 Web 应用，其余的都用全局的 26。在挂载了 vfox 的 Shell 里，在它们之间 `cd`。下面是同一个 Shell 里每一步 `node -v` 的输出，已安装 18.20.8、24.22.2 和 26.13.0，全局版本是 26.13.0，在 vfox 1.1.0 里（bash 5.3）：
 
 | 步骤 | `node -v` |
 | --- | --- |
 | Shell 在完全没有配置的目录里启动 | v26.13.0 |
 | `cd` 进 `.nvmrc` 写着 18.20.8 的目录 | v18.20.8 |
 | `cd` 进 `.node-version` 写着 24.22.2 的目录 | v24.22.2 |
-| `cd` 进完全没有配置的目录 | v24.22.2 |
+| `cd` 进完全没有配置的目录 | v26.13.0 |
 | `cd` 进 `.vfox.toml` 写着 18.20.8 的目录 | v18.20.8 |
 | `cd` 进 `.vfox.toml` 写着 24.22.2 的目录 | v24.22.2 |
 | `cd` 进完全没有配置的目录 | v26.13.0 |
 
+未发布：0.5.5 在离开去完全没有配置的目录时，会保持版本文件的版本（第四步输出 v24.22.2）；切换回来需要 vfox 1.1.0。
+
 - **`.vfox.toml`** 在每次 `cd` 时都会切换，离开去没有配置的目录时也会切回全局版本。
-- **`.nvmrc` 和 `.node-version`** 在每个提示符出现在它所在的目录里时都会读取。从一个这样的目录 `cd` 到另一个会切换，改动文件则在下一个提示符生效。
-- **离开**带有这类文件的目录、进入完全没有配置的目录时不会切换回来：Shell 保持它原有的版本，第四步就是这样。在没有东西可读的目录里不会调用插件，vfox 沿用它保存的结果。新开的终端，或者带有 `.vfox.toml` 或它自己的版本文件的目录，会切换。这是 vfox 缓存的限制，已作为 [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745) 报告，这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪。
+- **`.nvmrc` 和 `.node-version`** 在 vfox 1.1.0 及以后的版本里，每个提示符出现在它所在的目录里时都会读取。从一个这样的目录 `cd` 到另一个会切换，改动文件则在下一个提示符生效，离开去完全没有配置的目录时会切换回全局版本。在 vfox 1.1.0 之前的版本里，文件只在 Shell 于它所在的目录里启动时生效。
+- **离开**带有这类文件的目录、进入完全没有配置的目录时，在 vfox 1.1.0 之前的版本里不会切换回来：Shell 保持它原有的版本。请把 vfox 升级到 1.1.0 及以后的版本。
 
-原因在 [nvmrc.md](nvmrc.md#什么时候读取这个文件)：vfox 把 Shell 第一次计算的结果保存下来，并不跟踪版本文件（vfox 1.0.13），而插件在每次读取版本文件时都会让 vfox 重新计算。所以：
+原因在 [nvmrc.md](nvmrc.md#什么时候读取这个文件)：vfox 把 Shell 第一次计算的结果保存下来，只有 vfox 1.1.0 及以后的版本才会跟踪版本文件。所以：
 
-- 对需要在同一个 Shell 里来回切换的项目，`.vfox.toml` 在两个方向上都管用：在每个项目里执行 `vfox use --project nodejs@18.20.8` 这样的命令。
+- 对需要在 vfox 1.1.0 之前的版本里、同一个 Shell 来回切换的项目，`.vfox.toml` 在两个方向上都管用：在每个项目里执行 `vfox use --project nodejs@18.20.8` 这样的命令。在 vfox 1.1.0 及以后的版本里，`.nvmrc` 在两个方向上也管用。
 - 在该目录里启动的东西，`.nvmrc` 就够了：编辑器里的终端、同一文件夹里新开的标签页、脚本。本仓库的 Windows E2E 套件为每个目录都新启动一个 Shell，所以在已经运行的 Windows Shell 里 `cd` 的情形不在其中。
 
 ## 只在这个窗口里换一个版本

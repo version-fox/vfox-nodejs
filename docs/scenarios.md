@@ -13,7 +13,10 @@ ships with Windows 10 and 11, as well as in PowerShell 7, bash, zsh and fish.
 
 Each case below says what you want, what to type and what you see. The outputs
 are from 2026-11-03 on Linux x64, with vfox 1.0.13 and the code that became
-release 0.5.5, and the home directory is shown as `/home/me`. The PowerShell
+release 0.5.5, except the table in
+[Several projects in one shell](#several-projects-in-one-shell), which was
+replayed with vfox 1.1.0 and the unreleased plugin on 2026-11-10. The home
+directory is shown as `/home/me`. The PowerShell
 lines were run in PowerShell 7.6.9 on Linux, except those that exist only on
 Windows: `Set-ExecutionPolicy` and the user-level
 `[Environment]::SetEnvironmentVariable`. Windows PowerShell 5.1 itself is not
@@ -191,8 +194,8 @@ newest 22.x. `lts/*` and the other `.nvmrc` names do not: the install ends with
 `version not found for provided version lts/*`.
 
 The `.nvmrc` is applied at every prompt in the project directory, so a `cd` into
-it switches. Leaving the directory for one with no config at all does not
-switch back, see
+it switches, and leaving it for one with no config at all switches back on
+vfox 1.1.0 and later (on older vfox it does not switch back), see
 [Several projects in one shell](#several-projects-in-one-shell). If the
 repository should not get a vfox file, `vfox use --project` still gives you a
 `.vfox.toml` for yourself, which switches in both directions. Put `.vfox.toml`
@@ -229,37 +232,42 @@ Set-Content -Path .nvmrc -Value '22.23.4' -Encoding ascii
 A legacy API on Node.js 18, a web application on 24, and everything else on the
 global 26. In a hooked shell, `cd` between them. This is what `node -v` printed
 at each step of one shell, with 18.20.8, 24.22.2 and 26.13.0 installed and
-26.13.0 as the global release (bash 5.3, and PowerShell 7.6.9 agrees):
+26.13.0 as the global release, on vfox 1.1.0 (bash 5.3):
 
 | Step | `node -v` |
 | --- | --- |
 | The shell starts in a directory with no config at all | v26.13.0 |
 | `cd` into a directory with a `.nvmrc` that names 18.20.8 | v18.20.8 |
 | `cd` into a directory with a `.node-version` that names 24.22.2 | v24.22.2 |
-| `cd` into a directory with no config at all | v24.22.2 |
+| `cd` into a directory with no config at all | v26.13.0 |
 | `cd` into a directory with a `.vfox.toml` that names 18.20.8 | v18.20.8 |
 | `cd` into a directory with a `.vfox.toml` that names 24.22.2 | v24.22.2 |
 | `cd` into a directory with no config at all | v26.13.0 |
 
+Unreleased: release 0.5.5 keeps the version file's release when you leave for
+a directory with no config at all (the fourth step prints v24.22.2 there); the
+switch back needs vfox 1.1.0.
+
 - **`.vfox.toml`** switches on every `cd`, and back to the global release when
   you leave for a directory with no config.
-- **`.nvmrc` and `.node-version`** are read at every prompt in their directory.
-  A `cd` from one such directory into another switches, and editing the file
-  takes effect at the next prompt.
-- **Leaving** a directory with such a file for one with no config at all does
-  not switch back: the shell keeps the release it had, as the fourth step shows.
-  The plugin is not called in a directory with nothing to read, and vfox goes on
-  with the result it kept. A new terminal, or a directory with a `.vfox.toml` or
-  a version file of its own, switches. That is a limit of vfox's cache, reported
-  as [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745) and
-  tracked here as [#46](https://github.com/version-fox/vfox-nodejs/issues/46).
+- **`.nvmrc` and `.node-version`** are read at every prompt in their directory
+  on vfox 1.1.0 and later. A `cd` from one such directory into another
+  switches, editing the file takes effect at the next prompt, and leaving for
+  a directory with no config at all switches back to the global release. On
+  vfox before 1.1.0 the file only applies when a shell starts in its
+  directory.
+- **Leaving** a directory with such a file for one with no config at all on
+  vfox before 1.1.0 does not switch back: the shell keeps the release it had.
+  Upgrade vfox to 1.1.0 or later.
 
 Why is in [nvmrc.md](nvmrc.md#when-the-file-is-read): vfox keeps the result of
-its first calculation for the shell and does not track version files (vfox
-1.0.13), and the plugin makes vfox calculate again whenever it reads one. So:
+its first calculation for the shell, and only vfox 1.1.0 and later tracks
+version files. So:
 
-- For projects that you move between in one shell, `.vfox.toml` is the one that
-  works in both directions: `vfox use --project nodejs@18.20.8` in each of them.
+- For projects that you move between in one shell on vfox before 1.1.0,
+  `.vfox.toml` is the one that works in both directions: `vfox use --project
+  nodejs@18.20.8` in each of them. On vfox 1.1.0 and later a `.nvmrc` works in
+  both directions too.
 - A `.nvmrc` is enough where a shell starts in the directory: the terminal of
   your editor, a new tab in the same folder, a script. The Windows e2e suite of
   this repository starts a new shell for each directory, so a `cd` in a running
