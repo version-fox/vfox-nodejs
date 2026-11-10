@@ -4,7 +4,7 @@
 
 这个插件给 vfox 提供的，正是 [nvm-sh/nvm](https://github.com/nvm-sh/nvm) 给 POSIX Shell 提供的东西：多个 Node.js 版本并存，可以为一个 Shell、一个项目选定其中一个，或者设为默认，并且能读取 `.nvmrc` 文件。nvm-sh/nvm 是一组 Shell 函数。它的 README 列出的是 Unix、macOS 和 WSL 上的 sh、dash、ksh、zsh 和 bash，另外在某些情况下也可以用于 Git Bash 和 Cygwin，其他 Windows 用户则被指向别的工具。PowerShell 不在这个列表里。vfox 是一个程序，为每种 Shell 都提供挂载脚本，所以同样的事情既可以在 Windows 10 和 11 自带的 Windows PowerShell 5.1 里做，也可以在 PowerShell 7、bash、zsh 和 fish 里做。
 
-下面每个场景都写明你想做什么、要输入什么、会看到什么。输出取自 2026-11-03 的 Linux x64，使用 vfox 1.0.13 和后来成为 0.5.4 的代码，主目录一律写成 `/home/me`。PowerShell 的命令在 Linux 上的 PowerShell 7.6.9 里运行过，只有 Windows 独有的除外：`Set-ExecutionPolicy`，以及写入用户级环境变量的 `[Environment]::SetEnvironmentVariable`。Windows PowerShell 5.1 本身不在测试套件里（见 [platforms.md](platforms.md#ci-覆盖什么)），所以凡是依据 PowerShell 的文档或 vfox 的源码、而没有在那里实际运行过的内容，场景里都会注明。
+下面每个场景都写明你想做什么、要输入什么、会看到什么。输出取自 2026-11-03 的 Linux x64，使用 vfox 1.0.13 和后来成为 0.5.5 的代码，主目录一律写成 `/home/me`。PowerShell 的命令在 Linux 上的 PowerShell 7.6.9 里运行过，只有 Windows 独有的除外：`Set-ExecutionPolicy`，以及写入用户级环境变量的 `[Environment]::SetEnvironmentVariable`。Windows PowerShell 5.1 本身不在测试套件里（见 [platforms.md](platforms.md#ci-覆盖什么)），所以凡是依据 PowerShell 的文档或 vfox 的源码、而没有在那里实际运行过的内容，场景里都会注明。
 
 ## 从 nvm 迁移
 
@@ -74,7 +74,7 @@
   ```
 
   如果 `vfox use --session` 打印了这一行，说明配置文件没有运行：要么是第 1 步的执行策略，要么是挂载那一行写在了另一个 PowerShell 的配置文件里。
-- 只有 `PATH` 里的第一个 `node` 会运行。nodejs.org 的安装程序、winget 或 Scoop 装的，或者另一个版本管理器的，都可能排在 vfox 前面。这时 `vfox use` 会打印一条提示，指出是哪一个，并说明它排在 vfox 前面，见 [pnpm.md](pnpm.md)。请卸载另一个。
+- 只有 `PATH` 里的第一个 `node` 会运行。nodejs.org 的安装程序、winget 或 Scoop 装的，或者另一个版本管理器的，都可能排在 vfox 前面。这时 `vfox use` 会给出警告：在 vfox 1.1.0 及以后的版本里由 vfox 自己给出，并附带插件的提示，在更早的 vfox 里由插件打印一条提示，指出是哪一个，并说明它排在 vfox 前面，见 [pnpm.md](pnpm.md)和 [managers.md](managers.md)。请卸载另一个，或者用 `vfox link --detect nodejs` 把它链进来。
 - Windows PowerShell 5.1 用 `>` 写出的 `.nvmrc` 是 UTF-16，插件能读它，见[下文](#在-windows-powershell-51-里写这个文件)。
 
 ## 全团队使用同一个 Node.js

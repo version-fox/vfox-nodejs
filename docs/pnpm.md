@@ -40,9 +40,9 @@ Observed with pnpm 12.14.0 and vfox 1.0.12 in bash on Ubuntu.
    project lookup; `node` still runs pnpm's global Node.js, not vfox's.
 
 `vfox use nodejs@<version>` warns when a `node` sits ahead of vfox
-this way, whichever tool put it there. Unreleased: release 0.5.4 prints
-the `Note:` below from the plugin; on vfox 1.1.0 and later the warning
-comes from vfox itself with the plugin's hint.
+this way, whichever tool put it there. On vfox 1.1.0 and later the warning
+comes from vfox itself with the plugin's hint; on older vfox the plugin
+prints the `Note:` below.
 
 On vfox 1.1.0 and later:
 

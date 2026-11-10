@@ -13,7 +13,7 @@ ships with Windows 10 and 11, as well as in PowerShell 7, bash, zsh and fish.
 
 Each case below says what you want, what to type and what you see. The outputs
 are from 2026-11-03 on Linux x64, with vfox 1.0.13 and the code that became
-release 0.5.4, and the home directory is shown as `/home/me`. The PowerShell
+release 0.5.5, and the home directory is shown as `/home/me`. The PowerShell
 lines were run in PowerShell 7.6.9 on Linux, except those that exist only on
 Windows: `Set-ExecutionPolicy` and the user-level
 `[Environment]::SetEnvironmentVariable`. Windows PowerShell 5.1 itself is not
@@ -129,8 +129,11 @@ What is different on Windows:
   policy of step 1, or the hook line is in the profile of the other PowerShell.
 - Only the first `node` in `PATH` runs. One from the installer of nodejs.org,
   from winget or Scoop, or from another version manager can sit in front of
-  vfox's. `vfox use` then prints a note that names it and says that it comes
-  before vfox in `PATH`, see [pnpm.md](pnpm.md). Uninstall the other one.
+  vfox's. `vfox use` then warns about it: on vfox 1.1.0 and later vfox warns
+  itself with the plugin's hint, on older vfox the plugin prints a note that
+  names it and says that it comes before vfox in `PATH`, see [pnpm.md](pnpm.md)
+  and [managers.md](managers.md). Uninstall the other one, or link it with
+  `vfox link --detect nodejs`.
 - A `.nvmrc` that Windows PowerShell 5.1 writes with `>` is UTF-16, which the
   plugin reads, see [below](#writing-the-file-from-windows-powershell-51).
 

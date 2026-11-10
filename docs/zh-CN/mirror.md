@@ -67,7 +67,7 @@ $env:VFOX_NODEJS_MIRROR = "https://npmmirror.com/mirrors/node"
 | 北京外国语大学 | `https://mirrors.bfsu.edu.cn/nodejs-release`（会重定向到 TUNA） |
 | 天翼云 | `https://mirrors.ctyun.cn/nodejs-release` |
 
-2026-11-03，又用 vfox 1.0.13 通过它们各安装了一次 24.21.0（`VFOX_NODEJS_MIRROR=<mirror> vfox install nodejs@24.21.0`），每一个都安装成功并且能运行。0.5.4 之前，通过华为云、TUNA、USTC 和北外安装会以 `checksum error` 结束：下载由 vfox 自己完成，它请求时使用的是 Go HTTP 客户端的 `User-Agent`，即 `Go-http-client/1.1`，华为云（HTTP 418）、TUNA 和北外（403）以及 USTC（204，没有内容）对它返回的是错误页面或者空内容，而不是安装包，vfox 把这个回应存成了文件。插件请求 `index.json` 和 `SHASUMS256.txt` 时用的是 vfox 为它生成的 `User-Agent`，即 `vfox/1.0.13 vfox-nodejs/0.5.4`，这些镜像都正常响应，下载时也改用同一个。
+2026-11-03，又用 vfox 1.0.13 通过它们各安装了一次 24.21.0（`VFOX_NODEJS_MIRROR=<mirror> vfox install nodejs@24.21.0`），每一个都安装成功并且能运行。0.5.4 之前，通过华为云、TUNA、USTC 和北外安装会以 `checksum error` 结束：下载由 vfox 自己完成，它请求时使用的是 Go HTTP 客户端的 `User-Agent`，即 `Go-http-client/1.1`，华为云（HTTP 418）、TUNA 和北外（403）以及 USTC（204，没有内容）对它返回的是错误页面或者空内容，而不是安装包，vfox 把这个回应存成了文件。插件请求 `index.json` 和 `SHASUMS256.txt` 时用的是 vfox 为它生成的 `User-Agent`，即 `vfox/1.0.13 vfox-nodejs/0.5.5`，这些镜像都正常响应，下载时也改用同一个。
 
 只做重定向的地址没有列出：2026-11-03，`mirror.sjtu.edu.cn/nodejs-release` 把请求转到了 nodejs.org，`mirrors.cernet.edu.cn/nodejs-release` 则转到了中科大的一台服务器。
 

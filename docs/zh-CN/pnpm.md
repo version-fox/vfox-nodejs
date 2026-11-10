@@ -19,7 +19,7 @@ pnpm 作为包管理器使用（比如通过 `npm install -g pnpm` 安装）时�
 2. 每次出现提示符时，`vfox env` 都会把 `PATH` 里排在它自己的第一个路径之前的条目，保留在所有 SDK 路径的前面，这样已经激活的 Python 虚拟环境才能保持优先。`$PNPM_HOME/bin` 正是这样一个条目。
 3. 那个 `node` 是 pnpm 的 shim：它运行 pnpm 的全局 Node.js，或者当前项目通过 `devEngines.runtime`、`engines.runtime`、`.node-version` 或 `.nvmrc` 固定的版本（见[项目感知的全局 bin](https://pnpm.io/global-packages#project-aware-global-bins)）。pnpm 的 `globalShims` 设置和 `PNPM_SHIM_BYPASS=1` 只能关掉按项目查找；`node` 运行的仍然是 pnpm 的全局 Node.js，而不是 vfox 的。
 
-不管是哪个工具放的，只要有 `node` 排在 vfox 前面，`vfox use nodejs@<version>` 就会给出警告。未发布：0.5.4 会由插件打印下面的 `Note:`；在 vfox 1.1.0 及以后的版本里，这条警告由 vfox 自己打印，并附带插件的提示。
+不管是哪个工具放的，只要有 `node` 排在 vfox 前面，`vfox use nodejs@<version>` 就会给出警告。在 vfox 1.1.0 及以后的版本里，这条警告由 vfox 自己打印，并附带插件的提示；在更早的 vfox 里，插件打印下面的 `Note:`。
 
 在 vfox 1.1.0 及以后的版本里：
 
