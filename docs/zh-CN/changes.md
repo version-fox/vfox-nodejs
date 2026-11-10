@@ -2,11 +2,11 @@
 
 [中文](changes.md) | [English](../changes.md)
 
-按发布版本列出用户能感受到的变化。GitHub 的 [Release 页面](https://github.com/version-fox/vfox-nodejs/releases)列出了对应的 PR。撰写本文时最新的发布版是 0.5.5，`main` 比它新的内容都在“未发布”下面。想直接用上这些，见 [source-build.md](source-build.md)。
+按发布版本列出用户能感受到的变化。GitHub 的 [Release 页面](https://github.com/version-fox/vfox-nodejs/releases)列出了对应的 PR。
 
-## 未发布
+## 0.5.6（2026-11-10）
 
-- 在 vfox 1.1.0 及以后的版本里，从带有 `.nvmrc` 或 `.node-version` 的目录离开、进入完全没有配置的目录时，会切换回全局版本。vfox 从 1.1.0 起自己跟踪版本文件（[version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745)，由 [version-fox/vfox#748](https://github.com/version-fox/vfox/pull/748) 修复），所以每当 vfox 请插件读取这样的文件时，插件不再删除 `env-state.json`，没有任何变化的提示符沿用保存的结果。0.5.5 在带有这类文件的目录里，每个提示符都会重新计算一次，而且离开时不会切换回来。在 vfox 1.1.0 之前的版本里，文件只在 Shell 于它所在的目录里启动时生效。见 [nvmrc.md](nvmrc.md#什么时候读取这个文件)（[#46](https://github.com/version-fox/vfox-nodejs/issues/46)）。
+- 在 vfox 1.1.0 及以后的版本里，从带有 `.nvmrc` 或 `.node-version` 的目录离开、进入完全没有配置的目录时，会切换回全局版本。vfox 从 1.1.0 起自己跟踪版本文件（[version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745)，由 [version-fox/vfox#748](https://github.com/version-fox/vfox/pull/748) 修复），所以每当 vfox 请插件读取这样的文件时，插件不再删除 `env-state.json`，没有任何变化的提示符沿用保存的结果。0.5.5 在带有这类文件的目录里，每个提示符都会重新计算一次，而且离开时不会切换回来。在 vfox 1.1.0 之前的版本里，文件只在 Shell 于它所在的目录里启动时生效。见 [nvmrc.md](nvmrc.md#什么时候读取这个文件)（[#46](https://github.com/version-fox/vfox-nodejs/issues/46)，[#50](https://github.com/version-fox/vfox-nodejs/pull/50)）。
 
 ## 0.5.5（2026-11-10）
 

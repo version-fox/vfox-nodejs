@@ -34,8 +34,6 @@ node -v
 
 `vfox search nodejs` 会列出每个版本及其自带的 npm，属于 LTS 版本线的版本带有标记。在交互式终端里可以从中选一个。
 
-只存在于 `main`、还没进入最新发布版的行为，在下面各页里标有“未发布”。[docs/zh-CN/changes.md](docs/zh-CN/changes.md) 里列出了这些行为，想直接用上 `main`，见 [docs/zh-CN/source-build.md](docs/zh-CN/source-build.md)。
-
 ### 示例：Ubuntu 26.04
 
 ```bash
@@ -80,7 +78,7 @@ Node.js 为 Linux（x64、arm64、ppc64le、s390x）、macOS（x64 和 arm64）�
 
 ## `.nvmrc` 和 `.node-version`
 
-每个提示符出现在带有这些文件的目录里时，vfox 都会读取它们，并选中其中指定的版本（前提是已经安装），所以 `cd` 进这个目录就会切换。在 vfox 1.1.0 及以后的版本里，`cd` 到完全没有配置的目录时会切换回全局版本；`vfox use --project` 写出的 `.vfox.toml` 在所有 vfox 里都会。未发布：0.5.5 在那里不会切换回来。文件里能写什么取决于 vfox 的 `legacyVersionFile.strategy`：默认值 `specified` 下，只有完整的版本号才能选中某个版本。UTF-16 的文件或带字节顺序标记的文件（Windows PowerShell 5.1 会写出这样的文件）也能读取。详见 [docs/zh-CN/nvmrc.md](docs/zh-CN/nvmrc.md)。
+每个提示符出现在带有这些文件的目录里时，vfox 都会读取它们，并选中其中指定的版本（前提是已经安装），所以 `cd` 进这个目录就会切换。在 vfox 1.1.0 及以后的版本里，`cd` 到完全没有配置的目录时会切换回全局版本；`vfox use --project` 写出的 `.vfox.toml` 在所有 vfox 里都会。文件里能写什么取决于 vfox 的 `legacyVersionFile.strategy`：默认值 `specified` 下，只有完整的版本号才能选中某个版本。UTF-16 的文件或带字节顺序标记的文件（Windows PowerShell 5.1 会写出这样的文件）也能读取。详见 [docs/zh-CN/nvmrc.md](docs/zh-CN/nvmrc.md)。
 
 ## LTS
 

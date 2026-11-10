@@ -95,7 +95,7 @@ with the `User-Agent` of Go's HTTP client, `Go-http-client/1.1`, and Huawei
 Cloud (HTTP 418), TUNA and BFSU (403) and USTC (204 with no content) answer that
 with an error page, or with nothing, in place of the package, which vfox saves.
 The plugin asks for `index.json` and `SHASUMS256.txt` with the `User-Agent`
-that vfox builds for it, `vfox/1.0.13 vfox-nodejs/0.5.5`, which all of them
+that vfox builds for it, `vfox/1.0.13 vfox-nodejs/0.5.6`, which all of them
 serve, and it has the download send the same one.
 
 Addresses that only redirect are not listed: on 2026-11-03

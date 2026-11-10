@@ -45,10 +45,6 @@ node -v
 `vfox search nodejs` lists every release, with the npm that comes with it and a
 mark on the ones of an LTS line. In an interactive terminal it lets you pick one.
 
-Behavior that only exists on `main` and not in the latest release is marked
-"Unreleased" in the pages below. [docs/changes.md](docs/changes.md) lists it, and
-[docs/source-build.md](docs/source-build.md) gets you `main`.
-
 ### Example: Ubuntu 26.04
 
 ```bash
@@ -125,7 +121,7 @@ vfox reads these files at every prompt in a directory that has one, and selects
 the release they name if it is installed, so a `cd` into the directory switches.
 On vfox 1.1.0 and later a `cd` into a directory with no config at all switches
 back to the global release; a `.vfox.toml`, which `vfox use --project` writes,
-does on every vfox. Unreleased: release 0.5.5 never switches back there. What
+does on every vfox. What
 a file can say
 depends on vfox's `legacyVersionFile.strategy`: with the default, `specified`,
 only a full release number selects something. A file in UTF-16 or with a byte

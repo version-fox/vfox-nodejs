@@ -13,9 +13,9 @@ ships with Windows 10 and 11, as well as in PowerShell 7, bash, zsh and fish.
 
 Each case below says what you want, what to type and what you see. The outputs
 are from 2026-11-03 on Linux x64, with vfox 1.0.13 and the code that became
-release 0.5.5, except the table in
+release 0.5.6, except the table in
 [Several projects in one shell](#several-projects-in-one-shell), which was
-replayed with vfox 1.1.0 and the unreleased plugin on 2026-11-10. The home
+replayed with vfox 1.1.0 and release 0.5.6 on 2026-11-10. The home
 directory is shown as `/home/me`. The PowerShell
 lines were run in PowerShell 7.6.9 on Linux, except those that exist only on
 Windows: `Set-ExecutionPolicy` and the user-level
@@ -243,10 +243,6 @@ at each step of one shell, with 18.20.8, 24.22.2 and 26.13.0 installed and
 | `cd` into a directory with a `.vfox.toml` that names 18.20.8 | v18.20.8 |
 | `cd` into a directory with a `.vfox.toml` that names 24.22.2 | v24.22.2 |
 | `cd` into a directory with no config at all | v26.13.0 |
-
-Unreleased: release 0.5.5 keeps the version file's release when you leave for
-a directory with no config at all (the fourth step prints v24.22.2 there); the
-switch back needs vfox 1.1.0.
 
 - **`.vfox.toml`** switches on every `cd`, and back to the global release when
   you leave for a directory with no config.
