@@ -19,7 +19,7 @@ cd my-project                      # 里面有上面那个 .nvmrc
 node -v                            # v22.23.3
 ```
 
-vfox 挂载到 Shell 之后，每个提示符出现在这个目录里时都会读取这个文件，并选中其中指定的版本，所以 `cd` 进这个目录就会切换，改动文件也一样。不需要 `vfox use`。挂载由 vfox 自己完成，zsh、fish、PowerShell 等其他 Shell 的挂载方式见它的[快速入门](https://vfox.dev/zh-hans/guides/quick-start.html)。
+vfox 挂载到 Shell 之后，每个提示符出现在这个目录里时都会读取这个文件，并选中其中指定的版本，所以 `cd` 进这个目录就会切换，改动文件也一样。离开这个目录、进入完全没有配置的目录时，在 vfox 1.1.0 及以后的版本里会切换回全局版本。未发布：0.5.5 会停在文件指定的版本上。不需要 `vfox use`。挂载由 vfox 自己完成，zsh、fish、PowerShell 等其他 Shell 的挂载方式见它的[快速入门](https://vfox.dev/zh-hans/guides/quick-start.html)。
 
 - 只读取当前目录下的文件。进入项目的子目录就找不到它了，所以 `cd packages/app` 之后会回到全局版本。
 - 同一目录里两个文件都有时，`.node-version` 优先。
@@ -31,13 +31,9 @@ vfox 挂载到 Shell 之后，每个提示符出现在这个目录里时都会�
 
 ## 什么时候读取这个文件
 
-vfox 在 Shell 出现第一个提示符时算出它的环境，并把结果保存在会话目录的 `env-state.json` 里。只有当前目录的 `.vfox.toml` 与上次不是同一个、`PATH` 与上次不同，或者 vfox 的某个配置文件更新了（`vfox use` 就会造成这一点），它才会重新计算。`.nvmrc` 或 `.node-version` 不在其中（vfox 1.0.13，以及 2026-11-03 的 vfox `main`），所以 vfox 注意不到 Shell 进入了带有这类文件的目录。
+vfox 在 Shell 出现第一个提示符时算出它的环境，并把结果保存在会话目录的 `env-state.json` 里。此后每个提示符出现时，它都会读取当前目录的版本文件，解析出的结果与上次不同就重新计算。在 vfox 1.1.0 及以后的版本里，`cd` 进带有 `.nvmrc` 或 `.node-version` 的目录会切换，从一个这样的目录 `cd` 到另一个也会，改动文件则在下一个提示符生效，离开去完全没有配置的目录时会切换回全局版本。没有任何变化的提示符沿用保存的结果（`Using cached output`）。未发布：0.5.5 在带有这类文件的目录里，每个提示符都会重新算一遍，因为每当 vfox 请插件读取文件时，插件就会删掉 `env-state.json`，而且离开去完全没有配置的目录时不会切换回来。
 
-插件弥补了这一点。vfox 在查看保存的结果之前，会先运行插件的 `ParseLegacyFile`，插件就在这里删掉 `env-state.json`（`util.forget_env_state`），于是在带有这类文件的目录里，vfox 在每个提示符都会重新算一遍。`cd` 进这个目录会切换，从一个这样的目录 `cd` 到另一个也会，改动文件则在下一个提示符生效。多算这一次，在只装了一个 SDK 时每个提示符大约多花一毫秒，`--debug` 里显示为 `Config changed: true`。这是针对 vfox 的权宜之计，等 vfox 跟踪这些文件之后就该去掉。
-
-从这个目录 `cd` 到完全没有配置的目录时，它帮不上忙。插件在那里不会被调用，所以 vfox 沿用它为你离开的那个目录算出的结果（`Using cached output`），Shell 也就停在那个版本上。带有 `.vfox.toml` 的目录，或者带有它自己的版本文件的目录，会切换，新开的 Shell 也一样。
-
-下面是在 vfox 1.0.13 里，同一个 Shell 一步一步执行时 `node -v` 打印的结果，全局版本是 26.13.0（bash 5.3，PowerShell 7.6.9 的结果一致）：
+下面是在 vfox 1.1.0 里，同一个 Shell 一步一步执行时 `node -v` 打印的结果，全局版本是 26.13.0（bash 5.3）：
 
 | 步骤 | `node -v` |
 | --- | --- |
@@ -46,11 +42,11 @@ vfox 在 Shell 出现第一个提示符时算出它的环境，并把结果保�
 | `cd` 进有 18.20.8 那个 `.nvmrc` 的目录 | v18.20.8 |
 | `cd` 进 `.node-version` 写着 24.22.2 的目录 | v24.22.2 |
 | 把那个 `.node-version` 改成 22.23.4 | v22.23.4 |
-| `cd` 进完全没有配置的目录 | v22.23.4 |
+| `cd` 进完全没有配置的目录 | v26.13.0 |
 | `cd` 进 `.vfox.toml` 写着 18.20.8 的目录 | v18.20.8 |
 | `cd` 进完全没有配置的目录 | v26.13.0 |
 
-第一行是单独的一个 Shell，其余七行是在第二个 Shell 里依次执行的。`vfox --debug env -s bash` 能看到这两种情形。在带有 `.nvmrc` 的目录里，插件解析了这个文件，vfox 重新计算：
+第一行是单独的一个 Shell，其余七行是在第二个 Shell 里依次执行的。`vfox --debug env -s bash` 能看到这两种情形。发生变化之后的第一个提示符，在带有 `.nvmrc` 的目录里会解析这个文件并重新计算：
 
 ```text
 Parsing legacy file /home/me/projects/legacy-api/.nvmrc
@@ -60,16 +56,19 @@ Config changed: true, configPaths: map[global:/home/me/.vfox/.vfox.toml]
 CallFunction: EnvKeys
 ```
 
-`cd` 进没有配置的目录之后的第一个提示符，插件无事可读：
+没有任何变化的提示符沿用保存的结果：
 
 ```text
+Parsing legacy file /home/me/projects/legacy-api/.nvmrc
+CallFunction: ParseLegacyFile
+Found nodejs@18.20.8
 Config changed: false, configPaths: map[global:/home/me/.vfox/.vfox.toml]
 Using cached output
 ```
 
-`.vfox.toml` 是 vfox 自己跟踪的，所以它在两个方向上都会切换：`vfox use --project nodejs@18.20.8` 会写出一个。见 [scenarios.md](scenarios.md#一个-shell-里的多个项目)。
+`.vfox.toml` 是 vfox 自己跟踪的，所以它在两个方向上都会切换，在任何 vfox 里都一样：`vfox use --project nodejs@18.20.8` 会写出一个。见 [scenarios.md](scenarios.md#一个-shell-里的多个项目)。
 
-这个缓存是 vfox 的，修复也要由 vfox 来做。它已经作为 [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745) 报告，在有发布版带上修复之前，这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪。等 vfox 自己能注意到版本文件之后，这个应对办法就可以去掉。
+在 vfox 1.1.0 之前的版本里，这个文件只在 Shell 于它所在的目录里启动时生效：`cd` 进这个目录不会切换，改动文件也不会，离开这个目录时会保持原有的版本。请把 vfox 升级到 1.1.0 及以后的版本，就能在每次 `cd` 时切换。vfox 在 1.1.0 里学会了跟踪这些文件（[version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745)，由 [version-fox/vfox#748](https://github.com/version-fox/vfox/pull/748) 修复），这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪。
 
 ## 由策略决定
 
@@ -133,8 +132,8 @@ vfox config legacyVersionFile.strategy latest_installed
 版本没有切换时：
 
 - vfox 没有挂载到当前的 Shell。`eval "$(vfox activate bash)"` 要在当前 Shell 里执行过，只在别处执行过不算。
-- 仅限 0.5.4 之前：你 `cd` 进这个目录时，Shell 已经在运行，而 vfox 沿用了它为这个 Shell 算出的版本。请在那里打开一个新终端，或者用 `vfox update nodejs` 更新插件。
-- Shell 从带有版本文件的目录进入了完全没有配置的目录，它会保持离开的那个目录的版本。请打开一个新终端。
+- vfox 在 1.1.0 之前：你 `cd` 进这个目录时，Shell 已经在运行，而 vfox 沿用了它为这个 Shell 算出的版本。请在那里打开一个新终端，或者把 vfox 升级到 1.1.0 及以后的版本。
+- vfox 在 1.1.0 之前：Shell 从带有版本文件的目录进入了完全没有配置的目录，它会保持离开的那个目录的版本。请在那里打开一个新终端。
 - 当前目录是文件所在目录的子目录。
 - 版本没有安装，用 `vfox install nodejs@22.23.3` 安装。
 - 策略是 `specified`，而文件里写的是 `22` 或 `lts/jod`。

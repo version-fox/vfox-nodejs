@@ -167,11 +167,10 @@ func verifyLegacyFiles(ctx context.Context, t *testing.T, ctr tc.Container, box 
 	t.Helper()
 	// Each probe activates a new PowerShell process because activation pins
 	// __VFOX_PID, which scopes the `vfox env` state cache. Windows may quickly
-	// reuse a just-exited PID, though, and `.nvmrc` changes are not among the
-	// cache's tracked config files. The plugin removes the cache file itself
-	// whenever vfox asks it to read a legacy file (util.forget_env_state), so a
-	// prior legacy probe cannot supply its selected version to the next probe:
-	// do not remove it here, or this test no longer covers that. The output
+	// reuse a just-exited PID, though, so a prior legacy probe could supply
+	// its selected version to the next probe: do not remove the cache file
+	// here, or this test no longer covers that. vfox 1.1.0 tracks the version
+	// files itself, so each probe resolves its own directory. The output
 	// includes the resolved node path and version to make failures clear.
 	run := func(dir string) string {
 		t.Helper()

@@ -126,17 +126,10 @@ check that cannot work never blocks an install. See
 
 ## Legacy files
 
-`ParseLegacyFile` first removes `env-state.json` from the session directory
-(`util.forget_env_state`). vfox keeps the result of `vfox env` there and does
-not track version files, so without this a `cd` into a directory that only has
-one is not noticed. vfox calls the hook before it loads that file, which is what
-makes the workaround work, and it is why the hook cannot help on the way out of
-the directory: it is not called where there is nothing to read. See
-[nvmrc.md](nvmrc.md#when-the-file-is-read).
-
-It then reads the file and decodes it (`util.decode_text` turns UTF-16 with a
-byte order mark into UTF-8, and drops the UTF-8 mark, because Windows PowerShell
-5.1 writes both). It removes all whitespace, and gives the text to
+`ParseLegacyFile` reads the file and decodes it (`util.decode_text` turns
+UTF-16 with a byte order mark into UTF-8, and drops the UTF-8 mark, because
+Windows PowerShell 5.1 writes both). It removes all whitespace, and gives the
+text to
 `resolve_version(query, strategy)`: it drops a leading `v`, lowers the case,
 turns `lts-x` into `lts/x`, and maps `lts/<codename>` to a major, `lts` and
 `lts/*` to the newest major of an LTS line. Under `latest_available` the
@@ -234,8 +227,8 @@ itself (`package.preload`), sets `RUNTIME` per case, and answers requests from
 It covers `Available` and its failures, the package name per platform and the
 errors of a failed checksum request, musl and `PostInstall` (with `util.capture`,
 `util.file_exists` and `util.has_libstdcxx` stubbed through `with_util`),
-`ParseLegacyFile` under each strategy, in UTF-16 and with a byte order mark, and
-with the removal of `env-state.json` (`os.getenv` and `os.remove` stubbed), what
+`ParseLegacyFile` under each strategy, in UTF-16 and with a byte order mark,
+what
 the plugin learns about LTS lines (the file is a temporary one, and every case
 starts with a fresh one that knows no line), `PreUse` with and without the
 shadowing `node` on old and new vfox (`RUNTIME.version` before and from
@@ -318,16 +311,13 @@ have no package. For the musl table run the same program against
 - A plugin directory that cannot be written, or a plugin that has not had the
   index in hand since it was installed, leaves `specified` and
   `latest_installed` with the built-in table, which ends at Lithium.
-- A `cd` out of a directory with a version file into one with no config at all
-  does not switch back. vfox does not track version files and keeps the result
-  of its last calculation, and the plugin is not called where there is no file
-  to read, so `util.forget_env_state` only covers the way in. A fix belongs in
-  vfox: [version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745),
+- On vfox before 1.1.0 a version file only applies when a shell starts in its
+  directory: a `cd` into the directory is ignored, and so is an edit of the
+  file, and leaving the directory keeps the release it had. vfox tracks these
+  files from 1.1.0
+  ([version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745),
+  fixed by [version-fox/vfox#748](https://github.com/version-fox/vfox/pull/748)),
   tracked here as [#46](https://github.com/version-fox/vfox-nodejs/issues/46).
-  Drop `util.forget_env_state` when vfox tracks version files.
-- Every prompt in a directory with a version file calculates the environment
-  again, because of `util.forget_env_state`. It took about a millisecond with
-  one SDK installed.
 - `latest_available` downloads `index.json` at every prompt in a directory with a
   legacy file.
 - UTF-32, and UTF-16 without a byte order mark, are not decoded.

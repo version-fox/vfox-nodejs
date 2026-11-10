@@ -66,9 +66,7 @@ vfox 加载 `metadata.lua`，命令需要时调用相应的钩子，并向钩子
 
 ## 兼容版本文件
 
-`ParseLegacyFile` 首先从会话目录里删掉 `env-state.json`（`util.forget_env_state`）。vfox 把 `vfox env` 的结果保存在那里，并且不跟踪版本文件，没有这一步的话，`cd` 进只有版本文件的目录就注意不到。vfox 在加载那个文件之前就调用这个钩子，这就是这个权宜之计能起作用的原因，也是它在离开目录时帮不上忙的原因：没有东西可读的地方不会调用它。见 [nvmrc.md](nvmrc.md#什么时候读取这个文件)。
-
-接着它读取文件并解码（`util.decode_text` 把带标记的 UTF-16 变成 UTF-8，并去掉 UTF-8 的标记，因为 Windows PowerShell 5.1 两种都会写出来）。去掉所有空白字符，再把文本交给 `resolve_version(query, strategy)`：它去掉开头的 `v`，转成小写，把 `lts-x` 变成 `lts/x`，把 `lts/<codename>` 映射到一个大版本，把 `lts` 和 `lts/*` 映射到最新的 LTS 版本线的大版本。在 `latest_available` 策略下，代号先从索引里取（`discover_lts`）。其他情况下，以及索引里没找到或请求失败时，由 `util.known_lts_lines` 作答，不发请求：插件从索引里学到的内容，加上内置的 `util.LtsLines`，见[下文](#插件如何学到-lts-版本线)。
+`ParseLegacyFile` 读取文件并解码（`util.decode_text` 把带标记的 UTF-16 变成 UTF-8，并去掉 UTF-8 的标记，因为 Windows PowerShell 5.1 两种都会写出来）。去掉所有空白字符，再把文本交给 `resolve_version(query, strategy)`：它去掉开头的 `v`，转成小写，把 `lts-x` 变成 `lts/x`，把 `lts/<codename>` 映射到一个大版本，把 `lts` 和 `lts/*` 映射到最新的 LTS 版本线的大版本。在 `latest_available` 策略下，代号先从索引里取（`discover_lts`）。其他情况下，以及索引里没找到或请求失败时，由 `util.known_lts_lines` 作答，不发请求：插件从索引里学到的内容，加上内置的 `util.LtsLines`，见[下文](#插件如何学到-lts-版本线)。
 
 接着 `resolve_legacy_version(strategy, query)` 用 `util.version_prefix` 解析查询：`22` 得到 `{ 22 }`，`22.23` 得到 `{ 22, 23 }`，`22.x`、`22.x.x` 和 `22.*` 都得到 `{ 22 }`。不是这类前缀的文本（`node`、`lts/unknown`、`>=20`）原样返回。对于前缀：
 
@@ -115,7 +113,7 @@ line lithium 26
 go run github.com/yuin/gopher-lua/cmd/glua@v1.1.1 tests/hooks_test.lua
 ```
 
-请在仓库根目录运行。`tests/hooks_test.lua` 自己模拟了 `http` 和 `json`（通过 `package.preload`），为每个用例设置 `RUNTIME`，请求的应答来自 `state.response`、`state.decoded` 和 `state.responder`。一个用例写作 `test("name", function() ... end)`，调用它会重置状态和 `available_result`。测试覆盖 `Available` 及其失败情况、各平台的包名和校验和请求失败时的错误、musl 与 `PostInstall`（通过 `with_util` 模拟了 `util.capture`、`util.file_exists` 和 `util.has_libstdcxx`）、各策略下的 `ParseLegacyFile`（包括 UTF-16 和带字节顺序标记的文件，以及删除 `env-state.json`，其中 `os.getenv` 和 `os.remove` 是模拟的）、插件如何学到 LTS 版本线（文件是临时的，每个用例开始时都有一个什么版本线也不认识的新文件）、新老 vfox 下有无遮蔽 `node` 时的 `PreUse`（`RUNTIME.version` 在 1.1.0 之前和之后）、`metadata.lua` 里的 `PLUGIN.shadowHints`、`Detect`（安装根目录、目录列表和 `node --version` 的输出都是模拟的：`os.getenv`、`list_dir`、`file_exists` 和 `capture`），以及 `lib/util.lua` 里的辅助函数。改动需要的用例就加在那里。
+请在仓库根目录运行。`tests/hooks_test.lua` 自己模拟了 `http` 和 `json`（通过 `package.preload`），为每个用例设置 `RUNTIME`，请求的应答来自 `state.response`、`state.decoded` 和 `state.responder`。一个用例写作 `test("name", function() ... end)`，调用它会重置状态和 `available_result`。测试覆盖 `Available` 及其失败情况、各平台的包名和校验和请求失败时的错误、musl 与 `PostInstall`（通过 `with_util` 模拟了 `util.capture`、`util.file_exists` 和 `util.has_libstdcxx`）、各策略下的 `ParseLegacyFile`（包括 UTF-16 和带字节顺序标记的文件）、插件如何学到 LTS 版本线（文件是临时的，每个用例开始时都有一个什么版本线也不认识的新文件）、新老 vfox 下有无遮蔽 `node` 时的 `PreUse`（`RUNTIME.version` 在 1.1.0 之前和之后）、`metadata.lua` 里的 `PLUGIN.shadowHints`、`Detect`（安装根目录、目录列表和 `node --version` 的输出都是模拟的：`os.getenv`、`list_dir`、`file_exists` 和 `capture`），以及 `lib/util.lua` 里的辅助函数。改动需要的用例就加在那里。
 
 gopher-lua 1.1.1 会丢掉闭包对 `local x = nil` 的赋值：外层作用域读到的仍然是 `nil`。要在 `with_util` 或 `pcall` 内部收集值的测试，必须把值放在表的字段里。它还有一个毛病：`local file = path ~= nil and io.open(path, "r") or nil` 之后的 `if file == nil` 会以 Go 的“nil pointer dereference”结束，所以要分成两条语句，先判断 `path`，再打开文件。新代码要用 `glua` 跑一遍，不能只靠 LuaLS。
 
@@ -160,8 +158,7 @@ curl -s https://nodejs.org/dist/index.json | jq -r '
 - E2E 的 Alpine 镜像通过依赖 `gcc` 的 `go` 得到 `libatomic`，所以套件没有覆盖不带它的原版 Alpine，钩子测试覆盖了。
 - `.nvmrc` 里的别名（`node`、`stable`、`lts/-1`）、范围和注释都不认识，见 [nvmrc.md](nvmrc.md#不认识的写法)。
 - 插件目录不可写，或者插件装好之后从没拿到过索引，`specified` 和 `latest_installed` 就只有内置的表，它到 Lithium 为止。
-- 从带有版本文件的目录 `cd` 到完全没有配置的目录时，不会切换回来。vfox 不跟踪版本文件，并沿用它上一次计算的结果，而没有文件可读的地方不会调用插件，所以 `util.forget_env_state` 只覆盖了进入的方向。修复应当放在 vfox 里：[version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745)，这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪。等 vfox 跟踪版本文件之后，就去掉 `util.forget_env_state`。
-- 在带有版本文件的目录里，每个提示符都会重新计算一次环境，这是 `util.forget_env_state` 造成的。只装了一个 SDK 时，大约多花一毫秒。
+- 在 vfox 1.1.0 之前的版本里，版本文件只在 Shell 于它所在的目录里启动时生效：`cd` 进这个目录不会切换，改动文件也不会，离开这个目录时会保持原有的版本。vfox 从 1.1.0 起跟踪这些文件（[version-fox/vfox#745](https://github.com/version-fox/vfox/issues/745)，由 [version-fox/vfox#748](https://github.com/version-fox/vfox/pull/748) 修复），这里用 [#46](https://github.com/version-fox/vfox-nodejs/issues/46) 跟踪。
 - `latest_available` 在带有兼容版本文件的目录里，每次出现提示符都会下载 `index.json`。
 - UTF-32，以及没有字节顺序标记的 UTF-16，都不会解码。
 - `VFOX_NODEJS_MIRROR` 对非官方站点不起作用。

@@ -221,9 +221,10 @@ after `get checksum failed:`:
 - **`corepack` is missing.** Node.js 25 and later does not ship it, see
   [npm.md](npm.md#yarn-pnpm-and-corepack).
 - **`.nvmrc` selects nothing.** Check the strategy and what the file holds, and
-  that the shell did not come from a directory with a version file into one with
-  none (it keeps the release it had). Before 0.5.4 the file was not read after a
-  `cd` from a running shell either. See [nvmrc.md](nvmrc.md#not-finding-it).
+  that vfox is 1.1.0 or later when the shell did not start in the directory: on
+  older vfox the file is not read after a `cd`, and a shell that came from a
+  directory with a version file into one with none keeps the release it had.
+  See [nvmrc.md](nvmrc.md#not-finding-it).
 - **`git status` lists `.vfox/`.** vfox links the release into the project as
   `.vfox/sdks/nodejs`. Ignore `.vfox/` in `.gitignore`, and keep `.vfox.toml`.
 - **The installed name has no `v`.** Releases are named `24.21.0`, and a `v` in
