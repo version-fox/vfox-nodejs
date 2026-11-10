@@ -25,8 +25,8 @@ node -v                            # v22.23.3
 vfox's shell hook reads the file at every prompt in the directory and selects
 the release it names, so a `cd` into the directory switches, and so does a
 change of the file. Leaving the directory for one with no config at all
-switches back to the global release on vfox 1.1.0 and later. Unreleased:
-release 0.5.5 keeps the file's release there. `vfox use` is not needed. The
+switches back to the global release on vfox 1.1.0 and later.
+`vfox use` is not needed. The
 hook is vfox's own, see its
 [quick start](https://vfox.dev/guides/quick-start.html) for zsh, fish,
 PowerShell and the others.
@@ -59,10 +59,7 @@ a directory with a `.nvmrc` or `.node-version` switches, a `cd` from one such
 directory to another does, a change of the file takes effect at the next
 prompt, and leaving for a directory with no config at all switches back to
 the global release. A prompt with nothing changed reuses the kept result
-(`Using cached output`). Unreleased: release 0.5.5 works the environment out
-again at every prompt in such a directory, by removing `env-state.json`
-whenever vfox asks the plugin to read the file, and never switches back on
-the way out.
+(`Using cached output`).
 
 This is what `node -v` printed in one shell, step by step, with vfox 1.1.0 and
 26.13.0 as the global release (bash 5.3):

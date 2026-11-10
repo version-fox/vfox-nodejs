@@ -4,11 +4,9 @@
 
 What changed in each release, as a user notices it. GitHub's
 [release pages](https://github.com/version-fox/vfox-nodejs/releases) list the
-pull requests. The newest release at the time of writing is 0.5.5, and `main` is
-ahead of it by everything under "Unreleased".
-[source-build.md](source-build.md) gets you those changes now.
+pull requests.
 
-## Unreleased
+## 0.5.6 (2026-11-10)
 
 - `.nvmrc` and `.node-version` switch back to the global release when you leave
   for a directory with no config at all, on vfox 1.1.0 and later. vfox tracks
@@ -20,7 +18,8 @@ ahead of it by everything under "Unreleased".
   works the environment out again at every prompt in such a directory and never
   switches back on the way out. On vfox before 1.1.0 the file only applies when
   a shell starts in its directory. See [nvmrc.md](nvmrc.md#when-the-file-is-read)
-  ([#46](https://github.com/version-fox/vfox-nodejs/issues/46)).
+  ([#46](https://github.com/version-fox/vfox-nodejs/issues/46),
+  [#50](https://github.com/version-fox/vfox-nodejs/pull/50)).
 
 ## 0.5.5 (2026-11-10)
 
