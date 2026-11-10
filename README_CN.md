@@ -34,6 +34,8 @@ node -v
 
 `vfox search nodejs` 会列出每个版本及其自带的 npm，属于 LTS 版本线的版本带有标记。在交互式终端里可以从中选一个。
 
+只存在于 `main`、还没进入最新发布版的行为，在下面各页里标有“未发布”。[docs/zh-CN/changes.md](docs/zh-CN/changes.md) 里列出了这些行为，想直接用上 `main`，见 [docs/zh-CN/source-build.md](docs/zh-CN/source-build.md)。
+
 ### 示例：Ubuntu 26.04
 
 ```bash

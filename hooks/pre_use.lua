@@ -26,19 +26,24 @@ function PLUGIN:PreUse(ctx)
         version = shorthands[version]
     end
 
-    -- vfox reports the switch even when another `node` keeps winning PATH
-    -- lookup, so say so here instead of leaving `node --version` to
-    -- contradict it.
-    local shadowing = util.shadowing_node()
-    if version ~= nil and shadowing ~= nil then
-        print(
-            "Note: "
-                .. shadowing
-                .. " comes before vfox in PATH, so `node` will not run nodejs@"
-                .. version
-                .. ". See "
-                .. util.PnpmDocUrl
-        )
+    -- vfox before 1.1.0 has no PLUGIN.shadowHints, so say here that another
+    -- `node` keeps winning PATH lookup instead of leaving `node --version`
+    -- to contradict the switch. vfox 1.1.0 and later warns itself and
+    -- appends the plugin's shadowHints, so stay quiet there to avoid a
+    -- duplicate note for the same problem.
+    -- See https://github.com/version-fox/vfox/issues/737
+    if not util.supports_shadow_hints() then
+        local shadowing = util.shadowing_node()
+        if version ~= nil and shadowing ~= nil then
+            print(
+                "Note: "
+                    .. shadowing
+                    .. " comes before vfox in PATH, so `node` will not run nodejs@"
+                    .. version
+                    .. ". See "
+                    .. util.PnpmDocUrl
+            )
+        end
     end
 
     --- return the version information

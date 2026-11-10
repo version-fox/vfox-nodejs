@@ -39,3 +39,40 @@ PLUGIN.legacyFilenames = {
     ".node-version",
     ".nvmrc",
 }
+
+--- Hints for a command of this SDK shadowed by another executable in PATH.
+--- vfox 1.1.0 and later prints these with its own shadowing warning; older
+--- vfox ignores this field and the plugin prints its own Note from PreUse.
+--- See https://github.com/version-fox/vfox/blob/main/docs/plugins/create/howto.md#shadowhints
+PLUGIN.shadowHints = {
+    {
+        match = "pnpm",
+        message = "pnpm installed its own node. Run `pnpm remove -g node` so vfox's node runs.",
+        url = "https://github.com/version-fox/vfox-nodejs/blob/main/docs/pnpm.md",
+    },
+    {
+        match = "mise",
+        message = "mise installed its own node. Run `mise unuse -g node` and `mise uninstall --all node` so vfox's node runs.",
+        url = "https://github.com/version-fox/vfox-nodejs/blob/main/docs/managers.md#mise",
+    },
+    {
+        match = "asdf",
+        message = "asdf installed its own node. Run `asdf uninstall nodejs <version>` and drop it from `.tool-versions` so vfox's node runs.",
+        url = "https://github.com/version-fox/vfox-nodejs/blob/main/docs/managers.md#asdf",
+    },
+    {
+        match = "nvm",
+        message = "nvm installed its own node. Run `nvm deactivate` in this shell so vfox's node runs.",
+        url = "https://github.com/version-fox/vfox-nodejs/blob/main/docs/managers.md#nvm",
+    },
+    {
+        match = "homebrew",
+        message = "Homebrew installed its own node. Run `brew unlink node` (or `brew uninstall node`) so vfox's node runs.",
+        url = "https://github.com/version-fox/vfox-nodejs/blob/main/docs/managers.md#homebrew",
+    },
+    {
+        match = "nodejs",
+        message = "A Node.js installed outside vfox (winget or the official installer) comes before vfox in PATH. Run `winget uninstall -e --id OpenJS.NodeJS` so vfox's node runs.",
+        url = "https://github.com/version-fox/vfox-nodejs/blob/main/docs/managers.md#winget-and-the-official-installer",
+    },
+}

@@ -936,8 +936,8 @@ local function with_path(path, existing, fn)
     return printed
 end
 local installed = { ["24.21.0"] = { version = "24.21.0" }, ["22.23.3"] = { version = "22.23.3" } }
-test("pre_use notes a node ahead of vfox", function()
-    RUNTIME = { osType = "linux", archType = "amd64" }
+test("pre_use notes a node ahead of vfox on old vfox", function()
+    RUNTIME = { osType = "linux", archType = "amd64", version = "1.0.13" }
     local printed = with_path("/home/u/.local/share/pnpm/bin:/home/u/.vfox/sdks/nodejs/bin:/usr/bin", {
         ["/home/u/.local/share/pnpm/bin/node"] = true,
         ["/home/u/.vfox/sdks/nodejs/bin/node"] = true,
@@ -948,6 +948,30 @@ test("pre_use notes a node ahead of vfox", function()
     assert(printed[1]:find("/home/u/.local/share/pnpm/bin/node", 1, true), printed[1])
     assert(printed[1]:find("nodejs@24.21.0", 1, true), printed[1])
     assert(printed[1]:find("docs/pnpm.md", 1, true), printed[1])
+end)
+test("pre_use notes without RUNTIME.version (old vfox)", function()
+    RUNTIME = { osType = "linux", archType = "amd64" }
+    local printed = with_path("/home/u/.local/share/pnpm/bin:/home/u/.vfox/sdks/nodejs/bin:/usr/bin", {
+        ["/home/u/.local/share/pnpm/bin/node"] = true,
+        ["/home/u/.vfox/sdks/nodejs/bin/node"] = true,
+    }, function()
+        assert(PLUGIN:PreUse({ version = "24", installedSdks = installed }).version == "24.21.0")
+    end)
+    assert(#printed == 1, "expected one note without RUNTIME.version")
+end)
+test("pre_use stays quiet with a shadowing node on vfox 1.1.0+", function()
+    -- vfox 1.1.0 warns itself and appends PLUGIN.shadowHints; the plugin's
+    -- own Note would duplicate it. See https://github.com/version-fox/vfox/issues/737
+    for _, version in ipairs({ "1.1.0", "v1.1.0", "1.2.0", "2.0.0" }) do
+        RUNTIME = { osType = "linux", archType = "amd64", version = version }
+        local printed = with_path("/home/u/.local/share/pnpm/bin:/home/u/.vfox/sdks/nodejs/bin:/usr/bin", {
+            ["/home/u/.local/share/pnpm/bin/node"] = true,
+            ["/home/u/.vfox/sdks/nodejs/bin/node"] = true,
+        }, function()
+            assert(PLUGIN:PreUse({ version = "24", installedSdks = installed }).version == "24.21.0")
+        end)
+        assert(#printed == 0, version .. " should stay quiet, got " .. tostring(printed[1]))
+    end
 end)
 test("pre_use stays quiet when vfox comes first", function()
     RUNTIME = { osType = "linux", archType = "amd64" }
@@ -981,6 +1005,54 @@ test("shadowing_node on windows", function()
     }, function()
         assert(util.shadowing_node() == pnpm .. "\\node.exe", tostring(util.shadowing_node()))
     end)
+end)
+test("supports_shadow_hints follows RUNTIME.version", function()
+    -- vfox 1.1.0 added PLUGIN.shadowHints. See https://github.com/version-fox/vfox/issues/737
+    local old = { "0.6.0", "1.0.0", "1.0.13", "1.0.99", "0.99.99", "1.0.0", "" }
+    for _, version in ipairs(old) do
+        RUNTIME = { osType = "linux", archType = "amd64", version = version }
+        assert(util.supports_shadow_hints() == false, version .. " should be old")
+    end
+    RUNTIME = nil
+    assert(util.supports_shadow_hints() == false, "nil RUNTIME should be old")
+    RUNTIME = { osType = "linux", archType = "amd64" }
+    assert(util.supports_shadow_hints() == false, "missing version should be old")
+    local new = { "1.1.0", "v1.1.0", "1.1.1", "1.2.0", "2.0.0", "1.10.0" }
+    for _, version in ipairs(new) do
+        RUNTIME = { osType = "linux", archType = "amd64", version = version }
+        assert(util.supports_shadow_hints() == true, version .. " should be new")
+    end
+end)
+test("metadata declares shadowHints for known managers", function()
+    local saved_plugin = PLUGIN
+    PLUGIN = {}
+    dofile("metadata.lua")
+    local hints = PLUGIN.shadowHints
+    assert(hints ~= nil and #hints >= 6, "shadowHints must cover pnpm, mise, asdf, nvm, homebrew and winget")
+    local want = {
+        pnpm = { command = "pnpm remove %-g node", url = "docs/pnpm%.md" },
+        mise = { command = "mise unuse %-g node", url = "docs/managers%.md#mise" },
+        asdf = { command = "asdf uninstall nodejs", url = "docs/managers%.md#asdf" },
+        nvm = { command = "nvm deactivate", url = "docs/managers%.md#nvm" },
+        homebrew = { command = "brew unlink node", url = "docs/managers%.md#homebrew" },
+        nodejs = { command = "winget uninstall", url = "docs/managers%.md#winget" },
+    }
+    local seen = {}
+    for _, hint in ipairs(hints) do
+        assert(type(hint.match) == "string" and hint.match ~= "", "match must not be empty")
+        assert(type(hint.message) == "string" and hint.message ~= "", "message must not be empty")
+        local key = hint.match:lower()
+        local expected = want[key]
+        assert(expected ~= nil, "unexpected shadowHints match: " .. tostring(hint.match))
+        assert(not seen[key], "duplicate shadowHints match: " .. key)
+        seen[key] = true
+        assert(hint.message:find(expected.command, 1) ~= nil, hint.message)
+        assert(hint.url ~= nil and hint.url:find(expected.url, 1) ~= nil, tostring(hint.url))
+    end
+    for key in pairs(want) do
+        assert(seen[key], "shadowHints must match " .. key)
+    end
+    PLUGIN = saved_plugin
 end)
 -- lib/util.lua helpers.
 test("version_prefix reads what a version file asks for", function()

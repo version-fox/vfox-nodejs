@@ -526,6 +526,45 @@ function UTIL.refresh_lts_cache(plugin)
     pcall(plugin.Available, plugin, {})
 end
 
+--- Whether the running vfox understands PLUGIN.shadowHints (v1.1.0 and later).
+--- Older vfox ignores the metadata field, so PreUse keeps printing its own
+--- Note there. Unknown or empty RUNTIME.version counts as old.
+--- See https://github.com/version-fox/vfox/issues/737
+--- @return boolean
+function UTIL.supports_shadow_hints()
+    if RUNTIME == nil or RUNTIME.version == nil or RUNTIME.version == "" then
+        return false
+    end
+    local cleaned = tostring(RUNTIME.version):gsub("^v", ""):match("^[^%-%+]+")
+    if cleaned == nil then
+        return false
+    end
+    local parts = {}
+    for part in string.gmatch(cleaned .. ".", "([^.]*)%.") do
+        -- Drop an empty segment such as the trailing one of "1.1."; anything
+        -- else must be a number, otherwise the version is unreadable.
+        if part == "" then
+            return false
+        end
+        if not part:match("^%d+$") then
+            return false
+        end
+        table.insert(parts, tonumber(part))
+    end
+    local want = { 1, 1, 0 }
+    for i = 1, math.max(#parts, #want) do
+        local got = parts[i] or 0
+        local need = want[i] or 0
+        if got > need then
+            return true
+        end
+        if got < need then
+            return false
+        end
+    end
+    return true
+end
+
 --- Whether a PATH entry belongs to vfox: like vfox's own check, one of its
 --- segments is `.vfox` (or the legacy `.version-fox`).
 local function is_vfox_path(dir)
@@ -543,6 +582,9 @@ end
 --- `pnpm runtime set node -g` writes to `$PNPM_HOME/bin`, shadows the
 --- version `vfox use` selects. With no vfox path on PATH yet, vfox puts its
 --- paths first and nothing shadows them.
+--- Legacy path for vfox before 1.1.0: that vfox has no PLUGIN.shadowHints,
+--- so PreUse prints the Note itself. vfox 1.1.0 and later warns itself and
+--- appends the plugin's shadowHints, and PreUse stays quiet.
 --- See https://github.com/version-fox/vfox-nodejs/blob/main/docs/pnpm.md
 --- @return string|nil path of the shadowing executable
 function UTIL.shadowing_node()

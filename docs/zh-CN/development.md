@@ -5,14 +5,14 @@
 ## 目录结构
 
 ```text
-metadata.lua                    插件名、版本，以及把 .node-version 和 .nvmrc 注册为兼容版本文件
+metadata.lua                    插件名、版本、把 .node-version 和 .nvmrc 注册为兼容版本文件，以及遮蔽 node 时的 shadowHints
 hooks/available.lua             vfox search：版本索引
 hooks/pre_install.lua           vfox install：选择包，以及它的 URL 和校验和
 hooks/post_install.lua          musl：node 无法运行时报错，比如缺少 libstdc++ 或 libatomic
 hooks/env_keys.lua              PATH：Linux 和 macOS 上是 bin，Windows 上是安装目录
-hooks/pre_use.lua               vfox use：把 24 或 24.21 映射到已安装的版本，vfox 的 node 被遮蔽时给出提示
+hooks/pre_use.lua               vfox use：把 24 或 24.21 映射到已安装的版本（只在 vfox 1.1.0 之前，vfox 的 node 被遮蔽时给出提示）
 hooks/parse_legacy_file.lua     .nvmrc 和 .node-version
-lib/util.lua                    镜像 URL 与下载请求头、musl 检测与缺失的库、运行命令、版本比较与匹配、简写、PATH 探测、插件学到的 LTS 版本线
+lib/util.lua                    镜像 URL 与下载请求头、musl 检测与缺失的库、运行命令、版本比较与匹配、简写、PATH 探测、vfox 版本检查、插件学到的 LTS 版本线
 .lts-cache                      不在仓库里：插件学到的 LTS 版本线，写在插件旁边
 tests/hooks_test.lua            离线的钩子测试
 tests/e2e/                      容器测试，见 e2e.md
@@ -113,7 +113,7 @@ line lithium 26
 go run github.com/yuin/gopher-lua/cmd/glua@v1.1.1 tests/hooks_test.lua
 ```
 
-请在仓库根目录运行。`tests/hooks_test.lua` 自己模拟了 `http` 和 `json`（通过 `package.preload`），为每个用例设置 `RUNTIME`，请求的应答来自 `state.response`、`state.decoded` 和 `state.responder`。一个用例写作 `test("name", function() ... end)`，调用它会重置状态和 `available_result`。测试覆盖 `Available` 及其失败情况、各平台的包名和校验和请求失败时的错误、musl 与 `PostInstall`（通过 `with_util` 模拟了 `util.capture`、`util.file_exists` 和 `util.has_libstdcxx`）、各策略下的 `ParseLegacyFile`（包括 UTF-16 和带字节顺序标记的文件，以及删除 `env-state.json`，其中 `os.getenv` 和 `os.remove` 是模拟的）、插件如何学到 LTS 版本线（文件是临时的，每个用例开始时都有一个什么版本线也不认识的新文件）、有 `node` 遮蔽 vfox 时的 `PreUse`，以及 `lib/util.lua` 里的辅助函数。改动需要的用例就加在那里。
+请在仓库根目录运行。`tests/hooks_test.lua` 自己模拟了 `http` 和 `json`（通过 `package.preload`），为每个用例设置 `RUNTIME`，请求的应答来自 `state.response`、`state.decoded` 和 `state.responder`。一个用例写作 `test("name", function() ... end)`，调用它会重置状态和 `available_result`。测试覆盖 `Available` 及其失败情况、各平台的包名和校验和请求失败时的错误、musl 与 `PostInstall`（通过 `with_util` 模拟了 `util.capture`、`util.file_exists` 和 `util.has_libstdcxx`）、各策略下的 `ParseLegacyFile`（包括 UTF-16 和带字节顺序标记的文件，以及删除 `env-state.json`，其中 `os.getenv` 和 `os.remove` 是模拟的）、插件如何学到 LTS 版本线（文件是临时的，每个用例开始时都有一个什么版本线也不认识的新文件）、新老 vfox 下有无遮蔽 `node` 时的 `PreUse`（`RUNTIME.version` 在 1.1.0 之前和之后）、`metadata.lua` 里的 `PLUGIN.shadowHints`，以及 `lib/util.lua` 里的辅助函数。改动需要的用例就加在那里。
 
 gopher-lua 1.1.1 会丢掉闭包对 `local x = nil` 的赋值：外层作用域读到的仍然是 `nil`。要在 `with_util` 或 `pcall` 内部收集值的测试，必须把值放在表的字段里。它还有一个毛病：`local file = path ~= nil and io.open(path, "r") or nil` 之后的 `if file == nil` 会以 Go 的“nil pointer dereference”结束，所以要分成两条语句，先判断 `path`，再打开文件。新代码要用 `glua` 跑一遍，不能只靠 LuaLS。
 
